@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Editor — Mozkotron</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; }
+
+  /* ---- Layout ---- */
+  .app { display: flex; height: calc(100vh - 82px); }
+  .sidebar { width: 260px; background: #1e293b; border-right: 1px solid #334155; display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden; }
+  .sidebar-header { padding: 1rem 1.2rem; border-bottom: 1px solid #334155; }
+  .sidebar-header h2 { font-size: 1rem; color: #38bdf8; font-weight: 700; }
+  .sidebar-tree { flex: 1; overflow-y: auto; padding: 0.5rem 0; }
+  .sidebar-actions { padding: 0.8rem 1.2rem; border-top: 1px solid #334155; }
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .toolbar { padding: 0.8rem 2rem; background: #1e293b; border-bottom: 1px solid #334155; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  .editor-area { flex: 1; overflow-y: auto; padding: 2rem; display: flex; justify-content: center; }
+  .editor-container { width: 100%; max-width: 780px; }
+
+  /* ---- Toolbar ---- */
+  .toolbar label { font-size: 0.78rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  .toolbar input, .toolbar select { font-family: inherit; font-size: 0.88rem; padding: 0.35rem 0.6rem; border: 1px solid #334155; border-radius: 6px; background: #0f172a; color: #e2e8f0; outline: none; }
+  .toolbar input:focus, .toolbar select:focus { border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56,189,248,0.15); }
+  .toolbar input.title-input { font-size: 1.1rem; font-weight: 600; flex: 1; min-width: 200px; }
+  .toolbar-group { display: flex; align-items: center; gap: 0.4rem; }
+  .btn { font-family: inherit; font-size: 0.85rem; padding: 0.4rem 1rem; border: 1px solid #334155; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.15s; }
+  .btn-primary { background: #0ea5e9; color: #fff; border-color: #0ea5e9; }
+  .btn-primary:hover { background: #38bdf8; }
+  .btn-secondary { background: #1e293b; color: #e2e8f0; }
+  .btn-secondary:hover { background: #334155; }
+
+  /* ---- Sidebar tree ---- */
+  .tree-item { display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 1.2rem; cursor: pointer; font-size: 0.85rem; color: #e2e8f0; transition: background 0.1s; user-select: none; }
+  .tree-item:hover { background: #334155; }
+  .tree-item.active { background: #0ea5e9; color: #fff; }
+  .tree-item.active .tree-icon svg { stroke: #fff; }
+  .tree-item.folder { font-weight: 600; color: #38bdf8; }
+  .tree-item .indent { width: 16px; flex-shrink: 0; }
+  .tree-icon { flex-shrink: 0; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; }
+  .tree-icon svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .tree-type-badge { font-size: 0.6rem; padding: 1px 4px; border-radius: 3px; font-weight: 700; margin-left: auto; text-transform: uppercase; flex-shrink: 0; }
+  .tree-type-badge.bimg { background: #dbeafe; color: #2563eb; }
+  .tree-type-badge.sop { background: #d1fae5; color: #059669; }
+  .tree-type-badge.cheatlist { background: #fef3cd; color: #92400e; }
+
+  /* ---- Type radio buttons ---- */
+  .type-radios { display: flex; gap: 0.3rem; }
+  .type-radio { padding: 0.3rem 0.7rem; border: 2px solid #334155; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: all 0.15s; text-transform: uppercase; letter-spacing: 0.03em; background: #1e293b; }
+  .type-radio:hover { opacity: 0.8; }
+  .type-radio.bimg { color: #2563eb; border-color: #dbeafe; }
+  .type-radio.bimg.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+  .type-radio.sop { color: #059669; border-color: #d1fae5; }
+  .type-radio.sop.active { background: #059669; color: #fff; border-color: #059669; }
+  .type-radio.cheatlist { color: #92400e; border-color: #fef3cd; }
+  .type-radio.cheatlist.active { background: #92400e; color: #fff; border-color: #92400e; }
+
+  /* ---- Context menu ---- */
+  .ctx-menu { position: fixed; z-index: 2000; background: #1e293b; border: 1px solid #334155; border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.15); min-width: 180px; padding: 0.3rem 0; display: none; }
+  .ctx-menu.visible { display: block; }
+  .ctx-menu-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.45rem 0.8rem; cursor: pointer; font-size: 0.85rem; transition: background 0.1s; color: #e2e8f0; }
+  .ctx-menu-item:hover { background: #334155; }
+  .ctx-menu-item.danger { color: #ef4444; }
+  .ctx-menu-item.danger:hover { background: #ef444422; }
+  .ctx-menu-item svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .ctx-menu-sep { height: 1px; background: #334155; margin: 0.2rem 0; }
+
+  /* ---- Block editor styles ---- */
+  .ek-block { position: relative; margin-bottom: 2px; display: flex; align-items: flex-start; gap: 0; border-radius: 6px; transition: background 0.1s; }
+  .ek-block:hover { background: rgba(217,119,6,0.04); }
+  .ek-block:hover .ek-block-handle { opacity: 0.4; }
+  .ek-block-handle { width: 24px; padding-top: 0.45rem; text-align: center; cursor: grab; color: #c4b99a; font-size: 0.7rem; opacity: 0; transition: opacity 0.15s; user-select: none; flex-shrink: 0; }
+  .ek-block-content { flex: 1; padding: 0.35rem 0.5rem; outline: none; min-height: 1.6em; line-height: 1.6; font-size: 1rem; }
+  .ek-block-content:focus { background: rgba(217,119,6,0.03); border-radius: 4px; }
+  .ek-block-content:empty::before { content: attr(data-placeholder); color: #c4b99a; pointer-events: none; }
+  .ek-block[data-type="h1"] .ek-block-content { font-size: 1.8rem; font-weight: 800; color: #1a1710; line-height: 1.3; padding-top: 1rem; padding-bottom: 0.3rem; }
+  .ek-block[data-type="h2"] .ek-block-content { font-size: 1.35rem; font-weight: 700; color: #92400e; line-height: 1.35; padding-top: 0.8rem; }
+  .ek-block[data-type="h3"] .ek-block-content { font-size: 1.1rem; font-weight: 600; color: #b45309; line-height: 1.4; padding-top: 0.5rem; }
+  .ek-block[data-type="blockquote"] .ek-block-content { border-left: 3px solid #d97706; padding-left: 1rem; color: #6b6456; font-style: italic; }
+  .ek-block[data-type="code"] .ek-block-content { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.88rem; background: #2d2a24; color: #e8e2d4; padding: 0.8rem 1rem; border-radius: 8px; white-space: pre-wrap; line-height: 1.5; }
+  .ek-block[data-type="divider"] { pointer-events: none; padding: 0.8rem 0; }
+  .ek-block[data-type="divider"] .ek-block-content { border-top: 2px solid #d8d0be; min-height: 0; padding: 0; }
+  .ek-block[data-type="divider"] .ek-block-handle { display: none; }
+  .ek-block[data-type="callout"] .ek-block-content { padding: 0.8rem 1rem; border-radius: 8px; border-left: 4px solid; }
+  .ek-block[data-type="callout"][data-variant="tip"] .ek-block-content { background: #f0fdf4; border-color: #22c55e; }
+  .ek-block[data-type="callout"][data-variant="warning"] .ek-block-content { background: #fffbeb; border-color: #f59e0b; }
+  .ek-block[data-type="callout"][data-variant="info"] .ek-block-content { background: #eff6ff; border-color: #3b82f6; }
+  .ek-block[data-type="callout"][data-variant="note"] .ek-block-content { background: #f5f1e8; border-color: #8b8070; }
+  .ek-block[data-type="callout"][data-variant="danger"] .ek-block-content { background: #fef2f2; border-color: #ef4444; }
+  .ek-block[data-type="confirm"] .ek-block-content,
+  .ek-block[data-type="quiz"] .ek-block-content { background: #f5f1e8; border: 2px dashed #d8d0be; border-radius: 8px; padding: 1rem; color: #8b8070; font-size: 0.88rem; text-align: center; cursor: default; }
+  .ek-block[data-type="bullet"] .ek-block-content::before { content: '•'; position: absolute; left: 28px; color: #d97706; font-weight: 700; }
+  .ek-block[data-type="bullet"] .ek-block-content { padding-left: 1.2rem; }
+  .ek-block[data-type="numbered"] .ek-block-content { padding-left: 1.2rem; }
+  .ek-block[data-type="numbered"] .ek-block-content::before { content: attr(data-num); position: absolute; left: 20px; color: #d97706; font-weight: 600; font-size: 0.88rem; }
+
+  /* ---- Slash menu ---- */
+  .slash-menu { position: absolute; z-index: 1000; background: #fff; border: 1px solid #d8d0be; border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.12); width: 280px; max-height: 340px; overflow-y: auto; display: none; }
+  .slash-menu.visible { display: block; }
+  .slash-menu-search { padding: 0.5rem 0.8rem; border-bottom: 1px solid #e8e2d4; }
+  .slash-menu-search input { width: 100%; border: none; outline: none; font-size: 0.88rem; font-family: inherit; background: transparent; }
+  .slash-menu-group-label { padding: 0.3rem 0.8rem; font-size: 0.7rem; font-weight: 700; color: #8b8070; text-transform: uppercase; letter-spacing: 0.06em; }
+  .slash-menu-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0.8rem; cursor: pointer; font-size: 0.88rem; transition: background 0.1s; }
+  .slash-menu-item:hover, .slash-menu-item.selected { background: #fef9ee; }
+  .slash-menu-item .item-icon { font-size: 1.1rem; width: 24px; text-align: center; }
+  .slash-menu-item .item-label { font-weight: 500; }
+  .slash-menu-item .item-desc { font-size: 0.75rem; color: #8b8070; }
+
+  /* ---- Format toolbar ---- */
+  .format-toolbar { position: absolute; z-index: 999; background: #2d2a24; border-radius: 8px; padding: 0.3rem; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+  .format-toolbar.visible { display: flex; gap: 2px; }
+  .format-btn { width: 30px; height: 28px; border: none; background: transparent; color: #e8e2d4; cursor: pointer; border-radius: 4px; font-size: 0.82rem; font-weight: 700; font-family: inherit; }
+  .format-btn:hover { background: rgba(255,255,255,0.15); }
+  .format-sep { width: 1px; height: 18px; background: rgba(255,255,255,0.2); flex-shrink: 0; margin: 0 2px; }
+
+  /* ---- Table block ---- */
+  .ek-block[data-type="table"] .ek-block-content { padding: 0.5rem; }
+  .ek-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  .ek-table th, .ek-table td { border: 1px solid #d8d0be; padding: 0.4rem 0.6rem; text-align: left; outline: none; min-width: 60px; }
+  .ek-table th { background: #f5f1e8; font-weight: 600; color: #92400e; font-size: 0.82rem; }
+  .ek-table th:focus, .ek-table td:focus { box-shadow: inset 0 0 0 2px #d97706; background: #fffbeb; }
+  .ek-table-add-col { width: 28px; text-align: center; cursor: pointer; color: #c4b99a; font-weight: 700; border: 1px dashed #d8d0be; background: transparent; }
+  .ek-table-add-col:hover { background: #f5f1e8; color: #d97706; }
+  .ek-table-row-del { width: 28px; text-align: center; cursor: pointer; color: #c4b99a; border: 1px dashed #d8d0be; background: transparent; }
+  .ek-table-row-del:hover { color: #ef4444; background: #fef2f2; }
+  .ek-table-add-row { text-align: center; padding: 0.3rem; font-size: 0.78rem; color: #c4b99a; cursor: pointer; border: 1px dashed #d8d0be; border-top: 0; border-radius: 0 0 6px 6px; }
+  .ek-table-add-row:hover { background: #f5f1e8; color: #d97706; }
+
+  /* ---- Columns block ---- */
+  .ek-block[data-type="columns"] .ek-block-content { padding: 0.5rem; }
+  .ek-columns { display: flex; gap: 0.8rem; width: 100%; }
+  .ek-column { flex: 1; min-height: 3em; padding: 0.6rem 0.8rem; border: 1px dashed #d8d0be; border-radius: 6px; outline: none; font-size: 0.95rem; line-height: 1.6; }
+  .ek-column:focus { border-color: #d97706; background: rgba(217,119,6,0.03); }
+  .ek-column:empty::before { content: attr(data-placeholder); color: #c4b99a; pointer-events: none; }
+
+  /* ---- Details / collapsible block ---- */
+  .ek-block[data-type="details"] .ek-block-content { padding: 0; }
+  .ek-details { border: 1px solid #d8d0be; border-radius: 8px; overflow: hidden; }
+  .ek-details-summary { padding: 0.6rem 1rem; background: #f5f1e8; font-weight: 600; color: #92400e; cursor: pointer; outline: none; font-size: 0.95rem; border: none; display: list-item; }
+  .ek-details-summary:focus { background: #ede8d8; }
+  .ek-details-summary:empty::before { content: attr(data-placeholder); color: #c4b99a; pointer-events: none; }
+  .ek-details-body { padding: 0.8rem 1rem; outline: none; min-height: 2em; font-size: 0.95rem; line-height: 1.6; border-top: 1px solid #d8d0be; }
+  .ek-details-body:focus { background: rgba(217,119,6,0.03); }
+  .ek-details-body:empty::before { content: attr(data-placeholder); color: #c4b99a; pointer-events: none; }
+
+  /* ---- Empty state ---- */
+  .empty-state { text-align: center; padding: 3rem; color: #8b8070; }
+  .empty-state .icon { opacity: 0.3; margin-bottom: 1rem; }
+  .empty-state .icon svg { width: 48px; height: 48px; stroke: #8b8070; fill: none; stroke-width: 1.5; }
+  .empty-state h3 { font-size: 1.1rem; color: #92400e; margin-bottom: 0.5rem; }
+
+  /* ---- Modals ---- */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 2000; display: none; align-items: center; justify-content: center; }
+  .modal-overlay.visible { display: flex; }
+  .modal { background: #fff; border-radius: 12px; padding: 1.5rem; width: 440px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+  .modal h3 { font-size: 1.1rem; color: #92400e; margin-bottom: 1rem; }
+  .modal .form-group { margin-bottom: 1rem; }
+  .modal label { display: block; font-size: 0.78rem; color: #8b8070; font-weight: 600; margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  .modal input, .modal select { width: 100%; font-family: inherit; font-size: 0.92rem; padding: 0.5rem 0.7rem; border: 1px solid #d8d0be; border-radius: 6px; background: #faf8f2; outline: none; }
+  .modal input:focus, .modal select:focus { border-color: #d97706; }
+  .modal .btn-row { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.2rem; }
+
+  /* ---- Toast ---- */
+  .toast { position: fixed; bottom: 2rem; right: 2rem; background: #2d2a24; color: #fff; padding: 0.7rem 1.2rem; border-radius: 8px; font-size: 0.88rem; z-index: 3000; transform: translateY(100px); opacity: 0; transition: all 0.3s ease; }
+  .toast.visible { transform: translateY(0); opacity: 1; }
+  .toast.success { background: #059669; }
+  .toast.error { background: #dc2626; }
+
+  /* ---- Scrollbar ---- */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #d8d0be; border-radius: 3px; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.3rem; color: #8b8070; text-decoration: none; font-size: 0.82rem; padding: 0.5rem 0; }
+  .back-link:hover { color: #d97706; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <a href="/" class="back-link">← Zpět do Mozkotron</a>
+      <h2>Dokumenty</h2>
+    </div>
+    <div class="sidebar-tree" id="docTree"></div>
+    <div class="sidebar-actions" style="display:flex;gap:0.4rem">
+      <button class="btn btn-primary" style="flex:1" onclick="showNewDocDialog()">+ Dokument</button>
+      <button class="btn btn-secondary" onclick="showNewFolderDialog()">+ Složka</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="toolbar" id="toolbar" style="display:none">
+      <div class="toolbar-group" style="flex:1">
+        <label>Název:</label>
+        <input type="text" class="title-input" id="docTitle" placeholder="Název dokumentu...">
+      </div>
+      <div class="toolbar-group">
+        <label>Typ dokumentu:</label>
+        <div class="type-radios" id="typeRadios">
+          <span class="type-radio bimg" data-value="bimg" onclick="setDocType('bimg')">BIMG</span>
+          <span class="type-radio sop" data-value="sop" onclick="setDocType('sop')">SOP</span>
+          <span class="type-radio cheatlist" data-value="cheatlist" onclick="setDocType('cheatlist')">Cheat</span>
+        </div>
+      </div>
+      <div class="toolbar-group">
+        <button class="btn btn-primary" onclick="saveDoc()">Uložit</button>
+        <button class="btn btn-secondary" onclick="previewMarkdown()">MD</button>
+        <button class="btn btn-secondary" style="color:#dc2626" onclick="deleteCurrentDoc()" title="Smazat dokument">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="editor-area">
+      <div class="empty-state" id="emptyState">
+        <div class="icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></div>
+        <h3>Vyber dokument nebo vytvoř nový</h3>
+        <p style="font-size:0.88rem">Vlevo vyber existující dokument,<br>nebo klikni na "+ Dokument".</p>
+      </div>
+      <div class="editor-container" id="editorContainer" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- New doc modal -->
+<div class="modal-overlay" id="newDocModal">
+  <div class="modal">
+    <h3>Nový dokument</h3>
+    <div class="form-group">
+      <label>Název dokumentu</label>
+      <input type="text" id="newDocTitle" placeholder="Např. Reklamační proces">
+    </div>
+    <div class="form-group">
+      <label>Typ dokumentu</label>
+      <select id="newDocType">
+        <option value="">— žádný —</option>
+        <option value="bimg">BIMG (dokumentace)</option>
+        <option value="sop">SOP (postup)</option>
+        <option value="cheatlist">Cheat list</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Umístění (složka)</label>
+      <select id="newDocFolder"><option value="">/ (kořen docs)</option></select>
+    </div>
+    <div class="form-group">
+      <label>Název souboru</label>
+      <input type="text" id="newDocFilename" placeholder="automaticky z názvu">
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="hideNewDocDialog()">Zrušit</button>
+      <button class="btn btn-primary" onclick="createNewDoc()">Vytvořit</button>
+    </div>
+  </div>
+</div>
+
+<!-- Markdown preview modal -->
+<div class="modal-overlay" id="previewModal">
+  <div class="modal" style="width:700px;max-height:80vh;display:flex;flex-direction:column">
+    <h3>Markdown náhled <button class="btn btn-secondary" style="float:right;font-size:0.78rem" onclick="copyMarkdown()">Kopírovat</button></h3>
+    <pre id="previewContent" style="flex:1;overflow:auto;background:#2d2a24;color:#e8e2d4;padding:1rem;border-radius:8px;font-size:0.82rem;line-height:1.5;white-space:pre-wrap;margin-top:0.8rem"></pre>
+    <div class="btn-row"><button class="btn btn-secondary" onclick="document.getElementById('previewModal').classList.remove('visible')">Zavřít</button></div>
+  </div>
+</div>
+
+<!-- Context menu -->
+<div class="ctx-menu" id="ctxMenu">
+  <div class="ctx-menu-item" data-action="settype-bimg"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg> BIMG</div>
+  <div class="ctx-menu-item" data-action="settype-sop"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> SOP</div>
+  <div class="ctx-menu-item" data-action="settype-cheatlist"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Cheat list</div>
+  <div class="ctx-menu-sep"></div>
+  <div class="ctx-menu-item" data-action="move"><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg> Přesunout do...</div>
+  <div class="ctx-menu-sep"></div>
+  <div class="ctx-menu-item danger" data-action="delete"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Smazat</div>
+</div>
+
+<!-- Move modal -->
+<div class="modal-overlay" id="moveModal">
+  <div class="modal">
+    <h3>Přesunout dokument</h3>
+    <div class="form-group">
+      <label>Cílová složka</label>
+      <select id="moveFolderSelect"><option value="">/ (kořen docs)</option></select>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="document.getElementById('moveModal').classList.remove('visible')">Zrušit</button>
+      <button class="btn btn-primary" onclick="executeMoveDoc()">Přesunout</button>
+    </div>
+  </div>
+</div>
+
+<!-- New folder modal -->
+<div class="modal-overlay" id="newFolderModal">
+  <div class="modal">
+    <h3>Nová složka</h3>
+    <div class="form-group">
+      <label>Název složky</label>
+      <input type="text" id="newFolderName" placeholder="Např. procesy">
+    </div>
+    <div class="form-group">
+      <label>Umístění</label>
+      <select id="newFolderParent"><option value="">/ (kořen docs)</option></select>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="document.getElementById('newFolderModal').classList.remove('visible')">Zrušit</button>
+      <button class="btn btn-primary" onclick="createNewFolder()">Vytvořit</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Editor engine (separátní modul) -->
+<script src="/js/block-editor.js"></script>
+
+<script>
+'use strict';
+
+// ================================================================
+// SVG ICONS (inline, no emoji)
+// ================================================================
+var SVG = {
+  folder: '<svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>',
+  file:   '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+};
+
+// ================================================================
+// APP STATE
+// ================================================================
+var currentDocPath = null;
+var currentDocType = '';
+var docTree = [];
+var editor = null;
+var ctxTarget = null;  // item for context menu
+
+// ================================================================
+// INIT EDITOR
+// ================================================================
+function initEditor() {
+  var container = document.getElementById('editorContainer');
+  editor = new BlockEditor(container);
+  editor.onSave = saveDoc;
+}
+
+// ================================================================
+// API HELPERS
+// ================================================================
+function api(method, url, data) {
+  var opts = { method: method, credentials: 'same-origin', headers: {} };
+  if (data !== undefined) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(data);
+  }
+  return fetch(url, opts).then(function(r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  });
+}
+
+// ================================================================
+// DOC TREE
+// ================================================================
+function loadDocTree() {
+  api('GET', '/api/editor/tree').then(function(data) {
+    docTree = data.tree || [];
+    renderDocTree();
+  }).catch(function(e) { console.error('Tree load failed:', e); });
+}
+
+function collectFolders(items, depth, target) {
+  items.forEach(function(item) {
+    if (item.type === 'folder') {
+      var opt = document.createElement('option');
+      opt.value = item.path;
+      opt.textContent = '\u00A0\u00A0'.repeat(depth) + (item.label || item.name);
+      target.appendChild(opt);
+      if (item.children) collectFolders(item.children, depth + 1, target);
+    }
+  });
+}
+
+function populateFolderSelects() {
+  var selects = ['newDocFolder', 'newFolderParent', 'moveFolderSelect'];
+  selects.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = '<option value="">/ (kořen docs)</option>';
+    collectFolders(docTree, 0, el);
+  });
+}
+
+function renderDocTree() {
+  var container = document.getElementById('docTree');
+  container.innerHTML = '';
+  populateFolderSelects();
+
+  function renderItems(items, depth) {
+    items.forEach(function(item) {
+      var el = document.createElement('div');
+      el.className = 'tree-item' + (item.type === 'folder' ? ' folder' : '') + (item.path === currentDocPath ? ' active' : '');
+
+      var indent = '';
+      for (var i = 0; i < depth; i++) indent += '<span class="indent"></span>';
+      var icon = item.type === 'folder' ? SVG.folder : SVG.file;
+      var badge = item.ek_type ? '<span class="tree-type-badge ' + item.ek_type + '">' + item.ek_type + '</span>' : '';
+
+      el.innerHTML = indent + '<span class="tree-icon">' + icon + '</span> <span class="tree-label">' + (item.label || item.name) + '</span>' + badge;
+
+      if (item.type === 'file') {
+        el.addEventListener('click', function() { openDoc(item.path); });
+      }
+
+      // Right-click context menu (files only)
+      if (item.type === 'file') {
+        el.addEventListener('contextmenu', function(e) {
+          e.preventDefault();
+          showContextMenu(e.clientX, e.clientY, item);
+        });
+      }
+
+      container.appendChild(el);
+
+      if (item.type === 'folder') {
+        if (item.children) renderItems(item.children, depth + 1);
+      }
+    });
+  }
+  renderItems(docTree, 0);
+}
+
+// ================================================================
+// CONTEXT MENU
+// ================================================================
+function showContextMenu(x, y, item) {
+  ctxTarget = item;
+  var menu = document.getElementById('ctxMenu');
+  menu.style.left = x + 'px';
+  menu.style.top = y + 'px';
+  menu.classList.add('visible');
+}
+
+function hideContextMenu() {
+  document.getElementById('ctxMenu').classList.remove('visible');
+  ctxTarget = null;
+}
+
+document.addEventListener('click', function() { hideContextMenu(); });
+
+document.getElementById('ctxMenu').addEventListener('click', function(e) {
+  var item = e.target.closest('.ctx-menu-item');
+  if (!item || !ctxTarget) return;
+  var action = item.dataset.action;
+
+  if (action === 'delete') {
+    if (!confirm('Opravdu smazat "' + (ctxTarget.label || ctxTarget.name) + '"?')) return;
+    api('DELETE', '/api/editor/doc?path=' + encodeURIComponent(ctxTarget.path)).then(function() {
+      if (currentDocPath === ctxTarget.path) {
+        currentDocPath = null;
+        document.getElementById('toolbar').style.display = 'none';
+        document.getElementById('editorContainer').style.display = 'none';
+        document.getElementById('emptyState').style.display = '';
+      }
+      loadDocTree();
+      toast('Dokument smazán', 'success');
+    }).catch(function(e) { toast('Chyba: ' + e.message, 'error'); });
+  }
+
+  if (action === 'move') {
+    document.getElementById('moveModal').classList.add('visible');
+  }
+
+  if (action.startsWith('settype-')) {
+    var newType = action.replace('settype-', '');
+    setDocTypeOnFile(ctxTarget.path, newType);
+  }
+
+  hideContextMenu();
+});
+
+function setDocTypeOnFile(filePath, newType) {
+  // Load file, update frontmatter ek_type, save back
+  api('GET', '/api/editor/doc?path=' + encodeURIComponent(filePath)).then(function(data) {
+    var content = data.content || '';
+    var fmMatch = content.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+    if (!fmMatch) return toast('Soubor nemá frontmatter', 'error');
+
+    var fmLines = fmMatch[1].split('\n');
+    var body = fmMatch[2];
+    var found = false;
+
+    fmLines = fmLines.map(function(line) {
+      if (line.match(/^ek_type:/)) { found = true; return 'ek_type: ' + newType; }
+      return line;
+    });
+    if (!found) fmLines.push('ek_type: ' + newType);
+
+    // Add/remove ek_confirm for SOP
+    var hasConfirm = fmLines.some(function(l) { return l.match(/^ek_confirm:/); });
+    if (newType === 'sop' && !hasConfirm) fmLines.push('ek_confirm: true');
+    if (newType !== 'sop' && hasConfirm) fmLines = fmLines.filter(function(l) { return !l.match(/^ek_confirm:/); });
+
+    var newContent = '---\n' + fmLines.join('\n') + '\n---\n' + body;
+    return api('PUT', '/api/editor/doc', { path: filePath, content: newContent });
+  }).then(function() {
+    loadDocTree();
+    // If this file is currently open, refresh type indicator
+    if (filePath === currentDocPath) {
+      currentDocType = newType;
+      updateTypeRadios();
+    }
+    toast('Typ nastaven: ' + newType.toUpperCase(), 'success');
+  }).catch(function(e) { toast('Chyba: ' + e.message, 'error'); });
+}
+
+function executeMoveDoc() {
+  if (!ctxTarget) return;
+  var targetFolder = document.getElementById('moveFolderSelect').value;
+  var filename = ctxTarget.name;
+  var toPath = targetFolder ? targetFolder + '/' + filename : 'docs/' + filename;
+
+  api('PUT', '/api/editor/move', { from: ctxTarget.path, to: toPath }).then(function() {
+    document.getElementById('moveModal').classList.remove('visible');
+    if (currentDocPath === ctxTarget.path) currentDocPath = toPath;
+    loadDocTree();
+    toast('Přesunuto!', 'success');
+  }).catch(function(e) { toast('Chyba: ' + e.message, 'error'); });
+}
+
+// ================================================================
+// TYPE RADIO BUTTONS
+// ================================================================
+function setDocType(type) {
+  // Toggle: clicking active type deselects it
+  currentDocType = (currentDocType === type) ? '' : type;
+  updateTypeRadios();
+}
+
+function updateTypeRadios() {
+  document.querySelectorAll('#typeRadios .type-radio').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.value === currentDocType);
+  });
+}
+
+// ================================================================
+// OPEN / SAVE / CREATE
+// ================================================================
+function openDoc(path) {
+  api('GET', '/api/editor/doc?path=' + encodeURIComponent(path)).then(function(data) {
+    currentDocPath = path;
+    document.getElementById('toolbar').style.display = '';
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('editorContainer').style.display = '';
+
+    var fm = editor.loadMarkdown(data.content || '');
+    document.getElementById('docTitle').value = fm.title || fm.sidebar_label || '';
+    currentDocType = fm.ek_type || '';
+    updateTypeRadios();
+
+    renderDocTree();
+    toast('Dokument načten', 'success');
+  }).catch(function(e) {
+    toast('Chyba při načítání: ' + e.message, 'error');
+  });
+}
+
+function saveDoc() {
+  if (!currentDocPath) return toast('Žádný dokument k uložení', 'error');
+
+  var title = document.getElementById('docTitle').value.trim() || 'Bez názvu';
+  var fm = { title: title, sidebar_label: title };
+  if (currentDocType) fm.ek_type = currentDocType;
+  if (currentDocType === 'sop') fm.ek_confirm = 'true';
+
+  var md = editor.toMarkdown(fm);
+  api('PUT', '/api/editor/doc', { path: currentDocPath, content: md }).then(function() {
+    // Auto-refresh tree to reflect changes (title, type)
+    loadDocTree();
+    toast('Uloženo!', 'success');
+  }).catch(function(e) {
+    toast('Chyba: ' + e.message, 'error');
+  });
+}
+
+function deleteCurrentDoc() {
+  if (!currentDocPath) return;
+  if (!confirm('Opravdu smazat tento dokument?')) return;
+  api('DELETE', '/api/editor/doc?path=' + encodeURIComponent(currentDocPath)).then(function() {
+    currentDocPath = null;
+    document.getElementById('toolbar').style.display = 'none';
+    document.getElementById('editorContainer').style.display = 'none';
+    document.getElementById('emptyState').style.display = '';
+    loadDocTree();
+    toast('Dokument smazán', 'success');
+  }).catch(function(e) { toast('Chyba: ' + e.message, 'error'); });
+}
+
+function createNewDoc() {
+  var title = document.getElementById('newDocTitle').value.trim();
+  if (!title) return toast('Vyplň název', 'error');
+
+  var folder = document.getElementById('newDocFolder').value;
+  var docType = document.getElementById('newDocType').value;
+  var filename = document.getElementById('newDocFilename').value.trim();
+
+  if (!filename) {
+    filename = title.toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  }
+  if (!filename.endsWith('.md')) filename += '.md';
+
+  var docPath = folder ? folder + '/' + filename : 'docs/' + filename;
+
+  var fm = { title: title, sidebar_label: title };
+  if (docType) fm.ek_type = docType;
+  if (docType === 'sop') fm.ek_confirm = 'true';
+
+  var content = '---\n';
+  Object.keys(fm).forEach(function(k) { content += k + ': "' + fm[k] + '"\n'; });
+  content += '---\n\n# ' + title + '\n\n';
+
+  api('POST', '/api/editor/doc', { path: docPath, content: content }).then(function() {
+    hideNewDocDialog();
+    loadDocTree();
+    openDoc(docPath);
+    toast('Dokument vytvořen!', 'success');
+  }).catch(function(e) {
+    toast('Chyba: ' + e.message, 'error');
+  });
+}
+
+function createNewFolder() {
+  var name = document.getElementById('newFolderName').value.trim();
+  if (!name) return toast('Vyplň název složky', 'error');
+
+  var parent = document.getElementById('newFolderParent').value;
+  var slug = name.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+  var folderPath = parent ? parent + '/' + slug : 'docs/' + slug;
+
+  api('POST', '/api/editor/folder', { path: folderPath, label: name }).then(function() {
+    document.getElementById('newFolderModal').classList.remove('visible');
+    loadDocTree();
+    toast('Složka vytvořena!', 'success');
+  }).catch(function(e) {
+    toast('Chyba: ' + e.message, 'error');
+  });
+}
+
+// ================================================================
+// DIALOGS & UTILS
+// ================================================================
+function showNewDocDialog() {
+  document.getElementById('newDocTitle').value = '';
+  document.getElementById('newDocFilename').value = '';
+  document.getElementById('newDocType').value = '';
+  populateFolderSelects();
+  document.getElementById('newDocModal').classList.add('visible');
+  document.getElementById('newDocTitle').focus();
+}
+
+function hideNewDocDialog() {
+  document.getElementById('newDocModal').classList.remove('visible');
+}
+
+function showNewFolderDialog() {
+  document.getElementById('newFolderName').value = '';
+  populateFolderSelects();
+  document.getElementById('newFolderModal').classList.add('visible');
+  document.getElementById('newFolderName').focus();
+}
+
+function previewMarkdown() {
+  var title = document.getElementById('docTitle').value.trim() || 'Bez názvu';
+  var fm = { title: title, sidebar_label: title };
+  if (currentDocType) fm.ek_type = currentDocType;
+  if (currentDocType === 'sop') fm.ek_confirm = 'true';
+
+  var md = editor.toMarkdown(fm);
+  document.getElementById('previewContent').textContent = md;
+  document.getElementById('previewModal').classList.add('visible');
+}
+
+function copyMarkdown() {
+  var text = document.getElementById('previewContent').textContent;
+  navigator.clipboard.writeText(text).then(function() { toast('Zkopírováno!', 'success'); });
+}
+
+function toast(msg, type) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast visible ' + (type || '');
+  clearTimeout(el._timer);
+  el._timer = setTimeout(function() { el.className = 'toast'; }, 2500);
+}
+
+// Auto-generate filename from title
+document.getElementById('newDocTitle').addEventListener('input', function() {
+  var fn = this.value.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  document.getElementById('newDocFilename').value = fn;
+});
+
+// ================================================================
+// BOOT
+// ================================================================
+initEditor();
+loadDocTree();
+</script>
+<script src="/js/sidebar-tree.js"></script>
+<script src="/js/status-bar.js"></script>
+</body>
+</html>

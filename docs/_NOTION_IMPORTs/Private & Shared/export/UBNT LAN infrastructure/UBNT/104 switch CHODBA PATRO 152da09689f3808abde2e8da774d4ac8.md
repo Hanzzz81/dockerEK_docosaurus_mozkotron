@@ -1,0 +1,4 @@
+# 104 switch CHODBA PATRO
+
+ID: 5
+IP: 172.25.1.104

@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mozkotron — Dashboard</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #0f172a; color: #e2e8f0; line-height: 1.6;
+    padding: 1.5rem; max-width: 1400px; margin: 0 auto;
+  }
+  h1 { font-size: 1.4rem; color: #f8fafc; margin-bottom: 0.3rem; }
+  .subtitle { color: #94a3b8; font-size: 0.85rem; margin-bottom: 1.5rem; }
+  a { color: #38bdf8; text-decoration: none; }
+  a:hover { text-decoration: underline; color: #0ea5e9; }
+
+  .tabs { display: flex; gap: 0; margin-bottom: 1.5rem; border-bottom: 1px solid #334155; }
+  .tab { padding: 0.6rem 1.2rem; cursor: pointer; font-size: 0.9rem; color: #94a3b8; border-bottom: 2px solid transparent; transition: all 0.2s; }
+  .tab:hover { color: #cbd5e1; }
+  .tab.active { color: #38bdf8; border-bottom-color: #38bdf8; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.8rem; margin-bottom: 1.5rem; }
+  .stat-card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 1rem; text-align: center; }
+  .stat-value { font-size: 1.8rem; font-weight: 800; color: #f8fafc; }
+  .stat-label { font-size: 0.75rem; color: #94a3b8; margin-top: 0.2rem; }
+
+  .section-title { color: #38bdf8; font-size: 0.95rem; font-weight: 600; margin: 1.5rem 0 0.6rem; display: flex; align-items: center; gap: 0.5rem; }
+  .section-title .icon { font-size: 1.1rem; }
+
+  .table-wrap { overflow-x: auto; margin-bottom: 1rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  th { text-align: left; padding: 0.6rem 0.7rem; color: #38bdf8; font-weight: 600; border-bottom: 1px solid #334155; white-space: nowrap; cursor: pointer; }
+  th:hover { color: #0ea5e9; }
+  td { padding: 0.5rem 0.7rem; border-bottom: 1px solid #334155; }
+  tr:hover td { background: #1e293b; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 600; }
+  .badge-green { background: #10b98122; color: #10b981; }
+  .badge-orange { background: #f59e0b22; color: #f59e0b; }
+  .badge-red { background: #ef444422; color: #ef4444; }
+  .badge-blue { background: #0ea5e922; color: #0ea5e9; }
+  .badge-gray { background: #334155; color: #94a3b8; }
+
+  .progress-bar { width: 80px; height: 6px; background: #334155; border-radius: 3px; display: inline-block; vertical-align: middle; margin-right: 6px; }
+  .progress-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+  .progress-fill.green { background: #10b981; }
+  .progress-fill.orange { background: #f59e0b; }
+  .progress-fill.red { background: #ef4444; }
+
+  .detail-header { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 1.2rem 1.5rem; margin-bottom: 1rem; }
+  .detail-header h2 { font-size: 1.1rem; color: #f8fafc; margin-bottom: 0.5rem; }
+  .detail-meta { font-size: 0.85rem; color: #94a3b8; }
+
+  .chart-bar { display: flex; align-items: flex-end; gap: 3px; height: 100px; margin: 0.5rem 0 1rem; padding: 0.5rem 0; }
+  .chart-bar-col { flex: 1; background: #0ea5e9; border-radius: 2px 2px 0 0; min-width: 8px; position: relative; transition: background 0.2s; }
+  .chart-bar-col:hover { background: #38bdf8; }
+  .chart-bar-col .tip { display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #1e293b; color: #f8fafc; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; white-space: nowrap; z-index: 10; }
+  .chart-bar-col:hover .tip { display: block; }
+
+  .toolbar { display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
+  .toolbar select { background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 6px; padding: 0.4rem 0.8rem; font-size: 0.82rem; }
+  .btn { background: #0ea5e9; color: #fff; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.82rem; font-weight: 600; }
+  .btn:hover { background: #38bdf8; }
+  .btn-outline { background: transparent; color: #38bdf8; border: 1px solid #38bdf8; }
+  .btn-outline:hover { background: #334155; }
+  .back-link { font-size: 0.85rem; margin-bottom: 1rem; display: inline-block; }
+  .loading { text-align: center; padding: 3rem; color: #94a3b8; }
+
+  /* Tree-table: sidebar visual style + data columns */
+  .tt { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  .tt th { text-align: left; padding: 0.5rem 0.6rem; color: #38bdf8; font-weight: 600; border-bottom: 2px solid #334155; white-space: nowrap; font-size: 0.75rem; }
+  .tt th.num { text-align: right; }
+  .tt td { padding: 0.35rem 0.6rem; border-bottom: 1px solid #1e293b; vertical-align: middle; }
+  .tt tr:hover td { background: #1e293b; }
+  .tt .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* Tree-table folder rows */
+  .tt-folder td {
+    background: #1e293b; padding: 0.45rem 0.6rem; font-weight: 600; color: #cbd5e1;
+    border-bottom: 1px solid #334155; cursor: pointer; user-select: none;
+  }
+  .tt-folder:hover td { background: #334155; }
+
+  /* Tree-table icons — identical to sidebar-tree.js */
+  .tt-icon { display: inline-flex; align-items: center; width: 18px; height: 18px; vertical-align: middle; margin-right: 4px; flex-shrink: 0; }
+  .tt-icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* SVG caret (chevron) — rotates like sidebar */
+  .tt-caret { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; margin-right: 2px; vertical-align: middle; cursor: pointer; transition: transform 0.25s ease; transform: rotate(90deg); }
+  .tt-caret.collapsed { transform: rotate(0deg); }
+  .tt-caret svg { width: 12px; height: 12px; fill: none; stroke: #94a3b8; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* Icon pulse animation (on toggle) */
+  .tt-icon-pulse { animation: ttIconPulse 0.35s ease; }
+  @keyframes ttIconPulse { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
+
+  /* Ripple effect */
+  .tt-ripple { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; animation: ttRipple 0.5s ease forwards; }
+  @keyframes ttRipple { 0% { opacity: 0.5; } 100% { opacity: 0; } }
+
+  /* Level buttons — per root category */
+  .tt-level-btns { display: inline-flex; gap: 3px; margin-left: 8px; vertical-align: middle; }
+  .tt-level-btn {
+    width: 22px; height: 18px; border: 1px solid #475569; border-radius: 3px;
+    background: transparent; color: #94a3b8; font-size: 0.62rem; font-weight: 700;
+    cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; justify-content: center;
+    padding: 0; line-height: 1;
+  }
+  .tt-level-btn:hover { border-color: #38bdf8; color: #e2e8f0; background: #1e3a5f; }
+
+  /* Children indent border (AOR tinted) */
+  .tt-children-border { border-left: 2px solid #334155; margin-left: 8px; }
+
+  /* Section breakdown bars */
+  .section-bar-row { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.35rem; font-size: 0.82rem; }
+  .section-bar-label { flex: 0 0 45%; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .section-bar-label.h1 { font-weight: 700; }
+  .section-bar-label.h2 { padding-left: 12px; }
+  .section-bar-label.h3 { padding-left: 24px; color: #94a3b8; font-size: 0.78rem; }
+  .section-bar-track { flex: 1; height: 14px; background: #1e293b; border-radius: 3px; overflow: hidden; position: relative; }
+  .section-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+  .section-bar-time { flex: 0 0 60px; text-align: right; color: #94a3b8; font-variant-numeric: tabular-nums; font-size: 0.78rem; }
+
+  /* Inline user breakdown (pod řádkem stránky ve stromu) */
+  .tt-breakdown { padding: 2px 0 6px; }
+  .tt-breakdown-row { display: flex; align-items: center; gap: 6px; padding: 2px 0; font-size: 0.75rem; }
+  .tt-breakdown-icon { width: 18px; text-align: center; flex-shrink: 0; }
+  .tt-breakdown-name { flex: 1; color: #cbd5e1; }
+  .tt-breakdown-badge { font-size: 0.68rem; }
+
+  /* User chips nad stromem */
+  .tt-user-chips { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; margin-bottom: 0.6rem; }
+  .tt-user-chip {
+    padding: 2px 10px; border-radius: 10px; font-size: 0.72rem; font-weight: 600;
+    cursor: pointer; transition: all 0.15s; border: 1px solid #334155; background: #334155; color: #94a3b8;
+  }
+  .tt-user-chip:hover { border-color: #475569; color: #cbd5e1; }
+  .tt-user-chip.active { background: #0ea5e922; color: #0ea5e9; border-color: #0ea5e9; }
+
+  /* Klikatelné buňky */
+  .tt-clickable { cursor: pointer; position: relative; }
+  .tt-clickable:hover { background: #1e293b; }
+  .tt-clickable .tt-expand-hint { display: inline-block; font-size: 0.85rem; color: #64748b; margin-left: 4px; transition: transform 0.2s; vertical-align: middle; }
+  .tt-clickable:hover .tt-expand-hint { color: #cbd5e1; }
+  .tt-clickable.expanded .tt-expand-hint { transform: rotate(180deg); }
+
+  /* Filter toolbar */
+  .filter-bar { display: flex; gap: 0.5rem; margin-bottom: 0.8rem; flex-wrap: wrap; align-items: center; }
+  .filter-bar input[type="text"] {
+    background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 6px;
+    padding: 0.4rem 0.8rem; font-size: 0.82rem; flex: 1; min-width: 180px;
+  }
+  .filter-bar input[type="text"]::placeholder { color: #475569; }
+  .tt-toolbar { display: flex; gap: 0.5rem; }
+  .tt-toolbar .btn-sm {
+    background: transparent; border: 1px solid #334155; border-radius: 4px;
+    color: #94a3b8; font-size: 0.72rem; padding: 3px 10px; cursor: pointer; transition: all 0.15s;
+  }
+  .tt-toolbar .btn-sm:hover { border-color: #38bdf8; color: #cbd5e1; }
+</style>
+</head>
+<body>
+
+<div style="background:linear-gradient(135deg,#1e293b 0%,#0f172a 50%,#0f172a 100%);border:1px solid #334155;border-radius:12px;padding:1.2rem 1.5rem;margin-bottom:1.2rem;display:flex;align-items:center;gap:1rem;">
+  <span style="font-size:2.2rem;filter:drop-shadow(0 0 8px rgba(56,189,248,0.4));">📊</span>
+  <div>
+    <h1 style="margin:0;font-size:1.3rem;color:#38bdf8;">Statistiky čtení</h1>
+    <p style="margin:0;font-size:0.78rem;color:#94a3b8;">Přehled aktivity a čtení znalostní báze</p>
+  </div>
+</div>
+
+<div class="tabs" id="tabs">
+  <div class="tab active" data-tab="pages">Stránky</div>
+  <div class="tab" data-tab="overview">Přehled</div>
+  <div class="tab" data-tab="users">Uživatelé</div>
+  <div class="tab" data-tab="detail">Detail</div>
+</div>
+
+<!-- ======= STRÁNKY ======= -->
+<div class="panel active" id="panel-pages">
+  <div id="tt-user-chips-container"></div>
+  <div class="filter-bar">
+    <input type="text" id="pages-filter" placeholder="Hledat ve stránkách..." oninput="ttSearchFilter()">
+  </div>
+  <div class="table-wrap" id="pages-tree-table">
+    <div class="loading">Načítám...</div>
+  </div>
+</div>
+
+<!-- ======= PŘEHLED ======= -->
+<div class="panel" id="panel-overview">
+  <div class="stats-grid" id="stats-grid"><div class="loading">Načítám data...</div></div>
+
+  <div class="section-title"><span class="icon">🔥</span> TOP 10 — Nejčtenější</div>
+  <div class="table-wrap">
+    <table id="top-views-table">
+      <thead><tr><th>#</th><th>Stránka</th><th class="num">Zobrazení</th><th class="num">Unikátní</th><th class="num">Ø čas</th><th class="num">Ø scroll</th></tr></thead>
+      <tbody><tr><td colspan="6" style="color: #8b8070; text-align: center;" class="loading">Načítám...</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="section-title"><span class="icon">⏱️</span> TOP 10 — Nejdéle studované</div>
+  <div class="table-wrap">
+    <table id="top-time-table">
+      <thead><tr><th>#</th><th>Stránka</th><th class="num">Ø čas</th><th class="num">Zobrazení</th><th class="num">Unikátní</th><th class="num">Ø scroll</th></tr></thead>
+      <tbody><tr><td colspan="6" style="color: #8b8070; text-align: center;" class="loading">Načítám...</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="section-title"><span class="icon">🆕</span> TOP 10 — Nejnovější</div>
+  <div class="table-wrap">
+    <table id="top-newest-table">
+      <thead><tr><th>#</th><th>Stránka</th><th>Přidáno</th><th class="num">Zobrazení</th><th class="num">Unikátní</th><th class="num">Ø čas</th></tr></thead>
+      <tbody><tr><td colspan="6" style="color: #8b8070; text-align: center;" class="loading">Načítám...</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="section-title"><span class="icon">📊</span> Návštěvnost</div>
+  <div class="chart-bar" id="frequency-chart"></div>
+  <div class="toolbar">
+    <select id="freq-period" onchange="loadFrequency()">
+      <option value="month">Posledních 30 dní</option>
+      <option value="week">Posledních 7 dní</option>
+    </select>
+    <a href="/api/dashboard/export" class="btn btn-outline">📥 CSV Export</a>
+  </div>
+</div>
+
+<!-- ======= UŽIVATELÉ ======= -->
+<div class="panel" id="panel-users">
+  <div class="table-wrap">
+    <table id="users-table">
+      <thead><tr>
+        <th onclick="sortTable('users-table', 0)">Uživatel</th>
+        <th onclick="sortTable('users-table', 1)" class="num">Povinné</th>
+        <th onclick="sortTable('users-table', 2)" class="num">Info</th>
+        <th onclick="sortTable('users-table', 3)" class="num">Celk. čas</th>
+        <th onclick="sortTable('users-table', 4)" class="num">Ø reakce</th>
+        <th onclick="sortTable('users-table', 5)">Naposledy</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ======= DETAIL ======= -->
+<div class="panel" id="panel-detail">
+  <div id="detail-content">
+    <p style="color: #8b8070; padding: 2rem; text-align: center;">Klikni na uživatele nebo stránku pro zobrazení detailu.</p>
+  </div>
+</div>
+
+<script>
+// ===========================================================================
+// Helpers
+// ===========================================================================
+document.getElementById('tabs').addEventListener('click', function(e) {
+  if (!e.target.classList.contains('tab')) return;
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
+  document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
+  e.target.classList.add('active');
+  document.getElementById('panel-' + e.target.dataset.tab).classList.add('active');
+});
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.toggle('active', t.dataset.tab === name);});
+  document.querySelectorAll('.panel').forEach(function(p){p.classList.toggle('active', p.id === 'panel-' + name);});
+}
+
+// ===========================================================================
+// Shared state
+// ===========================================================================
+var lastPagesTree = null;
+var ttSelectedUser = null; // null = agregace, string = username filtr
+var ttExpandedBreakdown = {}; // klíč = path + "_req" nebo "_info" → true/false
+var lastDetailTreeData = null;
+var lastDetailUsername = null;
+
+async function api(url) {
+  var res = await fetch(url, { credentials: 'same-origin' });
+  if (res.status === 403) { window.location.href = '/'; return null; }
+  return res.json();
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function formatTime(seconds) {
+  if (!seconds || seconds <= 0) return '—';
+  if (seconds < 60) return Math.round(seconds) + ' s';
+  if (seconds < 3600) return Math.round(seconds / 60) + ' min';
+  return (seconds / 3600).toFixed(1) + ' h';
+}
+
+function formatReaction(ms) {
+  if (!ms || ms <= 0) return '—';
+  var sec = ms / 1000;
+  if (sec < 60) return Math.round(sec) + ' s';
+  if (sec < 3600) return Math.round(sec / 60) + ' min';
+  if (sec < 86400) return (sec / 3600).toFixed(1) + ' h';
+  return Math.round(sec / 86400) + ' d';
+}
+
+function formatDate(isoStr) {
+  if (!isoStr) return '—';
+  var d = new Date(isoStr + 'Z');
+  return d.toLocaleDateString('cs-CZ') + ' ' + d.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatDateShort(isoStr) {
+  if (!isoStr) return '—';
+  var d = new Date(isoStr + 'Z');
+  return d.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short' });
+}
+
+function progressHtml(done, total) {
+  if (!total || total === 0) return '<span class="badge badge-gray">—</span>';
+  var pct = Math.round((done / total) * 100);
+  var cls = pct >= 80 ? 'green' : pct >= 50 ? 'orange' : 'red';
+  return '<span class="progress-bar"><span class="progress-fill ' + cls + '" style="width:' + pct + '%"></span></span>' +
+    '<span style="font-size:0.78rem;">' + done + '/' + total + '</span>';
+}
+
+function scrollBadge(pct) {
+  if (!pct && pct !== 0) return '—';
+  var cls = pct >= 90 ? 'badge-green' : pct >= 50 ? 'badge-orange' : 'badge-red';
+  return '<span class="badge ' + cls + '">' + Math.round(pct) + ' %</span>';
+}
+
+// ===========================================================================
+// PŘEHLED
+// ===========================================================================
+async function loadOverview() {
+  var stats = await api('/api/dashboard/stats');
+  if (!stats) return;
+  document.getElementById('stats-grid').innerHTML = [
+    { value: stats.totalViews, label: 'Celkem zobrazení' },
+    { value: stats.uniqueUsers, label: 'Unikátních uživatelů' },
+    { value: stats.uniquePages, label: 'Sledovaných stránek' },
+    { value: formatTime(stats.avgTimeMs / 1000), label: 'Ø čas na stránce' },
+    { value: stats.totalConfirmations, label: 'Potvrzení přečtení' },
+    { value: stats.totalQuizzes, label: 'Dokončených kvízů' },
+  ].map(function(s) {
+    return '<div class="stat-card"><div class="stat-value">' + s.value + '</div><div class="stat-label">' + s.label + '</div></div>';
+  }).join('');
+}
+
+function renderTopTable(tableId, rows, columns) {
+  var tbody = document.querySelector('#' + tableId + ' tbody');
+  if (!rows || rows.length === 0) { tbody.innerHTML = '<tr><td colspan="' + columns.length + '" style="color:#8b8070;text-align:center;">Zatím žádná data</td></tr>'; return; }
+  tbody.innerHTML = rows.map(function(r, i) {
+    return '<tr>' + columns.map(function(col) { return col(r, i); }).join('') + '</tr>';
+  }).join('');
+}
+
+async function loadTopPages() {
+  var [views, time, newest] = await Promise.all([
+    api('/api/dashboard/top-pages?by=views&limit=10'),
+    api('/api/dashboard/top-pages?by=time&limit=10'),
+    api('/api/dashboard/top-pages?by=newest&limit=10'),
+  ]);
+
+  if (views) renderTopTable('top-views-table', views.rows, [
+    function(r, i) { return '<td style="color:#a09882;width:30px;">' + (i+1) + '</td>'; },
+    function(r) { return '<td><a href="#" onclick="showPageDetail(\'' + esc(r.page_path) + '\');return false;">' + esc(r.page_title || r.page_path) + '</a></td>'; },
+    function(r) { return '<td class="num"><strong>' + r.view_count + '</strong></td>'; },
+    function(r) { return '<td class="num">' + r.unique_users + '</td>'; },
+    function(r) { return '<td class="num">' + formatTime(r.avg_time_sec) + '</td>'; },
+    function(r) { return '<td class="num">' + scrollBadge(r.avg_scroll_pct) + '</td>'; },
+  ]);
+
+  if (time) renderTopTable('top-time-table', time.rows, [
+    function(r, i) { return '<td style="color:#a09882;width:30px;">' + (i+1) + '</td>'; },
+    function(r) { return '<td><a href="#" onclick="showPageDetail(\'' + esc(r.page_path) + '\');return false;">' + esc(r.page_title || r.page_path) + '</a></td>'; },
+    function(r) { return '<td class="num"><strong>' + formatTime(r.avg_time_sec) + '</strong></td>'; },
+    function(r) { return '<td class="num">' + r.view_count + '</td>'; },
+    function(r) { return '<td class="num">' + r.unique_users + '</td>'; },
+    function(r) { return '<td class="num">' + scrollBadge(r.avg_scroll_pct) + '</td>'; },
+  ]);
+
+  if (newest) renderTopTable('top-newest-table', newest.rows, [
+    function(r, i) { return '<td style="color:#a09882;width:30px;">' + (i+1) + '</td>'; },
+    function(r) { return '<td><a href="#" onclick="showPageDetail(\'' + esc(r.page_path) + '\');return false;">' + esc(r.page_title || r.page_path) + '</a></td>'; },
+    function(r) { return '<td>' + formatDateShort(r.first_visit || r.last_visit) + '</td>'; },
+    function(r) { return '<td class="num">' + r.view_count + '</td>'; },
+    function(r) { return '<td class="num">' + r.unique_users + '</td>'; },
+    function(r) { return '<td class="num">' + formatTime(r.avg_time_sec) + '</td>'; },
+  ]);
+}
+
+async function loadFrequency() {
+  var period = document.getElementById('freq-period').value;
+  var data = await api('/api/dashboard/frequency?period=' + period);
+  if (!data) return;
+  var chart = document.getElementById('frequency-chart');
+  if (!data.daily || data.daily.length === 0) { chart.innerHTML = '<div style="color:#8b8070;padding:1rem;">Zatím žádná data</div>'; return; }
+  var maxViews = Math.max.apply(null, data.daily.map(function(d){return d.views;}));
+  chart.innerHTML = data.daily.map(function(d) {
+    var h = maxViews > 0 ? Math.max(4, (d.views / maxViews) * 100) : 4;
+    var dayLabel = new Date(d.day).toLocaleDateString('cs-CZ', { day:'numeric', month:'short' });
+    return '<div class="chart-bar-col" style="height:'+h+'%;"><div class="tip">'+dayLabel+': '+d.views+' zobrazení, '+d.unique_users+' uživatelů</div></div>';
+  }).join('');
+}
+
+// ===========================================================================
+// STRÁNKY — tree-table (sidebar vizuální DNA + datové sloupce)
+// ===========================================================================
+
+// AOR barvy — identické se sidebar-tree.js
+var AOR_COLORS = {
+  'firma': '#90a4ae', 'management': '#4caf50', 'finance': '#ab47bc',
+  'rust': '#ec407a', 'nakup': '#f1c40f', 'prodej': '#ffa726',
+  'dodani': '#ef5350', 'technologie': '#42a5f5'
+};
+function getCatColor(label) {
+  var slug = (label || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+  for (var key in AOR_COLORS) { if (slug.indexOf(key) >= 0) return AOR_COLORS[key]; }
+  return '#94a3b8';
+}
+
+// SVG ikony — přesná kopie ze sidebar-tree.js
+var TT_SVG = {
+  caret: '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>',
+  folderRoot: function(color) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" fill="' + color + '" opacity="0.3"/>' +
+      '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>';
+  },
+  folderL1: function(color) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>' +
+      '<text x="12" y="17.5" text-anchor="middle" font-size="10" font-weight="700" fill="' + color + '" stroke="none" font-family="system-ui, sans-serif">I</text></svg>';
+  },
+  folderL2: function(color) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>' +
+      '<text x="12" y="17.5" text-anchor="middle" font-size="9" font-weight="700" fill="' + color + '" stroke="none" font-family="system-ui, sans-serif">II</text></svg>';
+  },
+  folderL3: function(color) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>' +
+      '<text x="12" y="17.5" text-anchor="middle" font-size="8" font-weight="700" fill="' + color + '" stroke="none" font-family="system-ui, sans-serif">III</text></svg>';
+  },
+  folder: function(color) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>';
+  },
+  file: function(color) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+  }
+};
+
+function ttGetFolderSvg(color, depth) {
+  if (depth === 0) return TT_SVG.folderRoot(color);
+  if (depth === 1) return TT_SVG.folderL1(color);
+  if (depth === 2) return TT_SVG.folderL2(color);
+  if (depth === 3) return TT_SVG.folderL3(color);
+  return TT_SVG.folder(color);
+}
+
+// Hierarchický stav expand/collapse — klíč = unikátní cesta
+var ttExpanded = {};
+
+function ttIsExpanded(key) { return ttExpanded[key] !== false; } // default expanded
+function ttToggle(key, iconEl) {
+  ttExpanded[key] = !ttIsExpanded(key);
+  if (iconEl) { iconEl.classList.add('tt-icon-pulse'); setTimeout(function() { iconEl.classList.remove('tt-icon-pulse'); }, 350); }
+  renderPagesTree();
+}
+
+// Level buttons: expand/collapse to level within a root category
+function ttExpandToLevel(rootKey, level) {
+  // Find all keys starting with rootKey
+  for (var k in ttExpanded) {
+    if (k === rootKey || k.indexOf(rootKey + '/') === 0) {
+      var depth = k.split('/').length - rootKey.split('/').length;
+      if (level === 0) {
+        ttExpanded[k] = false; // collapse all
+      } else {
+        ttExpanded[k] = depth < level;
+      }
+    }
+  }
+  // Ensure root itself follows
+  if (level === 0) {
+    ttExpanded[rootKey] = false;
+  } else {
+    ttExpanded[rootKey] = true;
+  }
+  renderPagesTree();
+}
+
+function ttSearchFilter() {
+  var q = (document.getElementById('pages-filter').value || '').trim().toLowerCase();
+  if (q.length > 0) {
+    // Auto-rozbalit složky, které obsahují match
+    autoExpandMatches(lastPagesTree, '', q);
+  }
+  renderPagesTree();
+}
+function autoExpandMatches(items, parentKey, q) {
+  if (!items) return false;
+  var anyMatch = false;
+  items.forEach(function(item) {
+    if (item.type === 'folder') {
+      var key = parentKey ? parentKey + '/' + item.label : item.label;
+      var childMatch = autoExpandMatches(item.children, key, q);
+      var selfMatch = item.label.toLowerCase().indexOf(q) >= 0;
+      if (childMatch || selfMatch) { ttExpanded[key] = true; anyMatch = true; }
+    } else {
+      if (item.label && item.label.toLowerCase().indexOf(q) >= 0) anyMatch = true;
+    }
+  });
+  return anyMatch;
+}
+
+function ttSelectUser(username) {
+  ttSelectedUser = ttSelectedUser === username ? null : username;
+  renderPagesTree();
+}
+
+function ttToggleBreakdown(path, type) {
+  var key = path + '_' + type;
+  ttExpandedBreakdown[key] = !ttExpandedBreakdown[key];
+  renderPagesTree();
+}
+
+function renderUserChips() {
+  var container = document.getElementById('tt-user-chips-container');
+  if (!lastPagesTree) { container.innerHTML = ''; return; }
+  // Sbírat unikátní uživatele ze všech usersBreakdown
+  var users = {};
+  function collectUsers(items) {
+    items.forEach(function(item) {
+      if (item.type === 'folder' && item.children) collectUsers(item.children);
+      else if (item.usersBreakdown) {
+        item.usersBreakdown.forEach(function(u) { users[u.username] = u.name; });
+      }
+    });
+  }
+  collectUsers(lastPagesTree);
+  var userList = Object.keys(users).sort();
+  if (userList.length === 0) { container.innerHTML = ''; return; }
+  var html = '<div class="tt-user-chips"><span style="font-size:0.72rem;color:#94a3b8;margin-right:4px;">Zobrazit za:</span>';
+  html += '<span class="tt-user-chip' + (!ttSelectedUser ? ' active' : '') + '" onclick="ttSelectUser(null)">Všichni</span>';
+  userList.forEach(function(u) {
+    html += '<span class="tt-user-chip' + (ttSelectedUser === u ? ' active' : '') + '" onclick="ttSelectUser(\'' + esc(u) + '\')">' + esc(users[u] || u) + '</span>';
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+// Convert flat API list to hierarchical tree with children
+function flatToTree(flatList) {
+  var tree = [];
+  var stack = [{ children: tree, depth: -1 }];
+
+  flatList.forEach(function(item) {
+    if (item.type === 'folder') {
+      var folder = { type: 'folder', label: item.label || item.name, path: item.path, children: [] };
+      // Find parent: folders go under the current stack top
+      var parent = stack[stack.length - 1];
+      // Count depth by path segments: "docs/firma" = depth 0, "docs/firma/sub" = depth 1
+      var segments = (item.path || '').replace(/^docs\//, '').split('/').filter(Boolean);
+      var depth = segments.length - 1;
+
+      // Pop stack back to correct parent
+      while (stack.length > 1 && stack[stack.length - 1].depth >= depth) {
+        stack.pop();
+      }
+      parent = stack[stack.length - 1];
+      parent.children.push(folder);
+      stack.push({ children: folder.children, depth: depth, label: folder.label });
+    } else {
+      // Page — add to current folder
+      var parent = stack[stack.length - 1];
+      parent.children.push(item);
+    }
+  });
+  return tree;
+}
+
+// Rekurzivní agregace: složky dostanou sumy/průměry ze svých dětí
+function aggregateTree(items) {
+  items.forEach(function(item) {
+    if (item.type === 'folder' && item.children) {
+      aggregateTree(item.children);
+      var totalViews = 0, totalTime = 0, totalScroll = 0, pageCount = 0;
+      var reqTotal = 0, reqRead = 0, infoTotal = 0, infoRead = 0;
+      var confirmCount = 0, lastVisit = null, readers = 0;
+      function collect(arr) {
+        arr.forEach(function(ch) {
+          if (ch.type === 'folder' && ch._agg) {
+            totalViews += ch._agg.totalViews;
+            totalTime += ch._agg.totalTimeSec;
+            totalScroll += ch._agg.totalScrollPct;
+            pageCount += ch._agg.pageCount;
+            reqTotal += ch._agg.reqTotal;
+            reqRead += ch._agg.reqRead;
+            infoTotal += ch._agg.infoTotal;
+            infoRead += ch._agg.infoRead;
+            confirmCount += ch._agg.confirmCount;
+            readers += ch._agg.readers;
+            if (ch._agg.lastVisit && (!lastVisit || ch._agg.lastVisit > lastVisit)) lastVisit = ch._agg.lastVisit;
+          } else if (ch.type !== 'folder') {
+            totalViews += (ch.totalViews || 0);
+            totalTime += (ch.avgTimeSec || 0);
+            totalScroll += (ch.avgScrollPct || 0);
+            pageCount++;
+            reqTotal += (ch.requiredTotal || 0);
+            reqRead += (ch.requiredRead || 0);
+            infoTotal += (ch.infoTotal || 0);
+            infoRead += (ch.infoRead || 0);
+            confirmCount += (ch.confirmCount || 0);
+            readers += (ch.uniqueReaders || 0);
+            if (ch.lastVisit && (!lastVisit || ch.lastVisit > lastVisit)) lastVisit = ch.lastVisit;
+          }
+        });
+      }
+      collect(item.children);
+      item._agg = {
+        totalViews: totalViews,
+        totalTimeSec: totalTime,
+        avgTimeSec: pageCount > 0 ? totalTime / pageCount : 0,
+        totalScrollPct: totalScroll,
+        avgScrollPct: pageCount > 0 ? totalScroll / pageCount : 0,
+        pageCount: pageCount,
+        reqTotal: reqTotal,
+        reqRead: reqRead,
+        infoTotal: infoTotal,
+        infoRead: infoRead,
+        confirmCount: confirmCount,
+        readers: readers,
+        lastVisit: lastVisit
+      };
+    }
+  });
+}
+
+async function loadPages() {
+  var flatTree;
+  try {
+    flatTree = await api('/api/dashboard/pages-tree');
+  } catch (e) {
+    document.getElementById('pages-tree-table').innerHTML = '<div style="color:#dc2626;padding:2rem;">Chyba: ' + esc(e.message) + '</div>';
+    return;
+  }
+  if (!flatTree) return;
+  lastPagesTree = flatToTree(flatTree);
+  aggregateTree(lastPagesTree);
+  // Initialize expand state for all folders
+  initExpandState(lastPagesTree, '');
+  renderPagesTree();
+}
+
+function initExpandState(items, parentKey) {
+  items.forEach(function(item) {
+    if (item.type === 'folder') {
+      var key = parentKey ? parentKey + '/' + item.label : item.label;
+      if (ttExpanded[key] === undefined) ttExpanded[key] = false; // default collapsed
+      if (item.children) initExpandState(item.children, key);
+    }
+  });
+}
+
+function renderPagesTree() {
+  if (!lastPagesTree) return;
+  renderUserChips();
+  var filter = (document.getElementById('pages-filter').value || '').toLowerCase();
+  var container = document.getElementById('pages-tree-table');
+
+  var html = '<table class="tt"><thead><tr>' +
+    '<th>Stránka</th>' +
+    '<th class="num" style="width:90px;">● Povinné</th>' +
+    '<th class="num" style="width:90px;">○ Info</th>' +
+    '<th class="num" style="width:55px;">Zobr.</th>' +
+    '<th class="num" style="width:65px;">Ø čas</th>' +
+    '<th class="num" style="width:55px;">Scroll</th>' +
+    '<th style="width:85px;">Posl.</th>' +
+  '</tr></thead><tbody>';
+
+  html += renderTreeRows(lastPagesTree, 0, '', null, filter);
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+
+  // Attach event handlers via delegation
+  container.removeEventListener('click', ttClickHandler);
+  container.addEventListener('click', ttClickHandler);
+  container.removeEventListener('dblclick', ttDblClickHandler);
+  container.addEventListener('dblclick', ttDblClickHandler);
+}
+
+function renderTreeRows(items, depth, parentKey, rootColor, filter) {
+  var html = '';
+  // Řadit: složky první, pak soubory; v rámci skupiny zachovat pořadí z API (sidebar_position)
+  var sorted = items.slice().sort(function(a, b) {
+    if (a.type === 'folder' && b.type !== 'folder') return -1;
+    if (a.type !== 'folder' && b.type === 'folder') return 1;
+    return 0; // zachovat API pořadí (sidebar_position)
+  });
+  sorted.forEach(function(item) {
+    if (item.type === 'folder') {
+      var key = parentKey ? parentKey + '/' + item.label : item.label;
+      var rootKey = parentKey ? parentKey.split('/')[0] : item.label;
+      var color = depth === 0 ? getCatColor(item.label) : (rootColor || getCatColor(item.label));
+      var isOpen = ttIsExpanded(key);
+
+      // Filter: skip folder if no children match
+      if (filter && item.children) {
+        var anyMatch = hasFilterMatch(item, filter);
+        if (!anyMatch) return;
+      }
+
+      var indent = depth * 20;
+      var caretCls = 'tt-caret' + (isOpen ? '' : ' collapsed');
+
+      var agg = item._agg || {};
+
+      html += '<tr class="tt-folder" data-tt-key="' + esc(key) + '" data-tt-root="' + esc(rootKey) + '">' +
+        '<td style="padding-left:' + (8 + indent) + 'px; position: relative;">' +
+          '<span class="' + caretCls + '" data-tt-caret="' + esc(key) + '">' + TT_SVG.caret + '</span>' +
+          '<span class="tt-icon" data-tt-icon="' + esc(key) + '">' + ttGetFolderSvg(color, depth) + '</span> ' +
+          '<span style="color:' + color + ';font-weight:600;">' + esc(item.label) + '</span>';
+
+      // Level buttons — only on root categories (depth 0)
+      if (depth === 0) {
+        html += '<span class="tt-level-btns">';
+        html += '<button class="tt-level-btn" data-tt-lvl="0" data-tt-root="' + esc(key) + '" style="color:' + color + ';border-color:' + color + '40;" title="Zabalit vše">0</button>';
+        html += '<button class="tt-level-btn" data-tt-lvl="1" data-tt-root="' + esc(key) + '" style="color:' + color + ';border-color:' + color + '40;" title="Úroveň Ⅰ">Ⅰ</button>';
+        html += '<button class="tt-level-btn" data-tt-lvl="2" data-tt-root="' + esc(key) + '" style="color:' + color + ';border-color:' + color + '40;" title="Úroveň Ⅱ">Ⅱ</button>';
+        html += '<button class="tt-level-btn" data-tt-lvl="3" data-tt-root="' + esc(key) + '" style="color:' + color + ';border-color:' + color + '40;" title="Úroveň Ⅲ">Ⅲ</button>';
+        html += '</span>';
+      }
+
+      html += '</td>' +
+        '<td class="num" style="color:#64748b;">' + (agg.reqTotal > 0 ? progressHtml(agg.reqRead, agg.reqTotal) : '') + '</td>' +
+        '<td class="num" style="color:#64748b;">' + (agg.infoTotal > 0 ? progressHtml(agg.infoRead, agg.infoTotal) : '') + '</td>' +
+        '<td class="num" style="color:#64748b;">' + (agg.totalViews || '') + '</td>' +
+        '<td class="num" style="color:#64748b;">' + (agg.avgTimeSec > 0 ? formatTime(agg.avgTimeSec) : '') + '</td>' +
+        '<td class="num" style="color:#64748b;">' + (agg.avgScrollPct > 0 ? scrollBadge(agg.avgScrollPct) : '') + '</td>' +
+        '<td style="color:#64748b;">' + (agg.lastVisit ? formatDateShort(agg.lastVisit) : '') + '</td>' +
+      '</tr>';
+
+      // Children
+      if (isOpen && item.children) {
+        html += renderTreeRows(item.children, depth + 1, key, color, filter);
+      }
+
+    } else {
+      // File/page item
+      var color = rootColor || '#94a3b8';
+      var indent = depth * 20;
+
+      // Filter
+      if (filter) {
+        if (item.label.toLowerCase().indexOf(filter) < 0) return;
+      }
+
+      var ub = item.usersBreakdown || [];
+
+      // Per-user mode: show selected user's data instead of aggregate
+      if (ttSelectedUser && ub.length > 0) {
+        var su = null;
+        for (var i = 0; i < ub.length; i++) { if (ub[i].username === ttSelectedUser) { su = ub[i]; break; } }
+        if (su) {
+          var reqHtml = su.accessType === 'required'
+            ? (su.read ? '<span class="badge badge-green">✅</span>' : '<span class="badge badge-red">❌</span>')
+            : '<span style="color:#64748b;">—</span>';
+          var infoHtml = su.accessType === 'info'
+            ? (su.read ? '<span class="badge badge-green">✅</span>' : '<span class="badge badge-red">❌</span>')
+            : '<span style="color:#64748b;">—</span>';
+
+          html += '<tr>' +
+            '<td style="padding-left:' + (8 + indent) + 'px;">' +
+              '<span class="tt-icon">' + TT_SVG.file(color) + '</span> ' +
+              '<a href="#" onclick="showPageDetail(\'' + esc(item.path) + '\');return false;">' + esc(item.label) + '</a>' +
+            '</td>' +
+            '<td class="num">' + reqHtml + '</td>' +
+            '<td class="num">' + infoHtml + '</td>' +
+            '<td class="num">' + (item.totalViews || '') + '</td>' +
+            '<td class="num">' + (item.avgTimeSec > 0 ? formatTime(item.avgTimeSec) : '') + '</td>' +
+            '<td class="num">' + (item.avgScrollPct > 0 ? scrollBadge(item.avgScrollPct) : '') + '</td>' +
+            '<td>' + (item.lastVisit ? formatDateShort(item.lastVisit) : '') + '</td>' +
+          '</tr>';
+        }
+        // If user has no access to this page, skip
+        if (!su) return;
+      } else {
+        // Aggregate mode
+        var reqTotal = item.requiredTotal || 0;
+        var reqRead = item.requiredRead || 0;
+        var infoTotal = item.infoTotal || 0;
+        var infoRead = item.infoRead || 0;
+
+        var reqClickable = reqTotal > 0 && ub.length > 0;
+        var infoClickable = infoTotal > 0 && ub.length > 0;
+
+        var reqHtml = reqTotal > 0
+          ? progressHtml(reqRead, reqTotal)
+          : '<span style="color:#64748b;">—</span>';
+        var infoHtml = infoTotal > 0
+          ? progressHtml(infoRead, infoTotal)
+          : '<span style="color:#64748b;">—</span>';
+
+        var reqExpanded = !!ttExpandedBreakdown[item.path + '_req'];
+        var infoExpanded = !!ttExpandedBreakdown[item.path + '_info'];
+        var reqTdCls = reqClickable ? ' tt-clickable' + (reqExpanded ? ' expanded' : '') : '';
+        var infoTdCls = infoClickable ? ' tt-clickable' + (infoExpanded ? ' expanded' : '') : '';
+        var reqOnclick = reqClickable ? ' onclick="ttToggleBreakdown(\'' + esc(item.path) + '\',\'req\');return false;"' : '';
+        var infoOnclick = infoClickable ? ' onclick="ttToggleBreakdown(\'' + esc(item.path) + '\',\'info\');return false;"' : '';
+        var reqHint = reqClickable ? '<span class="tt-expand-hint">▾</span>' : '';
+        var infoHint = infoClickable ? '<span class="tt-expand-hint">▾</span>' : '';
+
+        html += '<tr>' +
+          '<td style="padding-left:' + (8 + indent) + 'px;">' +
+            '<span class="tt-icon">' + TT_SVG.file(color) + '</span> ' +
+            '<a href="#" onclick="showPageDetail(\'' + esc(item.path) + '\');return false;">' + esc(item.label) + '</a>' +
+          '</td>' +
+          '<td class="num' + reqTdCls + '"' + reqOnclick + '>' + reqHtml + reqHint + '</td>' +
+          '<td class="num' + infoTdCls + '"' + infoOnclick + '>' + infoHtml + infoHint + '</td>' +
+          '<td class="num">' + (item.totalViews || '') + '</td>' +
+          '<td class="num">' + (item.avgTimeSec > 0 ? formatTime(item.avgTimeSec) : '') + '</td>' +
+          '<td class="num">' + (item.avgScrollPct > 0 ? scrollBadge(item.avgScrollPct) : '') + '</td>' +
+          '<td>' + (item.lastVisit ? formatDateShort(item.lastVisit) : '') + '</td>' +
+        '</tr>';
+
+        // Inline breakdown rows for Povinné
+        if (ttExpandedBreakdown[item.path + '_req'] && reqTotal > 0) {
+          var reqUsers = ub.filter(function(u) { return u.accessType === 'required'; });
+          reqUsers.sort(function(a, b) { return (a.read === b.read) ? 0 : a.read ? 1 : -1; }); // unread first
+          html += '<tr><td colspan="7" style="padding: 0 0 0 ' + (28 + indent) + 'px; background: #0f172a;">' +
+            '<div class="tt-breakdown">';
+          reqUsers.forEach(function(u) {
+            var icon = u.read ? '✅' : (u.confirmed ? '🟡' : '❌');
+            var nameColor = u.read ? '#6ee7b7' : (u.confirmed ? '#fbbf24' : '#f87171');
+            html += '<div class="tt-breakdown-row">' +
+              '<span class="tt-breakdown-icon">' + icon + '</span>' +
+              '<span class="tt-breakdown-name" style="color:' + nameColor + ';">' + esc(u.name || u.username) + '</span>' +
+            '</div>';
+          });
+          html += '</div></td></tr>';
+        }
+
+        // Inline breakdown rows for Info
+        if (ttExpandedBreakdown[item.path + '_info'] && infoTotal > 0) {
+          var infoUsers = ub.filter(function(u) { return u.accessType === 'info'; });
+          infoUsers.sort(function(a, b) { return (a.read === b.read) ? 0 : a.read ? 1 : -1; });
+          html += '<tr><td colspan="7" style="padding: 0 0 0 ' + (28 + indent) + 'px; background: #0f172a;">' +
+            '<div class="tt-breakdown">';
+          infoUsers.forEach(function(u) {
+            var icon = u.read ? '✅' : '❌';
+            var nameColor = u.read ? '#6ee7b7' : '#f87171';
+            html += '<div class="tt-breakdown-row">' +
+              '<span class="tt-breakdown-icon">' + icon + '</span>' +
+              '<span class="tt-breakdown-name" style="color:' + nameColor + ';">' + esc(u.name || u.username) + '</span>' +
+            '</div>';
+          });
+          html += '</div></td></tr>';
+        }
+      }
+    }
+  });
+  return html;
+}
+
+function hasFilterMatch(item, filter) {
+  if (item.label && item.label.toLowerCase().indexOf(filter) >= 0) return true;
+  if (item.children) {
+    for (var i = 0; i < item.children.length; i++) {
+      if (hasFilterMatch(item.children[i], filter)) return true;
+    }
+  }
+  return false;
+}
+
+// Click delegation — caret, level buttons, folder row
+function ttClickHandler(e) {
+  // Level button click
+  var lvlBtn = e.target.closest('.tt-level-btn');
+  if (lvlBtn) {
+    e.stopPropagation();
+    var lvl = parseInt(lvlBtn.getAttribute('data-tt-lvl'), 10);
+    var rootKey = lvlBtn.getAttribute('data-tt-root');
+    // Set all keys under root to correct expand state
+    for (var k in ttExpanded) {
+      if (k === rootKey || k.indexOf(rootKey + '/') === 0) {
+        var parts = k.split('/');
+        var rootParts = rootKey.split('/');
+        var relDepth = parts.length - rootParts.length;
+        ttExpanded[k] = lvl === 0 ? false : relDepth < lvl;
+      }
+    }
+    if (lvl > 0) ttExpanded[rootKey] = true;
+    renderPagesTree();
+    return;
+  }
+
+  // Caret click
+  var caretEl = e.target.closest('.tt-caret');
+  if (caretEl) {
+    e.stopPropagation();
+    var key = caretEl.getAttribute('data-tt-caret');
+    var iconEl = caretEl.parentElement.querySelector('.tt-icon');
+    ttToggle(key, iconEl);
+    return;
+  }
+
+  // Folder row click (anywhere else on the row) → toggle
+  var folderRow = e.target.closest('.tt-folder');
+  if (folderRow) {
+    var key = folderRow.getAttribute('data-tt-key');
+    if (key) {
+      var iconEl = folderRow.querySelector('.tt-icon');
+      ttToggle(key, iconEl);
+    }
+  }
+}
+
+// Doubleclick on folder → toggle (like sidebar)
+function ttDblClickHandler(e) {
+  var folderRow = e.target.closest('.tt-folder');
+  if (folderRow) {
+    e.preventDefault();
+    // Ripple effect
+    var td = folderRow.querySelector('td');
+    if (td) {
+      var ripple = document.createElement('span');
+      ripple.className = 'tt-ripple';
+      var key = folderRow.getAttribute('data-tt-key');
+      var rootKey = folderRow.getAttribute('data-tt-root') || key;
+      var color = getCatColor(rootKey);
+      ripple.style.background = 'linear-gradient(90deg, transparent, ' + color + '40, transparent)';
+      td.style.position = 'relative';
+      td.appendChild(ripple);
+      setTimeout(function() { if (ripple.parentNode) ripple.parentNode.removeChild(ripple); }, 500);
+    }
+  }
+}
+
+// ===========================================================================
+// UŽIVATELÉ — s compliance daty
+// ===========================================================================
+async function loadUsers() {
+  var rows = await api('/api/dashboard/user-compliance');
+  if (!rows) return;
+  // Seřadit: nejméně přečtených povinných nahoře (nejhorší compliance)
+  rows.sort(function(a, b) {
+    var aPct = a.requiredTotal > 0 ? a.requiredRead / a.requiredTotal : 1;
+    var bPct = b.requiredTotal > 0 ? b.requiredRead / b.requiredTotal : 1;
+    return aPct - bPct;
+  });
+  document.querySelector('#users-table tbody').innerHTML = rows.map(function(r) {
+    var name = r.firstName + ' ' + (r.lastName || '');
+    return '<tr>' +
+      '<td><a href="#" onclick="showUserDetail(\'' + esc(r.username) + '\');return false;">' + esc(name.trim() || r.username) + ' <span style="color:#a09882;font-size:0.75rem;">(' + esc(r.username) + ')</span></a></td>' +
+      '<td class="num">' + progressHtml(r.requiredRead, r.requiredTotal) + '</td>' +
+      '<td class="num">' + progressHtml(r.infoRead, r.infoTotal) + '</td>' +
+      '<td class="num">' + formatTime(r.totalTimeSec) + '</td>' +
+      '<td class="num">' + formatReaction(r.avgReactionMs) + '</td>' +
+      '<td>' + formatDateShort(r.lastActive) + '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+// ===========================================================================
+// DETAIL STRÁNKY
+// ===========================================================================
+var pdData = null; // page detail data — pro per-user přepínání
+var pdSelectedUser = null; // null = agregace, string = username
+
+async function showPageDetail(pagePath) {
+  switchTab('detail');
+  pdSelectedUser = null;
+  var content = document.getElementById('detail-content');
+  content.innerHTML = '<div class="loading">Načítám...</div>';
+  try {
+    pdData = await api('/api/dashboard/page?path=' + encodeURIComponent(pagePath));
+  } catch (e) {
+    content.innerHTML = '<a href="#" class="back-link" onclick="switchTab(\'pages\');return false;">← Zpět na stránky</a><div style="color:#dc2626;padding:2rem;text-align:center;">Chyba načítání dat: ' + esc(e.message) + '</div>';
+    return;
+  }
+  if (!pdData) return;
+  renderPageDetail();
+}
+
+function pdSelectUser(username) {
+  pdSelectedUser = pdSelectedUser === username ? null : username;
+  renderPageDetail();
+}
+
+function renderPageDetail() {
+  var data = pdData;
+  if (!data) return;
+  var content = document.getElementById('detail-content');
+  var isUser = !!pdSelectedUser;
+
+  // Filtrace sessions pro vybraného uživatele
+  var sessions = isUser ? data.sessions.filter(function(s) { return s.username === pdSelectedUser; }) : data.sessions;
+  var totalTimeSec = sessions.reduce(function(sum, s) { return sum + (s.active_time_ms || 0); }, 0) / 1000;
+  var avgTimeSec = sessions.length > 0 ? totalTimeSec / sessions.length : 0;
+  var avgScroll = sessions.length > 0 ? sessions.reduce(function(sum, s) { return sum + (s.max_scroll_pct || 0); }, 0) / sessions.length : 0;
+  var lastVisit = sessions.length > 0 ? sessions[0].started_at : null;
+
+  // === ZÁHLAVÍ ===
+  var headerHtml = '<a href="#" class="back-link" onclick="switchTab(\'pages\');return false;">← Zpět na stránky</a>' +
+    '<div class="detail-header"><h2>' + esc(data.page_path) + '</h2>';
+
+  // User chips — přepínač
+  var uniqueUsers = {};
+  data.sessions.forEach(function(s) { uniqueUsers[s.username] = true; });
+  var userList = Object.keys(uniqueUsers).sort();
+  if (userList.length > 0) {
+    headerHtml += '<div style="margin:8px 0 4px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;">' +
+      '<span style="font-size:0.72rem;color:#94a3b8;margin-right:4px;">Zobrazit:</span>' +
+      '<span style="cursor:pointer;padding:2px 10px;border-radius:10px;font-size:0.72rem;font-weight:600;' +
+        (!isUser ? 'background:#0ea5e922;color:#0ea5e9;border:1px solid #0ea5e9;' : 'background:#334155;color:#94a3b8;border:1px solid #334155;') +
+      '" onclick="pdSelectUser(null)">Agregace</span>';
+    userList.forEach(function(u) {
+      var active = pdSelectedUser === u;
+      headerHtml += '<span style="cursor:pointer;padding:2px 10px;border-radius:10px;font-size:0.72rem;font-weight:600;' +
+        (active ? 'background:#0ea5e922;color:#0ea5e9;border:1px solid #0ea5e9;' : 'background:#334155;color:#94a3b8;border:1px solid #334155;') +
+      '" onclick="pdSelectUser(\'' + esc(u) + '\')">' + esc(u) + '</span>';
+    });
+    headerHtml += '</div>';
+  }
+
+  // === STAT KARTY ===
+  headerHtml += '<div class="stats-grid" style="margin-top:10px;">';
+  if (data.estReadTimeSec > 0) {
+    headerHtml += '<div class="stat-card"><div class="stat-value" style="font-size:1.4rem;">' + formatTime(data.estReadTimeSec) + '</div><div class="stat-label">Odh. čas čtení (' + (data.wordCount || 0) + ' slov)</div></div>';
+  }
+  headerHtml += '<div class="stat-card"><div class="stat-value" style="font-size:1.4rem;">' + sessions.length + '</div><div class="stat-label">' + (isUser ? 'Návštěv' : 'Celkem návštěv') + '</div></div>';
+  headerHtml += '<div class="stat-card"><div class="stat-value" style="font-size:1.4rem;">' + formatTime(totalTimeSec) + '</div><div class="stat-label">Celkem stráveno</div></div>';
+  headerHtml += '<div class="stat-card"><div class="stat-value" style="font-size:1.4rem;">' + formatTime(avgTimeSec) + '</div><div class="stat-label">Ø čas / návštěva</div></div>';
+  headerHtml += '<div class="stat-card"><div class="stat-value" style="font-size:1.4rem;">' + scrollBadge(avgScroll) + '</div><div class="stat-label">Ø scroll</div></div>';
+  headerHtml += '<div class="stat-card"><div class="stat-value" style="font-size:1.4rem;">' + (lastVisit ? formatDateShort(lastVisit) : '—') + '</div><div class="stat-label">Poslední návštěva</div></div>';
+  headerHtml += '</div>';
+  headerHtml += '</div>';
+
+  // === POVINNÉ / INFO — klikatelné expandery ===
+  var accessHtml = '';
+  if (data.userBreakdown && data.userBreakdown.length > 0 && !isUser) {
+    var required = data.userBreakdown.filter(function(u) { return u.accessType === 'required'; });
+    var info = data.userBreakdown.filter(function(u) { return u.accessType === 'info'; });
+
+    if (required.length > 0) {
+      var reqRead = required.filter(function(u) { return u.read; }).length;
+      accessHtml += '<div class="section-title" style="cursor:pointer;" onclick="document.getElementById(\'pd-req-list\').style.display=document.getElementById(\'pd-req-list\').style.display===\'none\'?\'block\':\'none\';">' +
+        '<span class="icon">📋</span> Povinné ' + progressHtml(reqRead, required.length) + ' <span style="font-size:0.72rem;color:#475569;margin-left:4px;">▾ rozbalit</span></div>';
+      accessHtml += '<div id="pd-req-list" style="display:none;margin-bottom:1rem;">';
+      required.forEach(function(u) {
+        var name = (u.firstName + ' ' + (u.lastName || '')).trim() || u.username;
+        var icon = u.confirmed ? '✅' : u.read ? '🟡' : '❌';
+        var badge = u.confirmed ? 'badge-green' : u.read ? 'badge-orange' : 'badge-red';
+        var detail = u.read ? formatTime(u.totalTimeMs / 1000) + ', scroll ' + Math.round(u.maxScroll) + '%' : 'nepřečteno';
+        if (u.confirmed) detail += ', potvrzeno';
+        accessHtml += '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #1e293b;">' +
+          '<span class="badge ' + badge + '" style="width:28px;text-align:center;">' + icon + '</span>' +
+          '<a href="#" onclick="showUserDetail(\'' + esc(u.username) + '\');return false;" style="flex:1;">' + esc(name) + '</a>' +
+          '<span style="font-size:0.75rem;color:#64748b;">' + detail + '</span></div>';
+      });
+      accessHtml += '</div>';
+    }
+
+    if (info.length > 0) {
+      var infoRead = info.filter(function(u) { return u.read; }).length;
+      accessHtml += '<div class="section-title" style="cursor:pointer;" onclick="document.getElementById(\'pd-info-list\').style.display=document.getElementById(\'pd-info-list\').style.display===\'none\'?\'block\':\'none\';">' +
+        '<span class="icon">ℹ️</span> Informační ' + progressHtml(infoRead, info.length) + ' <span style="font-size:0.72rem;color:#475569;margin-left:4px;">▾ rozbalit</span></div>';
+      accessHtml += '<div id="pd-info-list" style="display:none;margin-bottom:1rem;">';
+      info.forEach(function(u) {
+        var name = (u.firstName + ' ' + (u.lastName || '')).trim() || u.username;
+        var icon = u.read ? '✅' : '⬜';
+        var badge = u.read ? 'badge-green' : 'badge-gray';
+        var detail = u.read ? formatTime(u.totalTimeMs / 1000) : 'nenavštíveno';
+        accessHtml += '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #1e293b;">' +
+          '<span class="badge ' + badge + '" style="width:28px;text-align:center;">' + icon + '</span>' +
+          '<a href="#" onclick="showUserDetail(\'' + esc(u.username) + '\');return false;" style="flex:1;">' + esc(name) + '</a>' +
+          '<span style="font-size:0.75rem;color:#64748b;">' + detail + '</span></div>';
+      });
+      accessHtml += '</div>';
+    }
+  }
+
+  // === NÁVŠTĚVY ===
+  var sessionsHtml = sessions.map(function(s) {
+    return '<tr>' +
+      '<td><a href="#" onclick="showUserDetail(\'' + esc(s.username) + '\');return false;">' + esc(s.username) + '</a></td>' +
+      '<td>' + formatDate(s.started_at) + '</td>' +
+      '<td class="num">' + formatTime((s.active_time_ms || 0) / 1000) + '</td>' +
+      '<td class="num">' + scrollBadge(s.max_scroll_pct) + '</td>' +
+      '<td>' + (s.is_confirmed ? '<span class="badge badge-green">✅</span>' : '') + '</td>' +
+    '</tr>';
+  }).join('');
+  if (sessions.length === 0) sessionsHtml = '<tr><td colspan="5" style="color:#64748b;text-align:center;">Žádné návštěvy</td></tr>';
+
+  content.innerHTML = headerHtml + accessHtml +
+    '<div class="section-title"><span class="icon">👁️</span> Návštěvy' + (isUser ? ' — ' + esc(pdSelectedUser) : '') + '</div>' +
+    '<div class="table-wrap"><table><thead><tr><th>Uživatel</th><th>Kdy</th><th class="num">Čas</th><th class="num">Scroll</th><th>Potvrzení</th></tr></thead><tbody>' + sessionsHtml + '</tbody></table></div>' +
+    renderSectionBreakdown(data.sectionBreakdown);
+}
+
+function renderSectionBreakdown(sections) {
+  if (!sections || sections.length === 0) return '';
+  var maxMs = Math.max.apply(null, sections.map(function(s){ return s.total_ms; }));
+  if (maxMs <= 0) return '';
+  var totalMs = sections.reduce(function(sum, s){ return sum + s.total_ms; }, 0);
+
+  var barsHtml = sections.map(function(s) {
+    var pct = Math.round((s.total_ms / maxMs) * 100);
+    var sharePct = Math.round((s.total_ms / totalMs) * 100);
+    var lvlCls = s.heading_level <= 1 ? 'h1' : s.heading_level === 2 ? 'h2' : 'h3';
+    // Color gradient based on time share
+    var color = sharePct >= 30 ? '#ef4444' : sharePct >= 15 ? '#f59e0b' : '#0ea5e9';
+    return '<div class="section-bar-row">' +
+      '<div class="section-bar-label ' + lvlCls + '" title="' + esc(s.heading) + '">' + esc(s.heading) + '</div>' +
+      '<div class="section-bar-track"><div class="section-bar-fill" style="width:' + pct + '%;background:' + color + ';"></div></div>' +
+      '<div class="section-bar-time">' + formatTime(s.total_ms / 1000) + ' <span style="color:#475569;">(' + sharePct + '%)</span></div>' +
+    '</div>';
+  }).join('');
+
+  return '<div class="section-title"><span class="icon">📑</span> Čas podle sekcí <span style="font-weight:400;color:#94a3b8;font-size:0.78rem;">(celkem ' + formatTime(totalMs / 1000) + ')</span></div>' +
+    '<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:1rem 1.2rem;margin-bottom:1.5rem;">' + barsHtml + '</div>';
+}
+
+// ===========================================================================
+// DETAIL UŽIVATELE — tabulka přiřazeného obsahu (bez duplicitního stromu)
+// ===========================================================================
+// Collapse state for user detail tree — hierarchický
+var ttDetailExpanded = {};
+
+function initDetailExpandState(items, parentKey) {
+  items.forEach(function(item) {
+    if (item.type === 'folder') {
+      var key = parentKey ? parentKey + '/' + item.label : item.label;
+      if (ttDetailExpanded[key] === undefined) ttDetailExpanded[key] = true;
+      if (item.children) initDetailExpandState(item.children, key);
+    }
+  });
+}
+
+function renderDetailContentTable(treeData) {
+  var html = '<table class="tt"><thead><tr>' +
+    '<th>Stránka</th><th class="num" style="width:55px;">● Pov.</th><th class="num" style="width:55px;">○ Info</th>' +
+    '<th class="num" style="width:55px;">Potvrz.</th><th class="num" style="width:65px;">Kvíz</th>' +
+    '<th class="num" style="width:60px;">Čas</th><th class="num" style="width:55px;">Scroll</th><th style="width:80px;">Návštěva</th>' +
+  '</tr></thead><tbody>';
+
+  html += renderDetailRows(treeData.tree, 0, '', null);
+  html += '</tbody></table>';
+  return html;
+}
+
+function renderDetailRows(items, depth, parentKey, rootColor) {
+  var html = '';
+  items.forEach(function(item) {
+    if (item.type === 'folder') {
+      var key = parentKey ? parentKey + '/' + item.label : item.label;
+      var color = depth === 0 ? getCatColor(item.label) : (rootColor || getCatColor(item.label));
+      var isOpen = ttDetailExpanded[key] !== false;
+      var indent = depth * 20;
+      var caretCls = 'tt-caret' + (isOpen ? '' : ' collapsed');
+
+      html += '<tr class="tt-folder" data-ttd-key="' + esc(key) + '">' +
+        '<td colspan="8" style="padding-left:' + (8 + indent) + 'px; position: relative;">' +
+          '<span class="' + caretCls + '" data-ttd-caret="' + esc(key) + '">' + TT_SVG.caret + '</span>' +
+          '<span class="tt-icon">' + ttGetFolderSvg(color, depth) + '</span> ' +
+          '<span style="color:' + color + ';">' + esc(item.label) + '</span>' +
+        '</td></tr>';
+
+      if (isOpen && item.children) {
+        html += renderDetailRows(item.children, depth + 1, key, color);
+      }
+      return;
+    }
+
+    var color = rootColor || '#94a3b8';
+    var indent = depth * 20;
+    var reqHtml = '<span style="color:#64748b;">—</span>';
+    if (item.accessType === 'required') {
+      reqHtml = item.read ? '<span class="badge badge-green">✅</span>' : '<span class="badge badge-red">❌</span>';
+    }
+    var infoHtml = '<span style="color:#64748b;">—</span>';
+    if (item.accessType === 'info') {
+      infoHtml = item.read ? '<span class="badge badge-green">✅</span>' : '<span class="badge badge-orange">⬜</span>';
+    }
+    var confHtml = item.confirmed ? '<span class="badge badge-green">✅</span>' : '<span style="color:#64748b;">—</span>';
+    var qzHtml = '<span style="color:#64748b;">—</span>';
+    if (item.quizAttempts > 0) {
+      var qCls = item.quizBestPct >= 80 ? 'badge-green' : item.quizBestPct >= 50 ? 'badge-orange' : 'badge-red';
+      qzHtml = '<span class="badge ' + qCls + '">' + Math.round(item.quizBestPct) + '%</span>';
+      if (item.quizAttempts > 1) qzHtml += '<span style="color:#64748b;font-size:0.68rem;"> ×' + item.quizAttempts + '</span>';
+    }
+
+    html += '<tr>' +
+      '<td style="padding-left:' + (8 + indent) + 'px;">' +
+        '<span class="tt-icon">' + TT_SVG.file(color) + '</span> ' +
+        '<a href="#" onclick="showPageDetail(\'' + esc(item.path) + '\');return false;">' + esc(item.label) + '</a>' +
+      '</td>' +
+      '<td class="num">' + reqHtml + '</td>' +
+      '<td class="num">' + infoHtml + '</td>' +
+      '<td class="num">' + confHtml + '</td>' +
+      '<td class="num">' + qzHtml + '</td>' +
+      '<td class="num">' + (item.bestTimeMs > 0 ? formatTime(item.bestTimeMs / 1000) : '') + '</td>' +
+      '<td class="num">' + (item.read ? scrollBadge(item.bestScroll) : '') + '</td>' +
+      '<td>' + (item.lastVisit ? formatDateShort(item.lastVisit) : '') + '</td>' +
+    '</tr>';
+  });
+  return html;
+}
+
+async function showUserDetail(username) {
+  switchTab('detail');
+  var content = document.getElementById('detail-content');
+  content.innerHTML = '<div class="loading">Načítám...</div>';
+
+  var treeData, userData;
+  try {
+    var results = await Promise.all([
+      api('/api/dashboard/user/' + encodeURIComponent(username) + '/tree'),
+      api('/api/dashboard/user/' + encodeURIComponent(username)),
+    ]);
+    treeData = results[0];
+    userData = results[1];
+  } catch (e) {
+    content.innerHTML = '<a href="#" class="back-link" onclick="switchTab(\'users\');return false;">← Zpět na uživatele</a><div style="color:#dc2626;padding:2rem;text-align:center;">Chyba načítání dat: ' + esc(e.message) + '</div>';
+    return;
+  }
+  if (!treeData) return;
+
+  var name = (treeData.firstName + ' ' + (treeData.lastName || '')).trim() || username;
+  var sm = treeData.summary || {};
+
+  // ===== SUMMARY STATS =====
+  var summaryHtml = '<div class="stats-grid" style="margin-top:0.8rem;">';
+  summaryHtml += '<div class="stat-card"><div class="stat-value">' + progressHtml(sm.reqRead || 0, sm.reqTotal || 0) + '</div><div class="stat-label">Povinné přečteno</div></div>';
+  summaryHtml += '<div class="stat-card"><div class="stat-value">' + progressHtml(sm.infoRead || 0, sm.infoTotal || 0) + '</div><div class="stat-label">Info přečteno</div></div>';
+  summaryHtml += '<div class="stat-card"><div class="stat-value" style="font-size:1.4rem;">' + (sm.confirmedCount || 0) + '</div><div class="stat-label">Potvrzení</div></div>';
+  summaryHtml += '<div class="stat-card"><div class="stat-value" style="font-size:1.4rem;">' + (sm.quizCount || 0) + '</div><div class="stat-label">Kvízů splněno</div></div>';
+  if (userData && userData.sessions && userData.sessions.length > 0) {
+    var totalMs = userData.sessions.reduce(function(sum, s) { return sum + (s.active_time_ms || 0); }, 0);
+    var uniquePages = {};
+    userData.sessions.forEach(function(s) { uniquePages[s.page_path] = true; });
+    summaryHtml += '<div class="stat-card"><div class="stat-value" style="font-size:1.4rem;">' + formatTime(totalMs / 1000) + '</div><div class="stat-label">Celkový čas</div></div>';
+    summaryHtml += '<div class="stat-card"><div class="stat-value" style="font-size:1.4rem;">' + Object.keys(uniquePages).length + '</div><div class="stat-label">Unikátních stránek</div></div>';
+  }
+  summaryHtml += '</div>';
+
+  // ===== TREE-TABLE PŘIŘAZENÉHO OBSAHU =====
+  // Convert flat tree to hierarchy
+  if (treeData.tree) treeData.tree = flatToTree(treeData.tree);
+  lastDetailTreeData = treeData;
+  lastDetailUsername = username;
+  ttDetailExpanded = {};
+  if (treeData.tree) initDetailExpandState(treeData.tree, '');
+  var treeHtml = '<div id="detail-tree-container">' + renderDetailContentTable(treeData) + '</div>';
+
+  // ===== POSLEDNÍ NÁVŠTĚVY — TOP 10, datum vlevo =====
+  var visitsHtml = '';
+  if (userData && userData.sessions && userData.sessions.length > 0) {
+    var topSessions = userData.sessions.slice(0, 10);
+    visitsHtml = '<div class="section-title"><span class="icon">👁️</span> Poslední návštěvy</div>' +
+      '<div class="table-wrap"><table><thead><tr><th>Kdy</th><th>Stránka</th><th class="num">Aktivní čas</th><th class="num">Scroll</th><th>Potvrzení</th></tr></thead><tbody>' +
+      topSessions.map(function(s) {
+        return '<tr>' +
+          '<td style="white-space:nowrap;">' + formatDate(s.started_at) + '</td>' +
+          '<td><a href="#" onclick="showPageDetail(\'' + esc(s.page_path) + '\');return false;">' + esc(s.page_title || s.page_path) + '</a></td>' +
+          '<td class="num">' + formatTime((s.active_time_ms || 0) / 1000) + '</td>' +
+          '<td class="num">' + scrollBadge(s.max_scroll_pct) + '</td>' +
+          '<td>' + (s.is_confirmed ? '<span class="badge badge-green">✅</span>' : '') + '</td>' +
+        '</tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+
+  // ===== CO POTVRDIL =====
+  var confirmsHtml = '';
+  if (userData && userData.confirmations && userData.confirmations.length > 0) {
+    confirmsHtml = '<div class="section-title"><span class="icon">✅</span> Co potvrdil</div>' +
+      '<div class="table-wrap"><table><thead><tr><th>Kdy</th><th>Stránka</th></tr></thead><tbody>' +
+      userData.confirmations.map(function(c) {
+        return '<tr>' +
+          '<td style="white-space:nowrap;">' + formatDate(c.confirmed_at) + '</td>' +
+          '<td><a href="#" onclick="showPageDetail(\'' + esc(c.page_path) + '\');return false;">' + esc(c.doc_title || c.doc_id || c.page_path) + '</a></td>' +
+        '</tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+
+  // ===== KDE STRÁVIL NEJVÍC ČASU — TOP 10 =====
+  var topTimeHtml = '';
+  if (treeData.topTime && treeData.topTime.length > 0) {
+    topTimeHtml = '<div class="section-title"><span class="icon">⏱️</span> Kde strávil nejvíc času</div>' +
+      '<div class="table-wrap"><table><thead><tr><th>#</th><th>Stránka</th><th class="num">Celkový čas</th><th class="num">Návštěv</th></tr></thead><tbody>' +
+      treeData.topTime.map(function(t, i) {
+        return '<tr>' +
+          '<td style="color:#a09882;width:30px;">' + (i + 1) + '</td>' +
+          '<td><a href="#" onclick="showPageDetail(\'' + esc(t.page_path) + '\');return false;">' + esc(t.page_title || t.page_path) + '</a></td>' +
+          '<td class="num"><strong>' + formatTime((t.total_ms || 0) / 1000) + '</strong></td>' +
+          '<td class="num">' + t.visits + '</td>' +
+        '</tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+
+  // ===== KVÍZY =====
+  var quizHtml = '';
+  if (userData && userData.quizzes && userData.quizzes.length > 0) {
+    quizHtml = '<div class="section-title"><span class="icon">🎯</span> Kvízy</div>' +
+      '<div class="table-wrap"><table><thead><tr><th>Kdy</th><th>Kvíz</th><th class="num">Skóre</th><th class="num">%</th></tr></thead><tbody>' +
+      userData.quizzes.map(function(q) {
+        var sb = q.score_pct >= 80 ? 'badge-green' : q.score_pct >= 50 ? 'badge-orange' : 'badge-red';
+        return '<tr>' +
+          '<td style="white-space:nowrap;">' + formatDate(q.completed_at) + '</td>' +
+          '<td>' + esc(q.quiz_title || q.page_path) + '</td>' +
+          '<td class="num">' + q.correct_answers + '/' + q.total_questions + '</td>' +
+          '<td class="num"><span class="badge ' + sb + '">' + Math.round(q.score_pct) + ' %</span></td>' +
+        '</tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+
+  // ===== AKTIVITA ZA 30 DNÍ =====
+  var freqChart = '';
+  if (userData && userData.frequency && userData.frequency.length > 0) {
+    var maxV = Math.max.apply(null, userData.frequency.map(function(f){return f.views;}));
+    freqChart = '<div class="section-title"><span class="icon">📊</span> Aktivita za 30 dní</div>' +
+      '<div class="chart-bar" style="height:60px;">' + userData.frequency.map(function(f) {
+        var h = maxV > 0 ? Math.max(4, (f.views / maxV) * 100) : 4;
+        var dl = new Date(f.day).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short' });
+        return '<div class="chart-bar-col" style="height:' + h + '%;"><div class="tip">' + dl + ': ' + f.views + '</div></div>';
+      }).join('') + '</div>';
+  }
+
+  content.innerHTML =
+    '<a href="#" class="back-link" onclick="switchTab(\'users\');return false;">← Zpět na uživatele</a>' +
+    '<div class="detail-header"><h2>' + esc(name) + '</h2>' +
+    '<div class="detail-meta">ID: ' + esc(username) + '</div>' + summaryHtml + '</div>' +
+    '<div class="section-title"><span class="icon">📋</span> Přiřazený obsah</div>' +
+    treeHtml +
+    visitsHtml +
+    confirmsHtml +
+    topTimeHtml +
+    quizHtml +
+    freqChart;
+
+  // Attach click handler for detail tree expand/collapse
+  var detailTreeContainer = document.getElementById('detail-tree-container');
+  if (detailTreeContainer) {
+    detailTreeContainer.addEventListener('click', function(e) {
+      var caretEl = e.target.closest('[data-ttd-caret]');
+      if (caretEl) {
+        e.stopPropagation();
+        var key = caretEl.getAttribute('data-ttd-caret');
+        ttDetailExpanded[key] = !(ttDetailExpanded[key] !== false);
+        detailTreeContainer.innerHTML = renderDetailContentTable(lastDetailTreeData);
+        return;
+      }
+      var folderRow = e.target.closest('[data-ttd-key]');
+      if (folderRow) {
+        var key = folderRow.getAttribute('data-ttd-key');
+        ttDetailExpanded[key] = !(ttDetailExpanded[key] !== false);
+        detailTreeContainer.innerHTML = renderDetailContentTable(lastDetailTreeData);
+      }
+    });
+  }
+}
+
+// ===========================================================================
+// Table sort
+// ===========================================================================
+var sortState = {};
+function sortTable(tableId, colIndex) {
+  var table = document.getElementById(tableId), tbody = table.querySelector('tbody');
+  var rows = Array.from(tbody.querySelectorAll('tr'));
+  var key = tableId + '-' + colIndex;
+  var asc = sortState[key] === 'asc' ? 'desc' : 'asc'; sortState[key] = asc;
+  rows.sort(function(a, b) {
+    var aT = a.cells[colIndex].textContent.trim(), bT = b.cells[colIndex].textContent.trim();
+    var aN = parseFloat(aT.replace(/[^0-9.-]/g, '')), bN = parseFloat(bT.replace(/[^0-9.-]/g, ''));
+    if (!isNaN(aN) && !isNaN(bN)) return asc === 'asc' ? aN - bN : bN - aN;
+    return asc === 'asc' ? aT.localeCompare(bT, 'cs') : bT.localeCompare(aT, 'cs');
+  });
+  rows.forEach(function(row) { tbody.appendChild(row); });
+}
+
+// ===========================================================================
+// Init
+// ===========================================================================
+loadOverview();
+loadTopPages();
+loadFrequency();
+loadPages();
+loadUsers();
+</script>
+<script src="/js/sidebar-tree.js"></script>
+<script src="/js/status-bar.js"></script>
+</body>
+</html>

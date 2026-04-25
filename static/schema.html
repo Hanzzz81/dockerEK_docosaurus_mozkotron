@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mozkotron — Schema komponent</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #0f172a; color: #e2e8f0; line-height: 1.6;
+    padding: 1.5rem; max-width: 1200px; margin: 0 auto;
+  }
+  h1 { font-size: 1.3rem; color: #38bdf8; margin-bottom: 0.3rem; }
+  .subtitle { color: #94a3b8; font-size: 0.8rem; margin-bottom: 1.2rem; }
+
+  .tabs { display: flex; gap: 0; margin-bottom: 1.5rem; border-bottom: 1px solid #334155; flex-wrap: wrap; }
+  .tab {
+    padding: 0.5rem 1rem; cursor: pointer; font-size: 0.85rem; color: #94a3b8;
+    border-bottom: 2px solid transparent; transition: all 0.2s; white-space: nowrap;
+  }
+  .tab:hover { color: #cbd5e1; }
+  .tab.active { color: #38bdf8; border-bottom-color: #38bdf8; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* Layout diagram */
+  .layout {
+    display: grid; gap: 6px; margin-bottom: 1.5rem;
+    border: 1px solid #334155; border-radius: 10px; padding: 12px;
+    background: #0d1117;
+  }
+  .zone {
+    border: 2px dashed; border-radius: 8px; padding: 10px 14px;
+    position: relative; min-height: 50px;
+  }
+  .zone-tag {
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.03em;
+    position: absolute; top: 6px; left: 10px;
+  }
+  .zone-desc {
+    font-size: 0.72rem; color: #94a3b8; margin-top: 18px; line-height: 1.5;
+  }
+  .zone-file { font-size: 0.68rem; font-family: monospace; color: #64748b; }
+  .zone-off { opacity: 0.35; }
+  .zone-off .zone-tag::after { content: " (vypnuto)"; font-weight: 400; color: #64748b; }
+
+  /* Colors per component */
+  .z-k1 { border-color: #38bdf8; }  .z-k1 .zone-tag { color: #38bdf8; }
+  .z-k2 { border-color: #38bdf8; }  .z-k2 .zone-tag { color: #38bdf8; }
+  .z-k3 { border-color: #fbbf24; }  .z-k3 .zone-tag { color: #fbbf24; }
+  .z-k4 { border-color: #10b981; }  .z-k4 .zone-tag { color: #10b981; }
+  .z-k4tt { border-color: #a78bfa; }  .z-k4tt .zone-tag { color: #a78bfa; }
+  .z-k5 { border-color: #94a3b8; }  .z-k5 .zone-tag { color: #94a3b8; }
+  .z-k6 { border-color: #fbbf24; }  .z-k6 .zone-tag { color: #fbbf24; }
+  .z-k7 { border-color: #38bdf8; }  .z-k7 .zone-tag { color: #38bdf8; }
+  .z-k8 { border-color: #f97316; }  .z-k8 .zone-tag { color: #f97316; }
+
+  /* Legend table */
+  .legend { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 1rem; }
+  .legend th { text-align: left; padding: 0.4rem 0.6rem; color: #38bdf8; font-weight: 600; border-bottom: 2px solid #334155; font-size: 0.75rem; }
+  .legend td { padding: 0.4rem 0.6rem; border-bottom: 1px solid #1e293b; }
+  .legend .code { font-family: monospace; font-size: 0.72rem; color: #64748b; }
+  .legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+</style>
+</head>
+<body>
+
+<h1>🗂 Mozkotron — Schema komponent</h1>
+<p class="subtitle">Referenční mapa pro ladění. Klikni na tab pro zobrazení layoutu konkrétní stránky.</p>
+
+<div class="tabs" id="tabs">
+  <div class="tab active" data-tab="content">📄 Dokumenty</div>
+  <div class="tab" data-tab="dashboard">📊 Statistiky čtení</div>
+  <div class="tab" data-tab="homepage">🧭 Domů</div>
+  <div class="tab" data-tab="editor">✏️ Editor</div>
+  <div class="tab" data-tab="palace">🏛️ Palác</div>
+  <div class="tab" data-tab="mapa">🗺️ Myšlenková mapa</div>
+  <div class="tab" data-tab="admin">⚙️ Admin</div>
+  <div class="tab" data-tab="obsah">📐 Obsahová struktura</div>
+</div>
+
+<!-- ===== CONTENT PAGE ===== -->
+<div class="panel active" id="panel-content">
+  <div class="layout" style="grid-template-columns: 200px 170px 1fr 16px; grid-template-rows: 36px 1fr 30px;">
+    <div class="zone z-k1" style="grid-column: 1/-1;"><span class="zone-tag">K1 — TOP NAV</span><div class="zone-desc zone-file">status-bar.js · position: fixed top · 42px</div></div>
+    <div class="zone z-k2"><span class="zone-tag">K2 — SIDEBAR</span><div class="zone-desc">Strom dokumentů<br>SVG ikony, AOR barvy<br>Resizable, expand/collapse<br><span class="zone-file">sidebar-tree.js · fetch /api/sidebar</span></div></div>
+    <div class="zone z-k3"><span class="zone-tag">K3 — SEARCH</span><div class="zone-desc">Plovoucí výsledky<br>Nalepený na K2<br>Resizable 200–600px<br><span class="zone-file">sidebar-tree.js</span></div></div>
+    <div class="zone z-k4"><span class="zone-tag">K4 — HLAVNÍ OBSAH</span><div class="zone-desc">Docusaurus &lt;article&gt;<br>CRT power-on při přepnutí stránky<br>margin-left = K2 + K3<br><span class="zone-file">Docusaurus SSR + sidebar-tree.js adjustMainContent</span><br><br><strong style="color:#94a3b8;">K5 — OUTLINE (TOC)</strong><br>Nadpisy stránky, vpravo nahoře<br>animateScroll() při kliku<br><span class="zone-file">sidebar-tree.js click handler a[href^="#"]</span></div></div>
+    <div class="zone z-k6"><span class="zone-tag">K6</span><div class="zone-desc" style="margin-top:2px;font-size:0.6rem;writing-mode:vertical-lr;">MINIMAP</div></div>
+    <div class="zone z-k7" style="grid-column: 1/-1;"><span class="zone-tag">K7 — STATUS BAR</span><div class="zone-desc zone-file">status-bar.js · position: fixed bottom · 36px</div></div>
+  </div>
+</div>
+
+<!-- ===== DASHBOARD ===== -->
+<div class="panel" id="panel-dashboard">
+  <div class="layout" style="grid-template-columns: 1fr; grid-template-rows: 36px 1fr 30px;">
+    <div class="zone z-k1"><span class="zone-tag">K1 — TOP NAV</span></div>
+    <div class="zone z-k2 zone-off" style="position:absolute;width:0;height:0;overflow:hidden;"></div>
+    <div class="zone z-k4tt" style="min-height:200px;">
+      <span class="zone-tag">K4-TT — TREE-TABLE</span>
+      <div class="zone-desc">
+        Vizuál sidebaru (SVG ikony, AOR barvy, expand/collapse) + datové sloupce (Povinné, Info, Zobrazení, Čas, Scroll, Datum)<br>
+        Žádný K2 sidebar — celá šířka<br>
+        Taby: Stránky | Přehled | Uživatelé | Detail<br>
+        <span class="zone-file">dashboard.html · inline JS · fetch /api/dashboard/*</span>
+      </div>
+    </div>
+    <div class="zone z-k7"><span class="zone-tag">K7 — STATUS BAR</span></div>
+  </div>
+  <p style="font-size:0.78rem;color:#94a3b8;margin-top:0.5rem;">K2 (sidebar) je na dashboardu <strong>vypnutý</strong> — přidán do SKIP_PATHS. Data se zobrazují v K4-TT tree-table formátu.</p>
+</div>
+
+<!-- ===== HOMEPAGE ===== -->
+<div class="panel" id="panel-homepage">
+  <div class="layout" style="grid-template-columns: 200px 1fr; grid-template-rows: 36px 1fr 30px;">
+    <div class="zone z-k1" style="grid-column: 1/-1;"><span class="zone-tag">K1 — TOP NAV</span></div>
+    <div class="zone z-k2"><span class="zone-tag">K2 — SIDEBAR</span><div class="zone-desc">Strom dokumentů<br><span class="zone-file">sidebar-tree.js</span></div></div>
+    <div class="zone z-k4"><span class="zone-tag">K4 — HLAVNÍ OBSAH</span><div class="zone-desc">Karty v řadě: Tvořit / Číst / Vyhodnocovat / Správa<br>Satelitní linky (guides)<br>Dashboard widgety z /api/home<br><span class="zone-file">hub.html · static HTML + fetch /api/home</span></div></div>
+    <div class="zone z-k7" style="grid-column: 1/-1;"><span class="zone-tag">K7 — STATUS BAR</span></div>
+  </div>
+</div>
+
+<!-- ===== EDITOR ===== -->
+<div class="panel" id="panel-editor">
+  <div class="layout" style="grid-template-columns: 200px 1fr; grid-template-rows: 36px 1fr 30px;">
+    <div class="zone z-k1" style="grid-column: 1/-1;"><span class="zone-tag">K1 — TOP NAV</span></div>
+    <div class="zone z-k8"><span class="zone-tag">K8 — EDITOR TREE</span><div class="zone-desc">Vlastní strom (#docTree)<br>K2 sidebar se přeskočí<br>Drag & drop, slash commands<br><span class="zone-file">editor.html · inline JS</span></div></div>
+    <div class="zone z-k4"><span class="zone-tag">K4 — EDITOR CANVAS</span><div class="zone-desc">Blokový editor (Notion/Coda styl)<br>Tabulky, sloupce, details<br><span class="zone-file">editor.html · contenteditable bloky</span></div></div>
+    <div class="zone z-k7" style="grid-column: 1/-1;"><span class="zone-tag">K7 — STATUS BAR</span></div>
+  </div>
+  <p style="font-size:0.78rem;color:#94a3b8;margin-top:0.5rem;">Editor má vlastní strom (<strong>K8</strong>) — sidebar-tree.js detekuje #docTree a přeskočí se.</p>
+</div>
+
+<!-- ===== PALÁC ===== -->
+<div class="panel" id="panel-palace">
+  <div class="layout" style="grid-template-columns: 200px 1fr; grid-template-rows: 36px 1fr 30px;">
+    <div class="zone z-k1" style="grid-column: 1/-1;"><span class="zone-tag">K1 — TOP NAV</span></div>
+    <div class="zone z-k2"><span class="zone-tag">K2 — SIDEBAR</span><div class="zone-desc">Strom dokumentů<br><span class="zone-file">sidebar-tree.js</span></div></div>
+    <div class="zone z-k4"><span class="zone-tag">K4 — PALACE CANVAS</span><div class="zone-desc">Vizuální mapa dokumentů<br>AOR layout, zoom/filtr per kategorie<br>SVG + CSS grid<br><span class="zone-file">palace.html · inline JS</span></div></div>
+    <div class="zone z-k7" style="grid-column: 1/-1;"><span class="zone-tag">K7 — STATUS BAR</span></div>
+  </div>
+</div>
+
+<!-- ===== MAPA ===== -->
+<div class="panel" id="panel-mapa">
+  <div class="layout" style="grid-template-columns: 200px 1fr; grid-template-rows: 36px 1fr 30px;">
+    <div class="zone z-k1" style="grid-column: 1/-1;"><span class="zone-tag">K1 — TOP NAV</span></div>
+    <div class="zone z-k2"><span class="zone-tag">K2 — SIDEBAR</span><div class="zone-desc">Strom dokumentů<br><span class="zone-file">sidebar-tree.js</span></div></div>
+    <div class="zone z-k4"><span class="zone-tag">K4 — D3 VIZUALIZACE</span><div class="zone-desc">Radiální mapa znalostí<br>D3.js force layout<br><span class="zone-file">mapa.html · D3.js</span></div></div>
+    <div class="zone z-k7" style="grid-column: 1/-1;"><span class="zone-tag">K7 — STATUS BAR</span></div>
+  </div>
+</div>
+
+<!-- ===== ADMIN ===== -->
+<div class="panel" id="panel-admin">
+  <div class="layout" style="grid-template-columns: 1fr; grid-template-rows: 36px 1fr 30px;">
+    <div class="zone z-k1"><span class="zone-tag">K1 — TOP NAV</span></div>
+    <div class="zone z-k4"><span class="zone-tag">K4 — ADMIN PANEL</span><div class="zone-desc">Uživatelé, skupiny, přístupová matice, nastavení<br>Žádný K2 sidebar<br><span class="zone-file">admin.html · inline JS · fetch /api/admin/*</span></div></div>
+    <div class="zone z-k7"><span class="zone-tag">K7 — STATUS BAR</span></div>
+  </div>
+  <p style="font-size:0.78rem;color:#94a3b8;margin-top:0.5rem;">Admin nemá K2 (sidebar) — přidán do SKIP_PATHS.</p>
+</div>
+
+<!-- ===== OBSAHOVÁ STRUKTURA ===== -->
+<div class="panel" id="panel-obsah">
+
+  <h2 style="font-size:1.1rem;color:#a78bfa;margin-bottom:1rem;">Hierarchie obsahu v docs/</h2>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:1.5rem;">
+    <!-- Strukturální složka -->
+    <div style="border:2px dashed #475569;border-radius:10px;padding:14px;">
+      <div style="font-size:0.75rem;font-weight:700;color:#94a3b8;margin-bottom:8px;">STRUKTURÁLNÍ SLOŽKA</div>
+      <div style="font-size:0.85rem;color:#e2e8f0;margin-bottom:6px;">📁 <code style="color:#64748b;">01-finance/</code></div>
+      <div style="font-size:0.72rem;color:#94a3b8;line-height:1.5;">
+        Prefix: <strong style="color:#cbd5e1;">číslo</strong> (01-, 02-...)<br>
+        Účel: organizace a řazení<br>
+        Nemá vlastní obsah<br>
+        Agreguje data z dětí<br>
+        <code style="color:#64748b;">_category_.json</code>: label, position
+      </div>
+    </div>
+    <!-- Kapitola -->
+    <div style="border:2px solid #a78bfa;border-radius:10px;padding:14px;">
+      <div style="font-size:0.75rem;font-weight:700;color:#a78bfa;margin-bottom:8px;">KAPITOLA</div>
+      <div style="font-size:0.85rem;color:#e2e8f0;margin-bottom:6px;">📖 <code style="color:#a78bfa;">Saldokonto/</code></div>
+      <div style="font-size:0.72rem;color:#94a3b8;line-height:1.5;">
+        Prefix: <strong style="color:#cbd5e1;">písmeno</strong> (velké/malé)<br>
+        Účel: jeden trackovaný celek<br>
+        Má <code style="color:#a78bfa;">index.md</code> s popisem<br>
+        Části: 01-xxx.md, 02-yyy.md + HTML<br>
+        <code style="color:#64748b;">_category_.json</code>: unit, layer, category, audience
+      </div>
+    </div>
+    <!-- Pod-kapitola -->
+    <div style="border:2px solid #a78bfa50;border-radius:10px;padding:14px;">
+      <div style="font-size:0.75rem;font-weight:700;color:#a78bfa80;margin-bottom:8px;">POD-KAPITOLA</div>
+      <div style="font-size:0.85rem;color:#e2e8f0;margin-bottom:6px;">📖 <code style="color:#a78bfa80;">Upominky/</code></div>
+      <div style="font-size:0.72rem;color:#94a3b8;line-height:1.5;">
+        Prefix: <strong style="color:#cbd5e1;">písmeno</strong> (stejné pravidlo)<br>
+        Účel: složitější část kapitoly<br>
+        Vnořená uvnitř rodičovské kapitoly<br>
+        Vlastní index.md + části<br>
+        Trackuje se nezávisle
+      </div>
+    </div>
+  </div>
+
+  <!-- Příklad stromu -->
+  <div style="background:#0d1117;border:1px solid #334155;border-radius:10px;padding:16px;margin-bottom:1.5rem;">
+    <div style="font-size:0.75rem;font-weight:700;color:#38bdf8;margin-bottom:10px;">PŘÍKLAD STRUKTURY</div>
+    <pre style="font-family:monospace;font-size:0.78rem;color:#94a3b8;line-height:1.8;margin:0;"><span style="color:#64748b;">docs/</span>
+  <span style="color:#94a3b8;">01-finance/</span>                      <span style="color:#475569;">← strukturální (číslo)</span>
+    <span style="color:#94a3b8;">01-ucetnictvi/</span>               <span style="color:#475569;">← strukturální (číslo)</span>
+      <span style="color:#a78bfa;">Saldokonto/</span>                <span style="color:#a78bfa80;">← KAPITOLA (písmeno)</span>
+        <span style="color:#64748b;">_category_.json</span>          <span style="color:#475569;">← {unit:true, layer:"sop", ...}</span>
+        <span style="color:#38bdf8;">index.md</span>                 <span style="color:#475569;">← popis kapitoly</span>
+        <span style="color:#e2e8f0;">01-kontrola.md</span>           <span style="color:#475569;">← část 1</span>
+        <span style="color:#e2e8f0;">02-parovani.md</span>           <span style="color:#475569;">← část 2</span>
+        <span style="color:#fbbf24;">diagram.html</span>             <span style="color:#475569;">← interaktivní vizuál</span>
+        <span style="color:#64748b;">img/</span>                     <span style="color:#475569;">← obrázky</span>
+        <span style="color:#a78bfa80;">Upominky/</span>              <span style="color:#a78bfa50;">← POD-KAPITOLA (písmeno)</span>
+          <span style="color:#38bdf8;">index.md</span>               <span style="color:#475569;">← popis pod-kapitoly</span>
+          <span style="color:#e2e8f0;">01-prvni-upominka.md</span>   <span style="color:#475569;">← část</span>
+          <span style="color:#e2e8f0;">02-druha-upominka.md</span>   <span style="color:#475569;">← část</span>
+  <span style="color:#94a3b8;">02-technologie/</span>                  <span style="color:#475569;">← strukturální (číslo)</span>
+    <span style="color:#a78bfa;">Synology-NAS/</span>                <span style="color:#a78bfa80;">← KAPITOLA (písmeno)</span>
+      <span style="color:#38bdf8;">index.md</span>
+      <span style="color:#e2e8f0;">01-pristup.md</span>
+      <span style="color:#e2e8f0;">02-zalohovani.md</span></pre>
+  </div>
+
+  <!-- Rozpoznávací pravidlo -->
+  <div style="background:#0d1117;border:1px solid #334155;border-radius:10px;padding:16px;margin-bottom:1.5rem;">
+    <div style="font-size:0.75rem;font-weight:700;color:#10b981;margin-bottom:10px;">ROZPOZNÁVACÍ PRAVIDLO</div>
+    <pre style="font-family:monospace;font-size:0.78rem;color:#94a3b8;line-height:1.8;margin:0;"><span style="color:#fbbf24;">// Regex:</span> první znak názvu složky
+<span style="color:#a78bfa;">Písmeno</span> → /^[a-záčďéěíňóřšťúůýž]/i  → <span style="color:#a78bfa;">KAPITOLA</span>
+<span style="color:#94a3b8;">Číslo</span>   → /^[0-9]/                  → <span style="color:#94a3b8;">STRUKTURÁLNÍ</span></pre>
+  </div>
+
+  <!-- Typy dokumentů -->
+  <h2 style="font-size:1.1rem;color:#a78bfa;margin-bottom:1rem;">Tři typy dokumentů (layer)</h2>
+  <table class="legend">
+    <thead><tr><th>Typ</th><th>Název</th><th>Účel</th><th>Povinné části</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="dot" style="background:#10b981;"></span><strong>SOP</strong></td>
+        <td>Standard Operating Procedure</td>
+        <td>Člověk má něco udělat krok za krokem</td>
+        <td style="font-size:0.72rem;">Hlavička → Mapa procesu (5+ kroků) → Kroky → Varování → Quiz → Potvrzení</td>
+      </tr>
+      <tr>
+        <td><span class="dot" style="background:#38bdf8;"></span><strong>BIMG</strong></td>
+        <td>Big Image (dokumentace)</td>
+        <td>Člověk má pochopit, jak něco funguje</td>
+        <td style="font-size:0.72rem;">Hlavička → Vizuální mapa (vždy) → Obsahové sekce → Kontext inline</td>
+      </tr>
+      <tr>
+        <td><span class="dot" style="background:#fbbf24;"></span><strong>CHL</strong></td>
+        <td>Cheat List (reference)</td>
+        <td>Rychle najít konkrétní údaj</td>
+        <td style="font-size:0.72rem;">Hlavička → Tabulka/seznam → Hledání</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Metadata -->
+  <h2 style="font-size:1.1rem;color:#a78bfa;margin:1.5rem 0 1rem;">Metadata v _category_.json</h2>
+  <table class="legend">
+    <thead><tr><th>Pole</th><th>Hodnoty</th><th>Popis</th></tr></thead>
+    <tbody>
+      <tr><td><strong>unit</strong></td><td class="code">true | false</td><td>Je to kapitola? (=trackovaný celek)</td></tr>
+      <tr><td><strong>layer</strong></td><td class="code">bimg | sop | chl</td><td>Typ dokumentu</td></tr>
+      <tr><td><strong>category</strong></td><td class="code">law | proc | know | mem</td><td>Obsahová taxonomie</td></tr>
+      <tr><td><strong>audience</strong></td><td class="code">["finance", "prodej", ...]</td><td>Cílové role</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===== GLOBÁLNÍ LEGENDA ===== -->
+<table class="legend">
+  <thead><tr><th>Kód</th><th>Název</th><th>Soubor</th><th>Popis</th></tr></thead>
+  <tbody>
+    <tr><td><span class="dot" style="background:#38bdf8;"></span><strong>K1</strong></td><td>TOP NAV</td><td class="code">status-bar.js</td><td>Horní navigace — taby sekcí, sekční barvy, dynamická favicona</td></tr>
+    <tr><td><span class="dot" style="background:#38bdf8;"></span><strong>K2</strong></td><td>SIDEBAR</td><td class="code">sidebar-tree.js</td><td>Strom dokumentů — SVG ikony, AOR barvy, level 0/Ⅰ/Ⅱ/Ⅲ, expand/collapse, resize, doubleclick</td></tr>
+    <tr><td><span class="dot" style="background:#fbbf24;"></span><strong>K3</strong></td><td>SEARCH PANEL</td><td class="code">sidebar-tree.js</td><td>Plovoucí výsledky hledání — nalepený na K2, resizable 200-600px, "Zavřít hledání"</td></tr>
+    <tr><td><span class="dot" style="background:#10b981;"></span><strong>K4</strong></td><td>HLAVNÍ OBSAH</td><td class="code">varies</td><td>Centrální panel — Docusaurus article / static HTML / editor canvas. margin-left = K2 + K3</td></tr>
+    <tr><td><span class="dot" style="background:#a78bfa;"></span><strong>K4-TT</strong></td><td>TREE-TABLE</td><td class="code">dashboard.html</td><td>Varianta K4 na dashboardu: vizuál K2 (ikony, barvy) + datové sloupce statistik</td></tr>
+    <tr><td><span class="dot" style="background:#94a3b8;"></span><strong>K5</strong></td><td>OUTLINE (TOC)</td><td class="code">sidebar-tree.js</td><td>Nadpisy stránky — animateScroll() při kliku, rAF smyčka 400-900ms</td></tr>
+    <tr><td><span class="dot" style="background:#fbbf24;"></span><strong>K6</strong></td><td>MINIMAP</td><td class="code">sidebar-tree.js</td><td>Vertikální proužek vpravo při hledání — žluté tick markery, modrý viewport indikátor</td></tr>
+    <tr><td><span class="dot" style="background:#38bdf8;"></span><strong>K7</strong></td><td>STATUS BAR</td><td class="code">status-bar.js</td><td>Spodní lišta — uživatel, role, čas, statistiky čtení, odkaz Schema, debug konzole (&gt;_), odhlásit</td></tr>
+    <tr><td><span class="dot" style="background:#f97316;"></span><strong>K8</strong></td><td>EDITOR TREE</td><td class="code">editor.html</td><td>Vlastní strom editoru (#docTree) — K2 se přeskočí, drag & drop</td></tr>
+  </tbody>
+</table>
+
+<!-- ===== POMOCNÉ MATERIÁLY ===== -->
+<div style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid #334155;">
+  <h2 style="font-size:0.9rem;color:#94a3b8;margin-bottom:1rem;">📎 Pomocné materiály</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+    <a href="/dashboard" style="display:block;padding:10px 14px;border:1px solid #334155;border-radius:8px;text-decoration:none;transition:border-color 0.2s;">
+      <div style="font-size:0.8rem;font-weight:600;color:#38bdf8;">📊 Dashboard — Statistiky čtení</div>
+      <div style="font-size:0.7rem;color:#64748b;margin-top:2px;">Kdo co přečetl, compliance, per-user breakdown</div>
+    </a>
+    <a href="/admin" style="display:block;padding:10px 14px;border:1px solid #334155;border-radius:8px;text-decoration:none;transition:border-color 0.2s;">
+      <div style="font-size:0.8rem;font-weight:600;color:#f97316;">⚙️ Admin — Správa uživatelů</div>
+      <div style="font-size:0.7rem;color:#64748b;margin-top:2px;">Uživatelé, skupiny, přístupová matice, overrides</div>
+    </a>
+    <a href="/editor" style="display:block;padding:10px 14px;border:1px solid #334155;border-radius:8px;text-decoration:none;transition:border-color 0.2s;">
+      <div style="font-size:0.8rem;font-weight:600;color:#10b981;">✏️ Editor — Tvorba obsahu</div>
+      <div style="font-size:0.7rem;color:#64748b;margin-top:2px;">Blokový editor, typ dokumentu (BIMG/SOP/Cheat), publikace</div>
+    </a>
+    <a href="/guides/pruvodce-tvorbou" style="display:block;padding:10px 14px;border:1px solid #334155;border-radius:8px;text-decoration:none;transition:border-color 0.2s;">
+      <div style="font-size:0.8rem;font-weight:600;color:#fbbf24;">📚 Průvodce tvorbou obsahu</div>
+      <div style="font-size:0.7rem;color:#64748b;margin-top:2px;">Matice kategorií, workflow, kvíz — vše o tvorbě dokumentace</div>
+    </a>
+    <a href="/" style="display:block;padding:10px 14px;border:1px solid #334155;border-radius:8px;text-decoration:none;transition:border-color 0.2s;">
+      <div style="font-size:0.8rem;font-weight:600;color:#a78bfa;">🧭 Domů — Personalizovaný přehled</div>
+      <div style="font-size:0.7rem;color:#64748b;margin-top:2px;">Nepřečtené stránky, statistiky, quick links</div>
+    </a>
+  </div>
+</div>
+
+<script>
+document.getElementById('tabs').addEventListener('click', function(e) {
+  if (!e.target.classList.contains('tab')) return;
+  document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('active'); });
+  e.target.classList.add('active');
+  document.getElementById('panel-' + e.target.dataset.tab).classList.add('active');
+});
+</script>
+<script src="/js/status-bar.js"></script>
+</body>
+</html>

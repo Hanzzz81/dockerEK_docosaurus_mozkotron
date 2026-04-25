@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mozkotron — Přiřazení obsahu</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #0f172a; color: #e2e8f0; line-height: 1.6;
+    padding: 1.5rem; max-width: 1400px; margin: 0 auto;
+  }
+  h1 { font-size: 1.4rem; color: #f8fafc; margin-bottom: 0.3rem; }
+  .subtitle { color: #94a3b8; font-size: 0.85rem; margin-bottom: 1.5rem; }
+
+  .toolbar { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+  .btn { background: #0ea5e9; color: #f8fafc; border: none; padding: 0.45rem 0.9rem; border-radius: 6px; cursor: pointer; font-size: 0.82rem; font-weight: 600; transition: background 0.15s; }
+  .btn:hover { background: #38bdf8; }
+  .btn-ghost { background: transparent; border: 1px solid #475569; color: #94a3b8; }
+  .btn-ghost:hover { border-color: #0ea5e9; color: #e2e8f0; }
+
+  .msg { display: none; padding: 0.6rem 1rem; border-radius: 6px; font-size: 0.82rem; font-weight: 600; margin-bottom: 1rem; }
+  .msg-ok { background: #10b98122; color: #10b981; border: 1px solid #10b981; }
+  .msg-err { background: #ef444422; color: #ef4444; border: 1px solid #ef4444; }
+
+  .legend { font-size: 0.78rem; color: #94a3b8; margin-bottom: 1rem; display: flex; gap: 1.2rem; flex-wrap: wrap; }
+  .legend span { display: flex; align-items: center; gap: 0.3rem; }
+  .legend .sym { font-weight: 700; font-size: 0.9rem; }
+  .legend .sym-req { color: #059669; }
+  .legend .sym-info { color: #2563eb; }
+  .legend .sym-deny { color: #ef4444; }
+  .legend .sym-inherit { color: #94a3b8; }
+
+  /* Content tree */
+  .content-tree { font-size: 0.85rem; }
+  .ct-row { display: flex; align-items: center; gap: 0; padding: 0.35rem 0.6rem; border-bottom: 1px solid #334155; }
+  .ct-row:hover { background: #1e293b; }
+  .ct-row.ct-header { border-bottom: 1px solid #475569; margin-bottom: 0.3rem; background: none; }
+  .ct-label { flex: 1; min-width: 220px; display: flex; align-items: center; gap: 0.4rem; overflow: hidden; }
+  .ct-cols { display: flex; align-items: center; gap: 0; flex-shrink: 0; }
+  .ct-col { width: 48px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .ct-col-head { font-size: 0.6rem; color: #94a3b8; font-weight: 600; text-align: center; width: 48px; overflow: hidden; line-height: 1.2; padding: 2px 1px; }
+  .ct-col-head .col-icon { display: block; font-size: 0.85rem; }
+  .ct-col-head .col-name { display: block; font-size: 0.55rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ct-sep { width: 8px; flex-shrink: 0; border-left: 1px solid #475569; height: 16px; margin: 0 2px; }
+  .ct-icon { flex-shrink: 0; }
+  .ct-folder-name { font-weight: 600; color: #e2e8f0; }
+  .ct-page-title { color: #e2e8f0; }
+  .ct-page-file { font-size: 0.72rem; color: #64748b; margin-left: 0.4rem; }
+  .ct-frontmatter { font-size: 0.68rem; color: #c4b5fd; background: #3730a322; padding: 0 4px; border-radius: 3px; margin-left: 0.3rem; }
+  .ct-unassigned { font-size: 0.68rem; color: #ef4444; background: #ef444422; padding: 0 4px; border-radius: 3px; margin-left: 0.3rem; }
+
+  /* Audience doporučení sloupec */
+  .ct-audience { width: 110px; flex-shrink: 0; display: flex; align-items: center; gap: 0.3rem; font-size: 0.7rem; margin-right: 0.5rem; }
+  .ct-aud-badge { padding: 1px 6px; border-radius: 3px; font-size: 0.65rem; font-weight: 600; white-space: nowrap; cursor: help; }
+  .ct-aud-match { background: #10b98122; color: #10b981; }
+  .ct-aud-over { background: #f59e0b22; color: #f59e0b; }
+  .ct-aud-under { background: #ef444422; color: #ef4444; }
+  .ct-aud-none { color: #64748b; }
+  .ct-aud-head { width: 110px; flex-shrink: 0; font-size: 0.65rem; color: #94a3b8; font-weight: 600; text-align: center; margin-right: 0.5rem; }
+
+  .ct-access-btn {
+    width: 26px; height: 22px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; border-radius: 4px; font-size: 0.82rem; color: #64748b;
+    transition: all 0.15s; border: none; background: none; padding: 0;
+  }
+  .ct-access-btn:hover { background: #475569; color: #94a3b8; }
+  .ct-access-btn.required { color: #10b981; font-weight: 700; }
+  .ct-access-btn.info { color: #0ea5e9; font-weight: 600; }
+  .ct-access-btn.denied { color: #ef4444; font-weight: 700; }
+  .ct-access-btn.inherited { color: #94a3b8; }
+
+  /* Nový sloupec: audience tagy z frontmatter */
+  .ct-aud-tags { width: 140px; flex-shrink: 0; font-size: 0.65rem; color: #94a3b8; margin-right: 0.3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ct-aud-tags-head { width: 140px; flex-shrink: 0; font-size: 0.65rem; color: #94a3b8; font-weight: 600; text-align: center; margin-right: 0.3rem; }
+
+  /* Error tabulka nesouladů */
+  .mismatch-table { background: #ef444422; border: 1px solid #ef4444; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+  .mismatch-table h3 { color: #ef4444; font-size: 0.9rem; margin-bottom: 0.5rem; }
+  .mismatch-table table { width: 100%; font-size: 0.78rem; border-collapse: collapse; }
+  .mismatch-table th { text-align: left; color: #ef4444; padding: 0.3rem 0.5rem; border-bottom: 1px solid #ef4444; }
+  .mismatch-table td { padding: 0.3rem 0.5rem; border-bottom: 1px solid #ef4444; color: #e2e8f0; }
+
+  .empty-state { text-align: center; color: #64748b; padding: 2rem; font-size: 0.9rem; }
+
+  /* ===== PREVIEW PANEL (outline) ===== */
+  .ct-preview-row {
+    margin-left: 0; padding: 0;
+    overflow: hidden;
+    animation: previewSlide 0.2s ease-out;
+  }
+  @keyframes previewSlide {
+    from { max-height: 0; opacity: 0; }
+    to { max-height: 500px; opacity: 1; }
+  }
+  .ct-preview-panel {
+    background: #1e293b;
+    border: 1px solid #475569;
+    border-radius: 8px;
+    margin: 0.3rem 0.6rem 0.5rem;
+    padding: 0.8rem 1rem;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: #e2e8f0;
+  }
+  .ct-preview-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 0.5rem; padding-bottom: 0.4rem; border-bottom: 1px solid #475569;
+  }
+  .ct-preview-title {
+    font-size: 0.85rem; font-weight: 600; color: #0ea5e9;
+    display: flex; align-items: center; gap: 0.4rem;
+  }
+  .ct-preview-meta {
+    display: flex; gap: 0.8rem; font-size: 0.7rem; color: #94a3b8;
+  }
+  .ct-preview-close {
+    background: none; border: 1px solid #475569; border-radius: 4px;
+    color: #94a3b8; font-size: 0.72rem; padding: 2px 8px; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .ct-preview-close:hover { border-color: #0ea5e9; color: #e2e8f0; }
+  .ct-preview-intro {
+    color: #94a3b8; font-style: italic; font-size: 0.78rem;
+    margin-bottom: 0.5rem; padding-bottom: 0.4rem; border-bottom: 1px dashed #334155;
+  }
+  .ct-outline-item {
+    display: flex; align-items: baseline; gap: 0.3rem;
+    padding: 0.15rem 0; color: #cbd5e1;
+  }
+  .ct-outline-h1 { font-weight: 600; color: #f8fafc; font-size: 0.82rem; }
+  .ct-outline-h2 { padding-left: 1rem; color: #cbd5e1; }
+  .ct-outline-h3 { padding-left: 2rem; color: #94a3b8; font-size: 0.76rem; }
+  .ct-outline-h4 { padding-left: 3rem; color: #64748b; font-size: 0.74rem; }
+  .ct-outline-bullet { color: #94a3b8; flex-shrink: 0; }
+  .ct-preview-loading {
+    color: #94a3b8; font-style: italic; padding: 0.5rem; text-align: center;
+  }
+  .ct-preview-empty {
+    color: #64748b; font-style: italic; padding: 0.3rem 0;
+  }
+
+  /* Klikatelný název stránky */
+  .ct-page-clickable {
+    cursor: pointer; transition: color 0.15s;
+  }
+  .ct-page-clickable:hover { color: #0ea5e9; text-decoration: underline; }
+  .ct-page-active { color: #0ea5e9 !important; font-weight: 600; }
+
+  /* ===== SBALITELNÉ SLOŽKY ===== */
+  .ct-folder-toggle {
+    cursor: pointer; user-select: none; font-size: 0.7rem; color: #94a3b8;
+    margin-right: 0.2rem; transition: transform 0.2s, color 0.15s;
+    display: inline-block; width: 14px; text-align: center;
+  }
+  .ct-folder-toggle:hover { color: #0ea5e9; }
+  .ct-folder-toggle.collapsed { transform: rotate(-90deg); }
+
+  /* Malá tlačítka pro sbalit/rozbalit */
+  .btn-ghost-sm {
+    background: transparent; border: 1px solid #475569; border-radius: 4px;
+    color: #94a3b8; font-size: 0.72rem; padding: 3px 10px; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-ghost-sm:hover { border-color: #0ea5e9; color: #e2e8f0; }
+</style>
+</head>
+<body>
+<div style="background:linear-gradient(135deg,#1e293b 0%,#0f172a 50%,#0f172a 100%);border:1px solid #475569;border-radius:12px;padding:1.2rem 1.5rem;margin-bottom:1.2rem;display:flex;align-items:center;gap:1rem;">
+  <span style="font-size:2.2rem;filter:drop-shadow(0 0 8px rgba(14,165,233,0.4));">🔗</span>
+  <div>
+    <h1 style="margin:0;font-size:1.3rem;color:#0ea5e9;">Přiřazení obsahu</h1>
+    <p style="margin:0;font-size:0.78rem;color:#94a3b8;">Přiřazení články skupinám a uživatelům · ● povinné čtení · ○ informační</p>
+  </div>
+</div>
+
+<div id="msgOk" class="msg msg-ok"></div>
+<div id="msgErr" class="msg msg-err"></div>
+
+<div class="toolbar">
+  <button class="btn btn-ghost" onclick="syncFrontmatter()">Sync frontmatter</button>
+  <button class="btn btn-ghost" onclick="loadAll()">Obnovit</button>
+</div>
+
+<div class="legend">
+  <span><span class="sym sym-req">●</span> Povinné čtení</span>
+  <span><span class="sym sym-info">○</span> Informační</span>
+  <span><span class="sym sym-deny">✗</span> Zakázáno</span>
+  <span><span class="sym sym-inherit">●○✗</span> Šedá = zděděno ze skupiny/složky</span>
+</div>
+
+<div style="display:flex;gap:0.5rem;margin-bottom:0.4rem;">
+  <button class="btn-ghost-sm" onclick="collapseAll()">▶ Sbalit vše</button>
+  <button class="btn-ghost-sm" onclick="expandAll()">▼ Rozbalit vše</button>
+</div>
+
+<div id="contentTree" class="content-tree">
+  <div class="empty-state">Načítám...</div>
+</div>
+
+<script>
+'use strict';
+
+// SVG ikony — plně přebarvitelné
+function svgFolder(color) {
+  return '<svg width="16" height="14" viewBox="0 0 16 14" fill="none" style="vertical-align:middle;flex-shrink:0;">' +
+    '<path d="M1 2C1 1.45 1.45 1 2 1H6L8 3H14C14.55 3 15 3.45 15 4V12C15 12.55 14.55 13 14 13H2C1.45 13 1 12.55 1 12V2Z" fill="' + color + '" opacity="0.85"/>' +
+    '<path d="M1 4H15V12C15 12.55 14.55 13 14 13H2C1.45 13 1 12.55 1 12V4Z" fill="' + color + '"/>' +
+  '</svg>';
+}
+function svgDoc(color) {
+  return '<svg width="14" height="16" viewBox="0 0 14 16" fill="none" style="vertical-align:middle;flex-shrink:0;">' +
+    '<path d="M2 1C1.45 1 1 1.45 1 2V14C1 14.55 1.45 15 2 15H12C12.55 15 13 14.55 13 14V5L9 1H2Z" fill="' + color + '" opacity="0.15" stroke="' + color + '" stroke-width="0.8"/>' +
+    '<path d="M9 1V5H13" stroke="' + color + '" stroke-width="0.8" fill="' + color + '" opacity="0.25"/>' +
+    '<line x1="3.5" y1="8" x2="10.5" y2="8" stroke="' + color + '" stroke-width="0.6" opacity="0.4"/>' +
+    '<line x1="3.5" y1="10" x2="10.5" y2="10" stroke="' + color + '" stroke-width="0.6" opacity="0.4"/>' +
+    '<line x1="3.5" y1="12" x2="8" y2="12" stroke="' + color + '" stroke-width="0.6" opacity="0.4"/>' +
+  '</svg>';
+}
+
+var CONFIG = null;
+var DOCS_STRUCTURE = null;
+var ACCESS_MATRIX = null;
+var previewPath = null;   // Aktuálně otevřený náhled
+var previewCache = {};    // Cache náhledů {path: data}
+var collapsedFolders = {}; // Sbalené složky {path: true}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function flash(type, text) {
+  var el = document.getElementById(type === 'ok' ? 'msgOk' : 'msgErr');
+  el.textContent = text; el.style.display = 'block';
+  setTimeout(function() { el.style.display = 'none'; }, 3000);
+}
+
+// ============================================================================
+// DATA LOADING
+// ============================================================================
+
+async function loadAll() {
+  try {
+    var [configRes, docsRes, matrixRes] = await Promise.all([
+      fetch('/api/admin/config'),
+      fetch('/api/admin/docs'),
+      fetch('/api/admin/access-matrix')
+    ]);
+    CONFIG = await configRes.json();
+    DOCS_STRUCTURE = await docsRes.json();
+    ACCESS_MATRIX = await matrixRes.json();
+    ACCESS_MATRIX.pages = ACCESS_MATRIX.pages || {};
+    ACCESS_MATRIX.folders = ACCESS_MATRIX.folders || {};
+    renderContentTree();
+  } catch(e) {
+    flash('err', 'Chyba načítání: ' + e.message);
+  }
+}
+
+// ============================================================================
+// HELPERS — efektivní stav entity (5-stavový: required, info, deny, null)
+// ============================================================================
+
+/**
+ * Přímý stav entity v záznamu matice.
+ * Vrací: 'required', 'info', 'deny', nebo null.
+ */
+function getEntityState(entry, entityId, entityType) {
+  if (!entry) return null;
+  if (entityType === 'group') {
+    if ((entry.requiredGroups || []).indexOf(entityId) >= 0) return 'required';
+    if ((entry.groups || []).indexOf(entityId) >= 0) return 'info';
+    if ((entry.denyGroups || []).indexOf(entityId) >= 0) return 'deny';
+  } else {
+    if ((entry.requiredUsers || []).indexOf(entityId) >= 0) return 'required';
+    if ((entry.users || []).indexOf(entityId) >= 0) return 'info';
+    if ((entry.denyUsers || []).indexOf(entityId) >= 0) return 'deny';
+  }
+  return null;
+}
+
+/**
+ * Zděděný stav usera ze skupin v daném záznamu.
+ */
+function getUserGroupState(entry, userId) {
+  if (!entry || !CONFIG) return null;
+  var user = CONFIG.users[userId];
+  if (!user) return null;
+  var userGroups = user.groups || [];
+  // Deny má prioritu
+  for (var i = 0; i < userGroups.length; i++) {
+    if ((entry.denyGroups || []).indexOf(userGroups[i]) >= 0) return 'deny';
+  }
+  // Required
+  for (var i = 0; i < userGroups.length; i++) {
+    if ((entry.requiredGroups || []).indexOf(userGroups[i]) >= 0) return 'required';
+  }
+  // Info
+  for (var i = 0; i < userGroups.length; i++) {
+    if ((entry.groups || []).indexOf(userGroups[i]) >= 0) return 'info';
+  }
+  return null;
+}
+
+/**
+ * Najde zděděný záznam z nadřazené složky (inherit: true).
+ */
+function getInheritedFolderEntry(itemPath) {
+  if (!ACCESS_MATRIX) return null;
+  var parts = itemPath.split('/');
+  for (var i = parts.length - 1; i >= 1; i--) {
+    var folderPath = parts.slice(0, i).join('/');
+    var folderEntry = (ACCESS_MATRIX.folders || {})[folderPath];
+    if (folderEntry && folderEntry.inherit !== false) {
+      var hasAccess = (folderEntry.groups || []).length > 0 ||
+                      (folderEntry.users || []).length > 0 ||
+                      (folderEntry.requiredGroups || []).length > 0 ||
+                      (folderEntry.requiredUsers || []).length > 0 ||
+                      (folderEntry.denyGroups || []).length > 0 ||
+                      (folderEntry.denyUsers || []).length > 0;
+      if (hasAccess) return folderEntry;
+    }
+  }
+  return null;
+}
+
+/**
+ * Efektivní stav entity (přímý + skupinový + zděděný ze složky).
+ * Vrací: { state: 'required'|'info'|'deny'|null, source: 'direct'|'group'|'folder'|null }
+ */
+function getEffectiveState(itemPath, itemType, entityId, entityType) {
+  var section = itemType === 'folder' ? 'folders' : 'pages';
+  var entry = (ACCESS_MATRIX[section] || {})[itemPath] || null;
+
+  // 1. Přímý stav
+  var directState = getEntityState(entry, entityId, entityType);
+  if (directState) return { state: directState, source: 'direct' };
+
+  // 2. Pro uživatele: stav ze skupiny
+  if (entityType === 'user') {
+    var groupState = getUserGroupState(entry, entityId);
+    if (groupState) return { state: groupState, source: 'group' };
+  }
+
+  // 3. Dědičnost z nadřazené složky
+  var folderEntry = getInheritedFolderEntry(itemPath);
+  if (folderEntry) {
+    var folderDirect = getEntityState(folderEntry, entityId, entityType);
+    if (folderDirect) return { state: folderDirect, source: 'folder' };
+    if (entityType === 'user') {
+      var folderGroupState = getUserGroupState(folderEntry, entityId);
+      if (folderGroupState) return { state: folderGroupState, source: 'folder' };
+    }
+  }
+
+  return { state: null, source: null };
+}
+
+// ============================================================================
+// AUDIENCE DOPORUČENÍ — porovnání frontmatter vs. access-matrix
+// ============================================================================
+
+/**
+ * Zjistí, které skupiny mají reálný přístup ke stránce (přímý + zděděný).
+ * Vrací Set skupin.
+ */
+function getPageAccessGroups(itemPath) {
+  if (!CONFIG || !ACCESS_MATRIX) return new Set();
+  var groupIds = Object.keys(CONFIG.groups || {});
+  var result = new Set();
+  groupIds.forEach(function(g) {
+    var eff = getEffectiveState(itemPath, 'page', g, 'group');
+    if (eff.state === 'required' || eff.state === 'info') result.add(g);
+  });
+  return result;
+}
+
+/**
+ * Porovná frontmatter audience s reálnými přístupy.
+ * Vrací: { status: 'match'|'over'|'under'|'none', recommended: [], actual: [], missing: [], extra: [] }
+ */
+function compareAudience(item) {
+  if (!item.audience || item.audience.length === 0) {
+    return { status: 'none', recommended: [], actual: [], missing: [], extra: [] };
+  }
+  var recommended = new Set(item.audience);
+  var actual = getPageAccessGroups(item.path);
+
+  // Porovnání: ignoruj admin skupinu (ta vidí vše automaticky)
+  var adminGroups = new Set();
+  if (CONFIG && CONFIG.groups) {
+    Object.keys(CONFIG.groups).forEach(function(g) {
+      var access = CONFIG.groups[g].access || [];
+      if (access.indexOf('*') >= 0) adminGroups.add(g);
+    });
+  }
+
+  // Odeber admin skupiny z porovnání
+  var actualFiltered = new Set();
+  actual.forEach(function(g) { if (!adminGroups.has(g)) actualFiltered.add(g); });
+
+  var missing = [];
+  recommended.forEach(function(g) { if (!actualFiltered.has(g)) missing.push(g); });
+  var extra = [];
+  actualFiltered.forEach(function(g) { if (!recommended.has(g)) extra.push(g); });
+
+  var status;
+  if (missing.length === 0 && extra.length === 0) {
+    status = 'match';
+  } else if (missing.length > 0 && extra.length > 0) {
+    status = 'over'; // Mix — zobrazíme jako varování
+  } else if (extra.length > 0) {
+    status = 'over';
+  } else {
+    status = 'under';
+  }
+
+  return {
+    status: status,
+    recommended: Array.from(recommended),
+    actual: Array.from(actualFiltered),
+    missing: missing,
+    extra: extra
+  };
+}
+
+function renderAudienceBadge(item) {
+  if (item.type === 'folder') return '';
+  var cmp = compareAudience(item);
+  if (cmp.status === 'none') return '<span class="ct-aud-none">—</span>';
+
+  var label, cls, title;
+  if (cmp.status === 'match') {
+    label = '✅ Pokryto';
+    cls = 'ct-aud-match';
+    title = 'Doporučení: ' + cmp.recommended.join(', ') + '\nSkutečný přístup odpovídá.';
+  } else if (cmp.status === 'over') {
+    label = '⚠️ Přebytek';
+    cls = 'ct-aud-over';
+    title = 'Doporučení: ' + cmp.recommended.join(', ') + '\nNavíc mají přístup: ' + cmp.extra.join(', ');
+    if (cmp.missing.length > 0) title += '\nChybí: ' + cmp.missing.join(', ');
+  } else {
+    label = '🔻 Chybí';
+    cls = 'ct-aud-under';
+    title = 'Doporučení: ' + cmp.recommended.join(', ') + '\nBez přístupu: ' + cmp.missing.join(', ');
+  }
+
+  return '<span class="ct-aud-badge ' + cls + '" title="' + esc(title) + '">' + label + '</span>';
+}
+
+// ============================================================================
+// NESOULADY — audience tagy vs. reálné skupiny/uživatelé
+// ============================================================================
+
+/**
+ * Najde audience tagy z frontmatter které neodpovídají žádné existující skupině ani uživateli.
+ * Vrací pole { page, value, type } objektů.
+ */
+function findAudienceMismatches() {
+  if (!DOCS_STRUCTURE || !CONFIG) return [];
+  var groupIds = new Set(Object.keys(CONFIG.groups || {}));
+  var userIds = new Set(Object.keys(CONFIG.users || {}));
+  var results = [];
+
+  DOCS_STRUCTURE.forEach(function(item) {
+    if (item.type === 'folder' || !item.audience) return;
+    item.audience.forEach(function(tag) {
+      if (!groupIds.has(tag) && !userIds.has(tag)) {
+        results.push({
+          page: item.title || item.name,
+          value: tag,
+          type: 'Neexistující skupina/uživatel'
+        });
+      }
+    });
+  });
+  return results;
+}
+
+// ============================================================================
+// RENDER
+// ============================================================================
+
+function renderContentTree() {
+  if (!DOCS_STRUCTURE || !CONFIG || !ACCESS_MATRIX) return;
+  var groups = CONFIG.groups || {};
+  var groupIds = Object.keys(groups);
+  var users = CONFIG.users || {};
+  var userIds = Object.keys(users).sort();
+
+  var html = '<div style="overflow-x:auto;">';
+
+  // ---- ERROR TABULKA NESOULADŮ ----
+  var mismatches = findAudienceMismatches();
+  if (mismatches.length > 0) {
+    html += '<div class="mismatch-table"><h3>⚠ Nesoulad v doporučeních — neexistující skupiny/uživatelé</h3>' +
+      '<table><thead><tr><th>Stránka</th><th>Neznámá hodnota</th><th>Typ</th></tr></thead><tbody>';
+    mismatches.forEach(function(m) {
+      html += '<tr><td>' + esc(m.page) + '</td><td><strong>' + esc(m.value) + '</strong></td><td>' + esc(m.type) + '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+
+  // ---- HLAVIČKA ----
+  html += '<div class="ct-row ct-header">' +
+    '<div class="ct-label"><span style="font-size:0.72rem;color:#94a3b8;text-transform:uppercase;">Stránka / Složka</span></div>' +
+    '<div class="ct-aud-tags-head">Doporučení</div>' +
+    '<div class="ct-aud-head">Porovnání</div>' +
+    '<div class="ct-cols">';
+  groupIds.forEach(function(g) {
+    var icon = groups[g].icon || '👥';
+    var label = groups[g].label || g;
+    html += '<div class="ct-col ct-col-head" title="'+esc(label)+'"><span class="col-icon">'+icon+'</span><span class="col-name">'+esc(label)+'</span></div>';
+  });
+  html += '<div class="ct-sep"></div>';
+  userIds.forEach(function(uid) {
+    var u = users[uid];
+    var photo = u.photo ? '<img src="'+esc(u.photo)+'" style="width:18px;height:18px;border-radius:50%;object-fit:cover;">' : '👤';
+    var fullName = (u.firstName || '?') + '\n' + (u.lastName || '');
+    html += '<div class="ct-col ct-col-head" title="'+esc(u.firstName+' '+(u.lastName||''))+' ('+esc(uid)+')"><span class="col-icon">'+photo+'</span><span class="col-name">'+esc(u.firstName||uid)+'</span><span class="col-name">'+esc(u.lastName||'')+'</span></div>';
+  });
+  html += '</div></div>';
+
+  // ---- ŘÁDKY ----
+  DOCS_STRUCTURE.forEach(function(item) {
+    // Přeskočit položky uvnitř sbalených složek
+    if (isInsideCollapsedFolder(item.path)) return;
+
+    var depth = (item.path.match(/\//g) || []).length - 1;
+    var isFolder = item.type === 'folder';
+    var icon = isFolder ? svgFolder('#0ea5e9') : svgDoc('#94a3b8');
+    var name = isFolder ? item.name : (item.title || item.name);
+    var indent = depth * 1.2;
+    var section = isFolder ? 'folders' : 'pages';
+    var entry = (ACCESS_MATRIX[section] || {})[item.path] || null;
+    var endpoint = isFolder ? 'folder' : 'page';
+    var rowClass = isFolder ? 'ct-row ct-folder-row' : 'ct-row ct-page-row';
+    var itemType = isFolder ? 'folder' : 'page';
+
+    // Label
+    html += '<div class="'+rowClass+'" style="margin-left:'+indent+'rem;">' +
+      '<div class="ct-label">' +
+        '<span class="ct-icon">'+icon+'</span>';
+
+    if (isFolder) {
+      var isCollapsed = isFolderCollapsed(item.path);
+      var toggleCls = 'ct-folder-toggle' + (isCollapsed ? ' collapsed' : '');
+      html += '<span class="'+toggleCls+'" onclick="event.stopPropagation();toggleFolder(\''+esc(item.path)+'\')">▼</span>';
+      html += '<span class="ct-folder-name" style="cursor:pointer;" onclick="event.stopPropagation();toggleFolder(\''+esc(item.path)+'\')">'+esc(name)+'</span>';
+      var hasEntry = entry && ((entry.groups||[]).length > 0 || (entry.users||[]).length > 0 ||
+                               (entry.requiredGroups||[]).length > 0 || (entry.requiredUsers||[]).length > 0 ||
+                               (entry.denyGroups||[]).length > 0 || (entry.denyUsers||[]).length > 0);
+      if (hasEntry) {
+        var inheritOn = entry.inherit !== false;
+        var inheritCls = inheritOn ? 'color:#10b981;' : 'color:#ef4444;opacity:0.6;';
+        var inheritLabel = inheritOn ? '↓ dědí' : '↓ off';
+        var inheritTitle = inheritOn ? 'Dědičnost zapnuta. Klikni pro vypnutí.' : 'Dědičnost vypnuta. Klikni pro zapnutí.';
+        html += '<span style="font-size:0.68rem;margin-left:0.3rem;cursor:pointer;'+inheritCls+'" ' +
+          'title="'+inheritTitle+'" ' +
+          'onclick="event.stopPropagation();toggleInherit(\''+esc(item.path)+'\')">'+inheritLabel+'</span>';
+      }
+    } else {
+      var hasFolderInherit = getInheritedFolderEntry(item.path) !== null;
+      var unassigned = !entry && !hasFolderInherit ? ' <span class="ct-unassigned">jen vedení</span>' : '';
+      var isActive = previewPath === item.path;
+      var activeCls = isActive ? ' ct-page-active' : '';
+      html += '<span class="ct-page-title ct-page-clickable'+activeCls+'" data-path="'+esc(item.path)+'" onclick="event.stopPropagation();togglePreviewByPath(this.dataset.path)">'+esc(name)+unassigned+'</span>';
+      html += '<span class="ct-page-file">'+esc(item.name)+'</span>';
+    }
+    html += '</div>';
+
+    // ---- Audience doporučení (tagy z frontmatter) ----
+    var audTagsHtml = '';
+    if (!isFolder && item.audience && item.audience.length > 0) {
+      audTagsHtml = item.audience.map(function(a) {
+        return '<span style="background:#3730a322;color:#c4b5fd;padding:0 3px;border-radius:2px;margin-right:2px;">' + esc(a) + '</span>';
+      }).join('');
+    } else if (!isFolder) {
+      audTagsHtml = '<span style="color:#64748b;">—</span>';
+    }
+    html += '<div class="ct-aud-tags">' + audTagsHtml + '</div>';
+
+    // ---- Porovnání (audience vs. access-matrix) ----
+    html += '<div class="ct-audience">' + renderAudienceBadge(item) + '</div>';
+
+    // ---- Sloupce ----
+    html += '<div class="ct-cols">';
+
+    // Skupiny
+    groupIds.forEach(function(g) {
+      var eff = getEffectiveState(item.path, itemType, g, 'group');
+      var cls = 'ct-access-btn';
+      var label = '·';
+      if (eff.source === 'direct') {
+        if (eff.state === 'required') { cls += ' required'; label = '●'; }
+        else if (eff.state === 'info') { cls += ' info'; label = '○'; }
+        else if (eff.state === 'deny') { cls += ' denied'; label = '✗'; }
+      } else if (eff.source === 'folder') {
+        if (eff.state === 'required') { cls += ' inherited'; label = '●'; }
+        else if (eff.state === 'info') { cls += ' inherited'; label = '○'; }
+        else if (eff.state === 'deny') { cls += ' inherited'; label = '✗'; }
+      }
+      var titleParts = esc(groups[g].label||g);
+      if (eff.source === 'direct') titleParts += ': ' + (eff.state === 'required' ? 'povinné' : eff.state === 'info' ? 'informační' : 'zakázáno');
+      else if (eff.source === 'folder') titleParts += ': zděděno (' + (eff.state === 'required' ? 'povinné' : eff.state === 'info' ? 'informační' : 'zakázáno') + ')';
+      else titleParts += ': –';
+      html += '<div class="ct-col"><span class="'+cls+'" ' +
+        'onclick="toggleAccess(\''+endpoint+'\',\''+esc(item.path)+'\',\''+esc(g)+'\',\'group\')" ' +
+        'title="'+titleParts+'">'+label+'</span></div>';
+    });
+
+    html += '<div class="ct-sep"></div>';
+
+    // Uživatelé
+    userIds.forEach(function(uid) {
+      var eff = getEffectiveState(item.path, itemType, uid, 'user');
+      var cls = 'ct-access-btn';
+      var label = '·';
+      if (eff.source === 'direct') {
+        if (eff.state === 'required') { cls += ' required'; label = '●'; }
+        else if (eff.state === 'info') { cls += ' info'; label = '○'; }
+        else if (eff.state === 'deny') { cls += ' denied'; label = '✗'; }
+      } else if (eff.source === 'group' || eff.source === 'folder') {
+        if (eff.state === 'required') { cls += ' inherited'; label = '●'; }
+        else if (eff.state === 'info') { cls += ' inherited'; label = '○'; }
+        else if (eff.state === 'deny') { cls += ' inherited'; label = '✗'; }
+      }
+      var title = esc(users[uid].firstName+' '+(users[uid].lastName||''));
+      if (eff.source === 'direct') title += ' (přímý: ' + (eff.state === 'required' ? 'povinné' : eff.state === 'info' ? 'informační' : 'zakázáno') + ')';
+      else if (eff.source === 'group') title += ' (ze skupiny)';
+      else if (eff.source === 'folder') title += ' (zděděno ze složky)';
+      html += '<div class="ct-col"><span class="'+cls+'" ' +
+        'onclick="toggleAccess(\''+endpoint+'\',\''+esc(item.path)+'\',\''+esc(uid)+'\',\'user\')" ' +
+        'title="'+title+'">'+label+'</span></div>';
+    });
+
+    html += '</div></div>';
+
+    // ---- PREVIEW PANEL pod řádkem ----
+    if (!isFolder && previewPath === item.path) {
+      html += renderPreviewPanel(item.path, name);
+    }
+  });
+
+  html += '</div>';
+  document.getElementById('contentTree').innerHTML = html;
+}
+
+// ============================================================================
+// PREVIEW — náhled obsahu stránky
+// ============================================================================
+
+function togglePreviewByPath(itemPath) {
+  var item = DOCS_STRUCTURE.find(function(d) { return d.path === itemPath; });
+  var title = item ? (item.title || item.name) : itemPath;
+  togglePreview(itemPath, title);
+}
+
+async function togglePreview(itemPath, title) {
+  if (previewPath === itemPath) {
+    previewPath = null;
+    renderContentTree();
+    return;
+  }
+  previewPath = itemPath;
+  renderContentTree();
+
+  if (!previewCache[itemPath]) {
+    try {
+      var res = await fetch('/api/admin/doc-preview?path=' + encodeURIComponent(itemPath));
+      var data = await res.json();
+      if (data.ok) {
+        previewCache[itemPath] = data;
+      } else {
+        previewCache[itemPath] = { headings: [], firstParagraph: '(Obsah nelze načíst)', wordCount: 0 };
+      }
+    } catch(e) {
+      previewCache[itemPath] = { headings: [], firstParagraph: '(Chyba: ' + e.message + ')', wordCount: 0 };
+    }
+  }
+  renderContentTree();
+}
+
+function renderPreviewPanel(itemPath, title) {
+  var data = previewCache[itemPath];
+  var body;
+  if (!data) {
+    body = '<div class="ct-preview-loading">⏳ Načítám osnovu…</div>';
+  } else {
+    body = '';
+    // Úvodní věta
+    if (data.firstParagraph) {
+      body += '<div class="ct-preview-intro">' + esc(data.firstParagraph) + '</div>';
+    }
+    // Osnova nadpisů
+    if (data.headings && data.headings.length > 0) {
+      data.headings.forEach(function(h) {
+        var cls = 'ct-outline-item ct-outline-h' + h.level;
+        var bullets = { 1: '◆', 2: '▸', 3: '·', 4: '·' };
+        body += '<div class="' + cls + '">' +
+          '<span class="ct-outline-bullet">' + (bullets[h.level] || '·') + '</span> ' +
+          esc(h.text) + '</div>';
+      });
+    } else {
+      body += '<div class="ct-preview-empty">Dokument nemá žádné nadpisy.</div>';
+    }
+  }
+
+  // Meta info
+  var metaHtml = '';
+  if (data && data.wordCount) {
+    metaHtml = '<div class="ct-preview-meta">' +
+      '<span>📝 ' + data.wordCount + ' slov</span>' +
+      '<span>📑 ' + (data.headings ? data.headings.length : 0) + ' sekcí</span>' +
+    '</div>';
+  }
+
+  return '<div class="ct-preview-row">' +
+    '<div class="ct-preview-panel">' +
+      '<div class="ct-preview-header">' +
+        '<div><span class="ct-preview-title">📋 ' + esc(title) + '</span>' + metaHtml + '</div>' +
+        '<button class="ct-preview-close" onclick="event.stopPropagation();previewPath=null;renderContentTree();">✕ Zavřít</button>' +
+      '</div>' +
+      body +
+    '</div>' +
+  '</div>';
+}
+
+// ============================================================================
+// SLOŽKY — sbalitelné / rozbalitelné
+// ============================================================================
+
+function toggleFolder(folderPath) {
+  if (collapsedFolders[folderPath]) {
+    delete collapsedFolders[folderPath];
+  } else {
+    collapsedFolders[folderPath] = true;
+  }
+  renderContentTree();
+}
+
+function isFolderCollapsed(folderPath) {
+  return !!collapsedFolders[folderPath];
+}
+
+function collapseAll() {
+  if (!DOCS_STRUCTURE) return;
+  DOCS_STRUCTURE.forEach(function(item) {
+    if (item.type === 'folder') collapsedFolders[item.path] = true;
+  });
+  renderContentTree();
+}
+
+function expandAll() {
+  collapsedFolders = {};
+  renderContentTree();
+}
+
+function isInsideCollapsedFolder(itemPath) {
+  // Kontrola jestli je item uvnitř jakékoli sbalené složky
+  for (var fp in collapsedFolders) {
+    if (collapsedFolders[fp] && itemPath.startsWith(fp + '/') && itemPath !== fp) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// ============================================================================
+// TOGGLE — 5-stavový cyklus s dědičností
+// ============================================================================
+
+/**
+ * Cyklus bez dědičnosti:   · → ● required → ○ info → ✗ deny → ·
+ * Zděděný required/info:   zelená → ✗ deny → zpět zděděný
+ * Zděděný deny:            zelená ✗ → ● required → ○ info → zpět zděděný
+ */
+async function toggleAccess(type, itemPath, entityId, entityType) {
+  try {
+    var section = type === 'folder' ? 'folders' : 'pages';
+    var entry = (ACCESS_MATRIX[section] || {})[itemPath] || {
+      groups: [], users: [], requiredGroups: [], requiredUsers: [], denyGroups: [], denyUsers: []
+    };
+    entry.groups = entry.groups || [];
+    entry.users = entry.users || [];
+    entry.requiredGroups = entry.requiredGroups || [];
+    entry.requiredUsers = entry.requiredUsers || [];
+    entry.denyGroups = entry.denyGroups || [];
+    entry.denyUsers = entry.denyUsers || [];
+
+    var reqArr = entityType === 'group' ? entry.requiredGroups : entry.requiredUsers;
+    var infoArr = entityType === 'group' ? entry.groups : entry.users;
+    var denyArr = entityType === 'group' ? entry.denyGroups : entry.denyUsers;
+
+    var inReq = reqArr.indexOf(entityId);
+    var inInfo = infoArr.indexOf(entityId);
+    var inDeny = denyArr.indexOf(entityId);
+
+    // Efektivní stav (přímý + skupinový + složkový)
+    var eff = getEffectiveState(itemPath, type, entityId, entityType);
+    var isInherited = eff.source === 'group' || eff.source === 'folder';
+
+    // Odeber ze všech polí
+    if (inReq >= 0) reqArr.splice(inReq, 1);
+    if (inInfo >= 0) infoArr.splice(inInfo, 1);
+    if (inDeny >= 0) denyArr.splice(inDeny, 1);
+
+    // Rozhodovací logika
+    if (inReq >= 0) {
+      // Byl v required → přejdi na info
+      if (!isInherited) {
+        infoArr.push(entityId);
+      }
+      // S dědičností: required → zpět na zděděný (jen odeber)
+    } else if (inInfo >= 0) {
+      // Byl v info → přejdi na deny
+      if (!isInherited) {
+        denyArr.push(entityId);
+      }
+      // S dědičností: info → zpět na zděděný
+    } else if (inDeny >= 0) {
+      // Byl v deny → zpět na nic
+      // (odebráno výše, nic nepřidáváme)
+    } else if (isInherited && (eff.state === 'required' || eff.state === 'info')) {
+      // Zděděný required/info → deny (vyloučit)
+      denyArr.push(entityId);
+    } else if (isInherited && eff.state === 'deny') {
+      // Zděděný deny → required (přepsat)
+      reqArr.push(entityId);
+    } else {
+      // Žádný stav → required
+      reqArr.push(entityId);
+    }
+
+    // Zachovej inherit nastavení
+    var inheritVal = type === 'folder' ? (entry.inherit !== false) : undefined;
+
+    // Aktualizuj lokální data
+    ACCESS_MATRIX[section][itemPath] = entry;
+    renderContentTree();
+
+    // Ulož na server
+    var saveRes = await fetch('/api/admin/access/' + type, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        path: itemPath,
+        groups: entry.groups,
+        users: entry.users,
+        requiredGroups: entry.requiredGroups,
+        requiredUsers: entry.requiredUsers,
+        denyGroups: entry.denyGroups,
+        denyUsers: entry.denyUsers,
+        inherit: inheritVal
+      })
+    });
+    var data = await saveRes.json();
+    if (!data.ok) {
+      flash('err', 'Chyba: ' + (data.error || ''));
+      await loadAll();
+    }
+  } catch(e) {
+    flash('err', 'Chyba sítě: ' + e.message);
+  }
+}
+
+async function toggleInherit(folderPath) {
+  try {
+    var entry = (ACCESS_MATRIX.folders || {})[folderPath];
+    if (!entry) return;
+    var newInherit = entry.inherit === false ? true : false;
+
+    entry.inherit = newInherit;
+    renderContentTree();
+
+    var saveRes = await fetch('/api/admin/access/folder', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        path: folderPath,
+        groups: entry.groups || [],
+        users: entry.users || [],
+        requiredGroups: entry.requiredGroups || [],
+        requiredUsers: entry.requiredUsers || [],
+        denyGroups: entry.denyGroups || [],
+        denyUsers: entry.denyUsers || [],
+        inherit: newInherit
+      })
+    });
+    var data = await saveRes.json();
+    if (data.ok) {
+      flash('ok', 'Dědičnost ' + (newInherit ? 'zapnuta' : 'vypnuta'));
+    } else {
+      flash('err', 'Chyba: ' + (data.error || ''));
+      await loadAll();
+    }
+  } catch(e) {
+    flash('err', 'Chyba sítě: ' + e.message);
+  }
+}
+
+async function syncFrontmatter() {
+  try {
+    var res = await fetch('/api/admin/access/sync-frontmatter', { method: 'POST' });
+    var data = await res.json();
+    if (data.ok) {
+      flash('ok', 'Synchronizováno: ' + data.synced + ' stránek');
+      await loadAll();
+    } else {
+      flash('err', 'Chyba: ' + (data.error || ''));
+    }
+  } catch(e) {
+    flash('err', 'Chyba sítě: ' + e.message);
+  }
+}
+
+// Init
+loadAll();
+</script>
+<script src="/js/sidebar-tree.js"></script>
+<script src="/js/status-bar.js"></script>
+</body>
+</html>

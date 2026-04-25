@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Palác — Mozkotron</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { margin: 0; padding: 0; height: 100%; background: #0a0a1a; }
+body { margin: 0; padding: 0; height: 100%; background: #0a0a1a; font-family: 'Segoe UI', system-ui, sans-serif; color: #e2e8f0; overflow: hidden; }
+
+/* Palace layout — dynamically sized by JS after sidebar sets margin */
+.palace-wrap { padding: 8px 10px 4px 10px; display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box; margin-left: 0 !important; }
+.palace-header { display: flex; align-items: center; justify-content: center; gap: 12px; flex-shrink: 0; margin-bottom: 6px; }
+.palace-title { text-align: center; font-size: 12px; font-weight: 700; letter-spacing: 4px; color: #555; }
+.palace-subtitle { text-align: center; font-size: 9px; letter-spacing: 2px; color: #444; }
+
+/* Back button (zoom mode) */
+.palace-back { display: none; padding: 3px 10px; font-size: 10px; font-weight: 600; color: #94a3b8; background: #1e293b; border: 1px solid #334155; border-radius: 5px; cursor: pointer; letter-spacing: 0.5px; }
+.palace-back:hover { background: #334155; color: #e2e8f0; }
+.palace-wrap.zoomed .palace-back { display: inline-block; }
+
+/* Floor labels */
+.floor { position: relative; margin-bottom: 4px; flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.floor-label { position: absolute; left: 0; top: 50%; transform: translateY(-50%) rotate(-90deg); font-size: 8px; font-weight: 700; letter-spacing: 1px; color: #3a3a3a; width: 24px; text-align: center; }
+.floor-content { margin-left: 28px; flex: 1; display: flex; flex-direction: column; gap: 4px; overflow: hidden; min-height: 0; }
+.floor-line { height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent); margin: 2px 28px; flex-shrink: 0; }
+
+/* Zoom mode — hide non-selected floors */
+.palace-wrap.zoomed .floor { display: none; }
+.palace-wrap.zoomed .floor.floor-active { display: flex; flex: 1 !important; }
+.palace-wrap.zoomed .floor-line { display: none; }
+.palace-wrap.zoomed .aor-card.hidden-card { display: none; }
+.palace-wrap.zoomed .flow-arrow.hidden-card { display: none; }
+
+/* AOR card — root category */
+.aor-card { border: 2px solid; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; min-height: 0; transition: opacity 0.2s; }
+.aor-card-title { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 4px 10px; font-size: 12px; font-weight: 800; letter-spacing: 2px; cursor: pointer; flex-shrink: 0; }
+.aor-card-title:hover { filter: brightness(1.15); }
+.aor-card-title .zoom-hint { font-size: 9px; font-weight: 400; opacity: 0.5; letter-spacing: 0; }
+.aor-card-body { padding: 4px; display: flex; flex-wrap: wrap; gap: 4px; flex: 1; overflow-y: auto; align-content: flex-start; }
+
+/* Grid rows matching mental map */
+.row-full { display: flex; gap: 6px; flex: 1; min-height: 0; overflow: hidden; }
+.row-half { display: flex; gap: 6px; flex: 1; min-height: 0; overflow: hidden; }
+.row-third { display: flex; gap: 6px; flex: 1; min-height: 0; overflow: hidden; }
+.row-full > .aor-card { flex: 1; min-width: 0; }
+.row-half > .aor-card { flex: 1; min-width: 0; }
+.row-third > .aor-card { flex: 1; min-width: 0; }
+
+/* Zahrádka — L1 sub-folder */
+.zahradka { border-radius: 6px; padding: 4px 5px; flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.zahradka-title { font-size: 10px; font-weight: 700; opacity: 0.9; padding: 2px 4px; cursor: pointer; border-radius: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.zahradka-title:hover { opacity: 1; text-decoration: underline; text-decoration-style: dashed; text-underline-offset: 2px; }
+
+/* Pod-zahrádka — L2 sub-folder */
+.pod-zahradka { border-radius: 5px; padding: 3px 4px; display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
+.pod-zahradka-title { font-size: 9px; font-weight: 600; opacity: 0.8; padding: 1px 3px; cursor: pointer; border-radius: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pod-zahradka-title:hover { opacity: 1; text-decoration: underline; text-decoration-style: dashed; }
+
+/* Pod-pod-zahrádka — L3 folder */
+.pod3-zahradka { border-radius: 4px; padding: 2px 3px; display: flex; flex-direction: column; gap: 1px; margin-top: 1px; }
+.pod3-zahradka-title { font-size: 8px; font-weight: 600; opacity: 0.75; padding: 1px 3px; cursor: pointer; border-radius: 2px; }
+.pod3-zahradka-title:hover { opacity: 1; text-decoration: underline; }
+
+/* Document item */
+.doc-pill { font-size: 8px; padding: 2px 5px; border-radius: 3px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: all 0.12s; line-height: 1.6; max-width: 100%; }
+.doc-pill:hover { transform: translateX(2px); filter: brightness(1.3); }
+
+/* Firma — special průřezová card at top */
+.firma-strip { margin-left: 0; flex-shrink: 0; }
+
+/* Flow arrows between cards */
+.flow-arrow { display: flex; align-items: center; justify-content: center; font-size: 16px; color: rgba(255,255,255,0.2); flex-shrink: 0; width: 18px; }
+
+/* Stats footer */
+.palace-footer { text-align: center; font-size: 9px; color: #444; margin-top: 4px; flex-shrink: 0; }
+
+/* Scrollbar in card body */
+.aor-card-body::-webkit-scrollbar { width: 4px; }
+.aor-card-body::-webkit-scrollbar-track { background: transparent; }
+.aor-card-body::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+
+/* Loading */
+.loading { text-align: center; padding: 60px 0; color: #555; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="palace-wrap" id="palaceWrap">
+  <div class="loading" id="loading">Načítám strukturu dokumentů…</div>
+</div>
+
+<script src="/js/status-bar.js"></script>
+<script src="/js/sidebar-tree.js"></script>
+<script>
+(function() {
+  'use strict';
+
+  var AOR = {
+    firma:       { label: 'FIRMA', color: '#90a4ae', dark: '#546e7a', light: '#eceff110', textLight: '#b0bec5' },
+    management:  { label: 'MANAGEMENT', color: '#4caf50', dark: '#2e7d32', light: '#4caf5012', textLight: '#81c784' },
+    finance:     { label: 'FINANCE', color: '#ab47bc', dark: '#7b1fa2', light: '#ab47bc10', textLight: '#ce93d8' },
+    nakup:       { label: 'NÁKUP', color: '#f1c40f', dark: '#f57f17', light: '#f1c40f10', textLight: '#fff176' },
+    rust:        { label: 'RŮST', color: '#ec407a', dark: '#c2185b', light: '#ec407a10', textLight: '#f48fb1' },
+    prodej:      { label: 'PRODEJ', color: '#ffa726', dark: '#ef6c00', light: '#ffa72610', textLight: '#ffcc80' },
+    dodani:      { label: 'DODÁNÍ', color: '#ef5350', dark: '#c62828', light: '#ef535010', textLight: '#ef9a9a' },
+    technologie: { label: 'TECHNOLOGIE', color: '#42a5f5', dark: '#1565c0', light: '#42a5f510', textLight: '#90caf9' }
+  };
+
+  var LAYOUT = [
+    { floor: 'ŘÍZENÍ', flex: 2.5, rows: [
+      { type: 'firma-strip', slugs: ['firma'] },
+      { type: 'full', slugs: ['management'] }
+    ]},
+    { floor: 'ZDROJE', flex: 2, rows: [
+      { type: 'half', slugs: ['finance', 'nakup'] }
+    ]},
+    { floor: 'PROVOZ', flex: 1.2, rows: [
+      { type: 'third', slugs: ['rust', 'prodej', 'dodani'], arrows: true }
+    ]},
+    { floor: 'ZÁKLAD', flex: 1, rows: [
+      { type: 'full', slugs: ['technologie'] }
+    ]}
+  ];
+
+  // State
+  var currentZoom = null; // null = full view, 'finance' = zoomed
+  var cardElements = {};  // slug → { card, floor, row }
+
+  fetch('/api/sidebar')
+    .then(function(r) { return r.json(); })
+    .then(function(tree) {
+      var catMap = {};
+      tree.forEach(function(item) {
+        if (item.type === 'category') {
+          var slug = getRootSlug(item.href);
+          if (slug) catMap[slug] = item;
+        }
+      });
+      buildPalace(catMap);
+      // Check URL hash for initial zoom
+      if (window.location.hash) {
+        var h = window.location.hash.replace('#', '');
+        if (AOR[h]) zoomTo(h);
+      }
+      // Intercept sidebar clicks on palace page
+      interceptSidebarClicks();
+    })
+    .catch(function(e) {
+      document.getElementById('loading').textContent = 'Chyba: ' + e.message;
+    });
+
+  function getRootSlug(href) {
+    if (!href) return null;
+    return href.replace(/^\//, '').replace(/\/$/, '').split('/')[0] || null;
+  }
+
+  // =========================================================================
+  // BUILD PALACE
+  // =========================================================================
+  function buildPalace(catMap) {
+    var wrap = document.getElementById('palaceWrap');
+    wrap.innerHTML = '';
+
+    // Header
+    var header = document.createElement('div');
+    header.className = 'palace-header';
+    var titleWrap = document.createElement('div');
+    var title = document.createElement('div');
+    title.className = 'palace-title';
+    title.textContent = 'DOKUMENTOVÝ PALÁC';
+    titleWrap.appendChild(title);
+    var sub = document.createElement('div');
+    sub.className = 'palace-subtitle';
+    sub.textContent = 'ELEKTRO KUTÍLEK s.r.o.';
+    titleWrap.appendChild(sub);
+    header.appendChild(titleWrap);
+
+    var backBtn = document.createElement('button');
+    backBtn.className = 'palace-back';
+    backBtn.textContent = '\u2190 Celý palác';
+    backBtn.addEventListener('click', function() { zoomTo(null); });
+    header.appendChild(backBtn);
+
+    wrap.appendChild(header);
+
+    var totalDocs = 0;
+    var totalFolders = 0;
+
+    LAYOUT.forEach(function(floor, fi) {
+      if (fi > 0) {
+        var line = document.createElement('div');
+        line.className = 'floor-line';
+        wrap.appendChild(line);
+      }
+
+      var floorEl = document.createElement('div');
+      floorEl.className = 'floor';
+      floorEl.style.flex = floor.flex || 1;
+
+      var label = document.createElement('div');
+      label.className = 'floor-label';
+      label.textContent = floor.floor;
+      floorEl.appendChild(label);
+
+      var content = document.createElement('div');
+      content.className = 'floor-content';
+
+      floor.rows.forEach(function(row) {
+        var rowEl = document.createElement('div');
+
+        if (row.type === 'firma-strip') {
+          rowEl.className = 'firma-strip';
+          rowEl.style.marginLeft = '0';
+          var slug = row.slugs[0];
+          var cat = catMap[slug];
+          var aor = AOR[slug];
+          if (cat && aor) {
+            var card = buildCard(cat, aor, slug);
+            rowEl.appendChild(card);
+            cardElements[slug] = { card: card, floor: floorEl, row: rowEl };
+            var counts = countItems(cat);
+            totalDocs += counts.docs;
+            totalFolders += counts.folders;
+          }
+          content.appendChild(rowEl);
+          return;
+        }
+
+        rowEl.className = 'row-' + row.type;
+
+        row.slugs.forEach(function(slug, si) {
+          if (row.arrows && si > 0) {
+            var arrow = document.createElement('div');
+            arrow.className = 'flow-arrow';
+            arrow.innerHTML = '&#x25B6;';
+            rowEl.appendChild(arrow);
+          }
+          var cat = catMap[slug];
+          var aor = AOR[slug];
+          if (cat && aor) {
+            var card = buildCard(cat, aor, slug);
+            rowEl.appendChild(card);
+            cardElements[slug] = { card: card, floor: floorEl, row: rowEl };
+            var counts = countItems(cat);
+            totalDocs += counts.docs;
+            totalFolders += counts.folders;
+          }
+        });
+
+        content.appendChild(rowEl);
+      });
+
+      floorEl.appendChild(content);
+      wrap.appendChild(floorEl);
+    });
+
+    var footer = document.createElement('div');
+    footer.className = 'palace-footer';
+    footer.textContent = '8 oblastí \u00B7 ' + totalFolders + ' složek \u00B7 ' + totalDocs + ' dokumentů';
+    wrap.appendChild(footer);
+  }
+
+  function countItems(cat) {
+    var docs = 0, folders = 0;
+    if (!cat.children) return { docs: 0, folders: 0 };
+    cat.children.forEach(function(c) {
+      if (c.type === 'page') docs++;
+      else if (c.type === 'category') {
+        folders++;
+        var sub = countItems(c);
+        docs += sub.docs;
+        folders += sub.folders;
+      }
+    });
+    return { docs: docs, folders: folders };
+  }
+
+  function buildCard(cat, aor, slug) {
+    var card = document.createElement('div');
+    card.className = 'aor-card';
+    card.setAttribute('data-slug', slug);
+    card.style.borderColor = aor.dark;
+
+    var titleBar = document.createElement('div');
+    titleBar.className = 'aor-card-title';
+    titleBar.style.background = aor.dark;
+    titleBar.style.color = aor.textLight;
+
+    var labelSpan = document.createElement('span');
+    labelSpan.textContent = aor.label;
+    titleBar.appendChild(labelSpan);
+
+    var hint = document.createElement('span');
+    hint.className = 'zoom-hint';
+    hint.textContent = 'klik = zoom';
+    titleBar.appendChild(hint);
+
+    // Click title → zoom into this category
+    titleBar.addEventListener('click', function() {
+      if (currentZoom === slug) {
+        zoomTo(null); // already zoomed → go back
+      } else {
+        zoomTo(slug);
+      }
+    });
+    card.appendChild(titleBar);
+
+    var body = document.createElement('div');
+    body.className = 'aor-card-body';
+
+    if (cat.children && cat.children.length > 0) {
+      cat.children.forEach(function(child) {
+        if (child.type === 'category') {
+          body.appendChild(buildZahradka(child, aor, 1));
+        } else if (child.type === 'page') {
+          body.appendChild(buildDocPill(child, aor));
+        }
+      });
+    }
+
+    card.appendChild(body);
+    return card;
+  }
+
+  function buildZahradka(cat, aor, depth) {
+    var className, titleClass;
+    if (depth === 1) { className = 'zahradka'; titleClass = 'zahradka-title'; }
+    else if (depth === 2) { className = 'pod-zahradka'; titleClass = 'pod-zahradka-title'; }
+    else { className = 'pod3-zahradka'; titleClass = 'pod3-zahradka-title'; }
+
+    var z = document.createElement('div');
+    z.className = className;
+    var opacityHex = depth === 1 ? '12' : depth === 2 ? '18' : '20';
+    z.style.background = aor.color + opacityHex;
+
+    var title = document.createElement('div');
+    title.className = titleClass;
+    title.style.color = aor.textLight;
+    title.textContent = cat.label;
+    if (cat.href) {
+      title.addEventListener('click', function() { window.location.href = cat.href; });
+    }
+    z.appendChild(title);
+
+    if (cat.children && cat.children.length > 0) {
+      cat.children.forEach(function(child) {
+        if (child.type === 'category') {
+          z.appendChild(buildZahradka(child, aor, depth + 1));
+        } else if (child.type === 'page') {
+          z.appendChild(buildDocPill(child, aor));
+        }
+      });
+    }
+    return z;
+  }
+
+  function buildDocPill(item, aor) {
+    var pill = document.createElement('div');
+    pill.className = 'doc-pill';
+    pill.style.background = aor.color + '18';
+    pill.style.color = aor.textLight;
+    pill.textContent = item.label;
+    pill.title = item.label;
+    if (item.href) {
+      pill.addEventListener('click', function() { window.location.href = item.href; });
+    }
+    return pill;
+  }
+
+  // =========================================================================
+  // ZOOM — show only one category filling the full viewport
+  // =========================================================================
+  function zoomTo(slug) {
+    var wrap = document.getElementById('palaceWrap');
+    currentZoom = slug;
+
+    if (!slug) {
+      // Full view — remove zoom mode
+      wrap.classList.remove('zoomed');
+      window.location.hash = '';
+      // Show all floors and cards
+      var floors = wrap.querySelectorAll('.floor');
+      for (var i = 0; i < floors.length; i++) floors[i].classList.remove('floor-active');
+      var cards = wrap.querySelectorAll('.aor-card, .flow-arrow');
+      for (var j = 0; j < cards.length; j++) cards[j].classList.remove('hidden-card');
+      // Restore all rows hidden by zoom
+      var allRows = wrap.querySelectorAll('.floor-content > *');
+      for (var r = 0; r < allRows.length; r++) {
+        allRows[r].style.display = '';
+        allRows[r].style.flex = '';
+        allRows[r].style.flexDirection = '';
+        allRows[r].style.minHeight = '';
+      }
+      // Reset card flex overrides
+      var allCards = wrap.querySelectorAll('.aor-card');
+      for (var c = 0; c < allCards.length; c++) allCards[c].style.flex = '';
+      // Reset title
+      var titleEl = wrap.querySelector('.palace-title');
+      if (titleEl) {
+        titleEl.textContent = 'DOKUMENTOVÝ PALÁC';
+        titleEl.style.color = '';
+      }
+      return;
+    }
+
+    // Zoom mode
+    wrap.classList.add('zoomed');
+    window.location.hash = slug;
+
+    var info = cardElements[slug];
+    if (!info) return;
+
+    // Mark the active floor
+    var floors = wrap.querySelectorAll('.floor');
+    for (var f = 0; f < floors.length; f++) {
+      floors[f].classList.remove('floor-active');
+    }
+    info.floor.classList.add('floor-active');
+
+    // Hide other rows in the same floor (Firma vs Management issue)
+    // Also stretch the active row to fill the floor (firma-strip fix)
+    var floorContent = info.floor.querySelector('.floor-content');
+    if (floorContent) {
+      var rowChildren = floorContent.children;
+      for (var rc = 0; rc < rowChildren.length; rc++) {
+        if (rowChildren[rc] === info.row) {
+          rowChildren[rc].style.display = 'flex';
+          rowChildren[rc].style.flexDirection = 'column';
+          rowChildren[rc].style.flex = '1';
+          rowChildren[rc].style.minHeight = '0';
+        } else {
+          rowChildren[rc].style.display = 'none';
+          rowChildren[rc].style.flex = '';
+        }
+      }
+    }
+
+    // Hide sibling cards in the same row, show the target
+    var row = info.row;
+    var siblings = row.querySelectorAll('.aor-card, .flow-arrow');
+    for (var s = 0; s < siblings.length; s++) {
+      if (siblings[s] === info.card) {
+        siblings[s].classList.remove('hidden-card');
+        siblings[s].style.flex = '1';
+      } else {
+        siblings[s].classList.add('hidden-card');
+        siblings[s].style.flex = '';
+      }
+    }
+
+    // Update title
+    var aor = AOR[slug];
+    var titleEl = wrap.querySelector('.palace-title');
+    if (titleEl && aor) {
+      titleEl.textContent = aor.label;
+      titleEl.style.color = aor.color;
+    }
+  }
+
+  // =========================================================================
+  // INTERCEPT SIDEBAR CLICKS — on palace page, root folders zoom instead
+  // =========================================================================
+  function interceptSidebarClicks() {
+    // Wait for sidebar to render
+    setTimeout(function() {
+      var sidebar = document.querySelector('.ek-sidebar-tree');
+      if (!sidebar) return;
+
+      // Find root-level folder items (depth 0)
+      var rootFolders = sidebar.querySelectorAll('.tree-item.folder[data-depth="0"]');
+      rootFolders.forEach(function(folder) {
+        var href = folder.getAttribute('data-href');
+        if (!href) return;
+        var slug = href.replace(/^\//, '').replace(/\/$/, '').split('/')[0];
+        if (!AOR[slug]) return;
+
+        // Override the label click to zoom instead of navigate
+        var labelEl = folder.querySelector('.tree-label');
+        var iconEl = folder.querySelector('.tree-icon');
+
+        var zoomHandler = function(e) {
+          e.stopPropagation();
+          e.preventDefault();
+          zoomTo(slug);
+        };
+
+        // Clone and replace to remove old event listeners
+        if (labelEl) {
+          var newLabel = labelEl.cloneNode(true);
+          labelEl.parentNode.replaceChild(newLabel, labelEl);
+          newLabel.addEventListener('click', zoomHandler);
+        }
+      });
+    }, 500);
+  }
+
+  // Fit palace to exact available viewport (after sidebar + top nav render)
+  function fitToViewport() {
+    var wrap = document.getElementById('palaceWrap');
+    if (!wrap) return;
+
+    // Get sidebar width (if present)
+    var sidebar = document.querySelector('.ek-sidebar-tree');
+    var sidebarW = sidebar ? sidebar.offsetWidth : 0;
+
+    // Get top nav height
+    var topNav = document.getElementById('ek-top-nav');
+    var topH = topNav ? topNav.offsetHeight : 46;
+
+    // Bottom bar height
+    var bottomBar = document.getElementById('ek-status-bar');
+    var bottomH = bottomBar ? bottomBar.offsetHeight : 36;
+
+    // Anchor to all 4 edges — avoids width/height calculation drift
+    wrap.style.position = 'fixed';
+    wrap.style.left = sidebarW + 'px';
+    wrap.style.top = topH + 'px';
+    wrap.style.right = '0px';
+    wrap.style.bottom = bottomH + 'px';
+    wrap.style.width = 'auto';
+    wrap.style.height = 'auto';
+  }
+
+  // Run after sidebar has rendered
+  setTimeout(fitToViewport, 600);
+  window.addEventListener('resize', fitToViewport);
+
+  // Also re-fit when sidebar is resized
+  var resizeObs = new MutationObserver(function() { fitToViewport(); });
+  setTimeout(function() {
+    var sb = document.querySelector('.ek-sidebar-tree');
+    if (sb) resizeObs.observe(sb, { attributes: true, attributeFilter: ['style'] });
+  }, 700);
+
+  // Handle back/forward browser navigation
+  window.addEventListener('hashchange', function() {
+    var h = window.location.hash.replace('#', '');
+    if (h && AOR[h]) {
+      zoomTo(h);
+    } else {
+      zoomTo(null);
+    }
+  });
+
+})();
+</script>
+</body>
+</html>

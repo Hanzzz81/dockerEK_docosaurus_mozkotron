@@ -1,0 +1,5 @@
+{
+  "pages": {},
+  "folders": {},
+  "_comment": "Přístupová matice. pages = explicitní přístup per stránka, folders = dědičný přístup per složka. Stránky bez přiřazení vidí jen vedení (*). Hodnoty: {groups: ['vedeni','editori',...], users: ['jan',...]}"
+}

@@ -1,0 +1,1 @@
+# Příjem hotovosti do pokladny za základě FV

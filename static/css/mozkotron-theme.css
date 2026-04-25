@@ -1,0 +1,663 @@
+/**
+ * Mozkotron — Custom theme overrides
+ * ====================================
+ *
+ * Sjednoceni Docusaurus stranek s firemnim designem.
+ * Volume-mounted → zmeny bez rebuildu, staci refresh.
+ *
+ * Design: Dark Navy tema (#0f172a pozadi, #38bdf8 accent, svetly text)
+ * Inspirace: aplikacni-identita.html (Segoe UI, sky blue headings, pill badges)
+ */
+
+/* =========================================================================
+   1. BARVY A PROMENNE — dark navy tema
+   ========================================================================= */
+:root,
+[data-theme='light'],
+[data-theme='dark'] {
+  /* Primarni barva — sky blue */
+  --ifm-color-primary: #38bdf8;
+  --ifm-color-primary-dark: #0ea5e9;
+  --ifm-color-primary-darker: #0284c7;
+  --ifm-color-primary-darkest: #0369a1;
+  --ifm-color-primary-light: #7dd3fc;
+  --ifm-color-primary-lighter: #bae6fd;
+  --ifm-color-primary-lightest: #e0f2fe;
+
+  /* Pozadi — dark navy */
+  --ifm-background-color: #0f172a;
+  --ifm-background-surface-color: #1e293b;
+
+  /* Text — svetly, citelny */
+  --ifm-font-color-base: #e2e8f0;
+  --ifm-heading-color: #f8fafc;
+
+  /* Font — Segoe UI / system */
+  --ifm-font-family-base: 'Segoe UI', system-ui, -apple-system, sans-serif;
+
+  /* Sidebar */
+  --ifm-sidebar-width: 260px;
+
+  /* Layout */
+  --ifm-container-width: 100%;
+
+  /* Navbar */
+  --ifm-navbar-background-color: #1e293b;
+  --ifm-navbar-height: 0px;
+
+  /* Footer */
+  --ifm-footer-background-color: #0d1117;
+
+  /* Kod */
+  --ifm-code-background: #1e293b;
+  --ifm-code-border-radius: 6px;
+  --ifm-pre-background: #1e293b;
+  --ifm-pre-border-radius: 8px;
+
+  /* Bordery */
+  --ifm-hr-border-color: #334155;
+  --ifm-toc-border-color: #1e293b;
+
+  /* Per-sekce CSS promenne — vychozi hodnoty (sky blue) */
+  --ek-section-accent: #38bdf8;
+  --ek-section-accent-light: #0ea5e922;
+  --ek-section-heading: #38bdf8;
+  --ek-section-sidebar-active: #38bdf8;
+
+  /* Linky */
+  --ifm-link-color: #7dd3fc;
+  --ifm-link-hover-color: #38bdf8;
+
+  /* Admonitions */
+  --ifm-alert-background-color: #1e293b;
+
+  /* Highlighted code */
+  --docusaurus-highlighted-code-line-bg: rgba(56, 189, 248, 0.1);
+
+  /* Force dark color scheme */
+  color-scheme: dark;
+}
+
+/* =========================================================================
+   2. DOCUSAURUS NAVBAR — skryt (mame vlastni horni listu)
+   ========================================================================= */
+.navbar {
+  display: none !important;
+}
+
+/* =========================================================================
+   3. SIDEBAR — dark navy styl
+   ========================================================================= */
+/* Docusaurus sidebar hidden — replaced by unified sidebar-tree.js */
+.theme-doc-sidebar-container {
+  display: none !important;
+}
+
+/* Menu polozky */
+.menu {
+  background: transparent !important;
+  padding: 0.5rem 0 !important;
+}
+
+.menu__link {
+  color: #94a3b8 !important;
+  font-size: 0.84rem !important;
+  padding: 0.35rem 0.8rem !important;
+  border-radius: 0 !important;
+  border-left: 2px solid transparent;
+  transition: all 0.15s !important;
+}
+
+.menu__link:hover {
+  background: #1e293b !important;
+  color: #e2e8f0 !important;
+  border-left-color: var(--ek-section-sidebar-active);
+}
+
+.menu__link--active,
+.menu__link--active:hover {
+  background: #1e293b !important;
+  color: var(--ek-section-sidebar-active) !important;
+  border-left-color: var(--ek-section-sidebar-active);
+  font-weight: 600 !important;
+}
+
+/* Kategorie label */
+.menu__list-item-collapsible > .menu__link,
+.theme-doc-sidebar-item-category > .menu__list-item-collapsible > .menu__link {
+  color: #38bdf8 !important;
+  font-weight: 600 !important;
+  font-size: 0.76rem !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.menu__list-item-collapsible:hover {
+  background: #1e293b !important;
+}
+
+/* Sipka u kategorie */
+.menu__caret::before {
+  filter: brightness(0) saturate(100%) invert(70%) sepia(40%) saturate(600%) hue-rotate(170deg) brightness(100%) !important;
+}
+
+/* Vnorene urovne — odsazeni */
+.menu__list .menu__list {
+  border-left: 1px solid #334155 !important;
+  margin-left: 0.8rem !important;
+  padding-left: 0 !important;
+}
+
+/* =========================================================================
+   4. HLAVNI OBSAH — dark navy pozadi
+   ========================================================================= */
+.main-wrapper {
+  background: #0f172a !important;
+}
+
+/* Docusaurus main container */
+[class*="docMainContainer"] {
+  background: #0f172a !important;
+  flex: 1 !important;
+  max-width: 100% !important;
+}
+
+/* Container — plna sirka v ramci sveho sloupce */
+.container {
+  max-width: 100% !important;
+  padding: 0 !important;
+}
+
+/* Doc wrapper — plna sirka, obsah se centruje sam */
+[class*="docItemContainer"],
+[class*="docItemWrapper"] {
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+/* Hlavni content oblast — centrovani jako v editoru */
+[class*="docItemCol"] {
+  max-width: 100% !important;
+  flex: 1 1 0% !important;
+}
+
+/* Article — left-aligned, max 780px, konzistentni levy okraj */
+article,
+.markdown {
+  max-width: 780px !important;
+  width: 100% !important;
+  margin-left: 2rem !important;
+  margin-right: auto !important;
+  padding: 2rem !important;
+  display: block !important;
+}
+
+/* Pagination — stejna pozice jako article */
+nav.pagination-nav,
+.pagination-nav {
+  max-width: 780px !important;
+  width: 100% !important;
+  margin-left: 2rem !important;
+  margin-right: auto !important;
+  padding: 0 2rem !important;
+}
+
+/* Breadcrumbs — stejna pozice jako article */
+[class*="breadcrumbsContainer"] {
+  max-width: 780px !important;
+  margin-left: 2rem !important;
+  margin-right: auto !important;
+  padding: 0.5rem 2rem !important;
+}
+.breadcrumbs__link,
+.breadcrumbs__item--active .breadcrumbs__link {
+  color: #64748b !important;
+  font-size: 0.82rem !important;
+}
+.breadcrumbs__link:hover {
+  color: #94a3b8 !important;
+}
+.breadcrumbs__item--active .breadcrumbs__link {
+  color: #94a3b8 !important;
+}
+
+/* Nadpisy */
+.markdown h1 {
+  color: #f8fafc !important;
+  font-size: 1.45rem !important;
+  font-weight: 600 !important;
+  border-bottom: 1px solid #1e293b;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.2rem;
+}
+.markdown h2 {
+  color: var(--ek-section-heading) !important;
+  font-size: 1.05rem !important;
+  font-weight: 600 !important;
+  margin-top: 2rem;
+  border-bottom: 1px solid #1e293b;
+  padding-bottom: 0.3rem;
+}
+.markdown h3 {
+  color: #cbd5e1 !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+}
+.markdown h4 {
+  color: var(--ek-section-heading) !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+}
+
+/* Odstavce a text */
+.markdown p,
+.markdown li {
+  color: #cbd5e1;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+/* Strong / bold */
+.markdown strong {
+  color: #f8fafc;
+}
+
+/* Tabulky */
+.markdown table {
+  border-collapse: collapse;
+}
+.markdown th {
+  background: transparent !important;
+  color: #94a3b8 !important;
+  border-bottom: 2px solid #334155 !important;
+  font-weight: 600;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.6rem 0.8rem;
+}
+.markdown td {
+  color: #cbd5e1 !important;
+  border-bottom: 1px solid #1e293b !important;
+  padding: 0.6rem 0.8rem;
+}
+.markdown tr:hover td {
+  background: #1e293b44 !important;
+}
+
+/* Horizontal rule */
+.markdown hr {
+  border-color: #1e293b;
+}
+
+/* =========================================================================
+   5. TOC (pravy sidebar) — subtilnejsi
+   ========================================================================= */
+.table-of-contents {
+  border-left: none !important;
+  border-right: 1px solid #334155 !important;
+  padding-right: 0.8rem !important;
+}
+.table-of-contents__link {
+  color: #64748b !important;
+  font-size: 0.78rem !important;
+  transition: all 0.15s;
+  padding: 0.25rem 0.4rem !important;
+  border-radius: 0 !important;
+  display: block;
+}
+.table-of-contents__link:hover {
+  color: #94a3b8 !important;
+  background: #1e293b !important;
+}
+.table-of-contents__link--active,
+.table-of-contents__link--active:hover {
+  color: var(--ek-section-accent) !important;
+  font-weight: 600;
+  border-right: 2px solid var(--ek-section-accent);
+  margin-right: -0.85rem;
+}
+
+/* =========================================================================
+   6. ADMONITIONS — dark tinted
+   ========================================================================= */
+.alert {
+  border-radius: 8px !important;
+  border: none !important;
+  border-left: 4px solid !important;
+}
+
+.alert--info {
+  --ifm-alert-background-color: #1e293b;
+  background: #0ea5e911 !important;
+  border-left-color: #0ea5e9 !important;
+  color: #94a3b8 !important;
+}
+.alert--info .admonitionHeading_node_modules,
+.alert--info [class*="admonitionHeading"] {
+  color: #7dd3fc !important;
+}
+
+.alert--warning {
+  background: #f59e0b11 !important;
+  border-left-color: #f59e0b !important;
+  color: #94a3b8 !important;
+}
+.alert--warning [class*="admonitionHeading"] {
+  color: #fcd34d !important;
+}
+
+.alert--danger {
+  background: #ef444411 !important;
+  border-left-color: #ef4444 !important;
+  color: #94a3b8 !important;
+}
+.alert--danger [class*="admonitionHeading"] {
+  color: #fca5a5 !important;
+}
+
+.alert--success {
+  background: #10b98111 !important;
+  border-left-color: #10b981 !important;
+  color: #94a3b8 !important;
+}
+.alert--success [class*="admonitionHeading"] {
+  color: #6ee7b7 !important;
+}
+
+/* =========================================================================
+   7. KOD BLOKY
+   ========================================================================= */
+code {
+  background: #1e293b !important;
+  border: 1px solid #334155;
+  color: #7dd3fc !important;
+  font-size: 0.88em !important;
+}
+
+pre code {
+  border: none !important;
+  background: transparent !important;
+  color: inherit !important;
+}
+
+pre {
+  background: #1e293b !important;
+  border: 1px solid #334155 !important;
+}
+
+/* =========================================================================
+   8. FOOTER — minimalisticky dark
+   ========================================================================= */
+.footer {
+  background: #0d1117 !important;
+  border-top: 1px solid #1e293b;
+  padding: 1rem 0 !important;
+}
+.footer__copyright {
+  color: #475569 !important;
+  font-size: 0.78rem !important;
+}
+
+/* =========================================================================
+   9. PAGINATION (navigace predchozi/dalsi)
+   ========================================================================= */
+.pagination-nav__link {
+  background: #1e293b !important;
+  border: 1px solid #334155 !important;
+  border-radius: 10px !important;
+  transition: border-color 0.15s;
+}
+.pagination-nav__link:hover {
+  border-color: var(--ek-section-accent) !important;
+}
+.pagination-nav__sublabel {
+  color: #64748b !important;
+}
+.pagination-nav__label {
+  color: var(--ek-section-accent) !important;
+}
+
+/* =========================================================================
+   10. SCROLLBAR — subtilni dark
+   ========================================================================= */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* =========================================================================
+   11. MERMAID DIAGRAMY
+   ========================================================================= */
+.docusaurus-mermaid-container {
+  background: #1e293b !important;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+/* Mermaid nodes */
+.docusaurus-mermaid-container .node rect,
+.docusaurus-mermaid-container .node circle,
+.docusaurus-mermaid-container .node ellipse,
+.docusaurus-mermaid-container .node polygon,
+.docusaurus-mermaid-container .node path {
+  fill: #1e293b !important;
+  stroke: #38bdf8 !important;
+  stroke-width: 1.5px !important;
+}
+
+.docusaurus-mermaid-container .nodeLabel,
+.docusaurus-mermaid-container .label,
+.docusaurus-mermaid-container .edgeLabel,
+.docusaurus-mermaid-container text,
+.docusaurus-mermaid-container .label div,
+.docusaurus-mermaid-container span {
+  color: #e2e8f0 !important;
+  fill: #e2e8f0 !important;
+}
+
+/* Mermaid hrany (sipky) */
+.docusaurus-mermaid-container .edgePath .path,
+.docusaurus-mermaid-container .flowchart-link {
+  stroke: #0ea5e9 !important;
+  stroke-width: 1.5px !important;
+}
+.docusaurus-mermaid-container .arrowheadPath,
+.docusaurus-mermaid-container marker path {
+  fill: #0ea5e9 !important;
+  stroke: #0ea5e9 !important;
+}
+
+/* Mermaid edge labels */
+.docusaurus-mermaid-container .edgeLabel rect {
+  fill: #1e293b !important;
+  stroke: none !important;
+}
+.docusaurus-mermaid-container .edgeLabel span,
+.docusaurus-mermaid-container .edgeLabel {
+  color: #7dd3fc !important;
+  fill: #7dd3fc !important;
+  background: #1e293b !important;
+}
+
+/* Mermaid decision (diamanty) */
+.docusaurus-mermaid-container .node.decision rect,
+.docusaurus-mermaid-container .node polygon[points] {
+  fill: #0ea5e911 !important;
+  stroke: #38bdf8 !important;
+}
+
+/* Mermaid cluster (subgraph) */
+.docusaurus-mermaid-container .cluster rect {
+  fill: #334155 !important;
+  stroke: #475569 !important;
+}
+.docusaurus-mermaid-container .cluster span,
+.docusaurus-mermaid-container .cluster text {
+  color: #7dd3fc !important;
+  fill: #7dd3fc !important;
+}
+
+/* =========================================================================
+   12. BODY — padding pro status bar a top nav
+   ========================================================================= */
+body {
+  padding-bottom: 40px;
+  background: #0f172a !important;
+}
+
+/* Kompenzace za skryty navbar */
+.main-wrapper {
+  padding-top: 0 !important;
+}
+
+/* Doc page row — flex fill */
+[class*="docPage"],
+.row {
+  margin: 0 !important;
+}
+/* Content column — flex grow, ale ne TOC column */
+[class*="docPage"] > [class*="docMainContainer"],
+.row > [class*="docItemCol"] {
+  max-width: 100% !important;
+  flex: 1 1 0% !important;
+  padding: 0 !important;
+}
+/* TOC column — VLEVO od article (vedle sidebar tree) */
+.row > .col--3 {
+  flex: 0 0 200px !important;
+  width: 200px !important;
+  max-width: 200px !important;
+  padding: 0 !important;
+  order: -1 !important;
+}
+
+/* Docusaurus sidebar col hidden — sidebar-tree.js handles navigation */
+[class*="docSidebarContainer"] {
+  display: none !important;
+}
+
+/* TOC col — vpravo, prilepeny */
+[class*="tableOfContents"] {
+  max-width: 200px;
+  position: sticky;
+  top: 50px;
+  align-self: flex-start;
+  padding-top: 1rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+/* =========================================================================
+   13. GENERATED INDEX — dark karty pro kategorie
+   ========================================================================= */
+.cardContainer_node_modules,
+[class*="cardContainer"] {
+  background: #1e293b !important;
+  border: 1px solid #334155 !important;
+  border-radius: 8px !important;
+}
+.cardContainer_node_modules:hover,
+[class*="cardContainer"]:hover {
+  border-color: var(--ek-section-accent) !important;
+}
+
+/* Card title a description */
+[class*="cardContainer"] [class*="title"] {
+  color: #e2e8f0 !important;
+}
+[class*="cardContainer"] [class*="description"] {
+  color: #94a3b8 !important;
+}
+
+/* Generated index page — centrovana jako article */
+[class*="generatedIndexPage"] {
+  max-width: 780px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding: 2rem !important;
+}
+
+/* =========================================================================
+   14. SEARCH — dark styl
+   ========================================================================= */
+[class*="searchBox"] input,
+.navbar__search-input {
+  background: #1e293b !important;
+  color: #e2e8f0 !important;
+  border: 1px solid #334155 !important;
+}
+
+/* =========================================================================
+   15. MISC — globalni dark overrides
+   ========================================================================= */
+
+/* Sidebar toggle button */
+[class*="collapseSidebarButton"] {
+  background: #1e293b !important;
+  border: 1px solid #334155 !important;
+}
+[class*="collapseSidebarButton"]:hover {
+  background: #334155 !important;
+}
+
+/* Back to top button */
+[class*="backToTopButton"] {
+  background: #1e293b !important;
+  color: #94a3b8 !important;
+}
+
+/* Details/summary */
+.markdown details {
+  background: #1e293b !important;
+  border: 1px solid #334155 !important;
+  border-radius: 8px !important;
+}
+.markdown details summary {
+  color: #e2e8f0 !important;
+}
+
+/* Blockquote */
+.markdown blockquote {
+  border-left: 4px solid #334155;
+  color: #94a3b8;
+  background: transparent;
+}
+
+/* Links in content */
+.markdown a {
+  color: #7dd3fc;
+}
+.markdown a:hover {
+  color: #38bdf8;
+}
+
+/* Tabs (pokud pouzivame Docusaurus tabs) */
+.tabs__item {
+  color: #64748b !important;
+  border-bottom-color: transparent !important;
+}
+.tabs__item--active {
+  color: #38bdf8 !important;
+  border-bottom-color: #38bdf8 !important;
+}
+.tabs__item:hover {
+  color: #94a3b8 !important;
+}
+
+/* Unread dot override — cervene puntiky zustavaji cervene */
+.ek-unread-dot {
+  background: #ef4444 !important;
+}

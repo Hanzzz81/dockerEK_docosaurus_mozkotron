@@ -1,0 +1,23 @@
+version: "3.8"
+
+services:
+  mozkotron:
+    build: .
+    container_name: mozkotron
+    restart: unless-stopped
+    ports:
+      - "3300:3000"
+    volumes:
+      - ./docs:/app/docs
+      - ./static:/app/static
+      - ./src:/app/src
+      - ./sidebars.js:/app/sidebars.js
+      - ./docusaurus.config.js:/app/docusaurus.config.js
+      - ./server.js:/app/server.js
+      - ./data:/app/data
+      - ./config:/app/config
+    environment:
+      - NODE_ENV=development
+      - DOCUSAURUS_PORT=3001
+      - DB_PATH=/app/data/analytics.sqlite
+      - AUTH_CONFIG=/app/config/auth-config.json

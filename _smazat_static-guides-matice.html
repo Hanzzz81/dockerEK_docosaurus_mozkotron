@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📊 Matice — Kategorie × Vrstva</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0f1117; color: #e2e8f0; padding: 32px;
+    line-height: 1.6;
+  }
+  h1 { font-size: 1.3rem; color: #f8fafc; margin-bottom: 4px; }
+  .subtitle { font-size: 0.75rem; color: #64748b; margin-bottom: 28px; }
+
+  /* ===== AXES LABELS ===== */
+  .matrix-wrap { position: relative; margin-left: 60px; margin-top: 40px; }
+  .axis-y-label {
+    position: absolute; left: -55px; top: 50%; transform: rotate(-90deg) translateX(-50%);
+    transform-origin: 0 0; font-size: 0.7rem; font-weight: 700; color: #64748b;
+    text-transform: uppercase; letter-spacing: 0.15em; white-space: nowrap;
+  }
+  .axis-x-label {
+    text-align: center; font-size: 0.7rem; font-weight: 700; color: #64748b;
+    text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 12px;
+  }
+
+  /* ===== MATRIX GRID ===== */
+  .matrix {
+    display: grid;
+    grid-template-columns: 140px repeat(3, 1fr);
+    grid-template-rows: auto;
+    gap: 2px;
+  }
+
+  /* Header cells */
+  .mh {
+    background: #111827; border: 1px solid #1e293b; border-radius: 8px;
+    padding: 12px 14px; text-align: center;
+  }
+  .mh-corner { background: transparent; border: none; }
+  .mh-layer .mh-code { font-size: 0.9rem; font-weight: 800; color: #f8fafc; }
+  .mh-layer .mh-name { font-size: 0.65rem; color: #64748b; margin-top: 2px; }
+  .mh-layer .mh-limit { font-size: 0.6rem; color: #475569; margin-top: 4px; font-style: italic; }
+
+  .mh-cat {
+    background: #111827; border: 1px solid #1e293b; border-radius: 8px;
+    padding: 14px; text-align: left; display: flex; flex-direction: column; justify-content: center;
+  }
+  .mh-cat .cat-icon { font-size: 1.2rem; }
+  .mh-cat .cat-code { font-size: 0.75rem; font-weight: 800; color: #f8fafc; margin-top: 2px; }
+  .mh-cat .cat-label { font-size: 0.65rem; color: #64748b; }
+  .mh-cat .cat-q { font-size: 0.6rem; color: #94a3b8; font-style: italic; margin-top: 3px; }
+
+  /* Category row colors */
+  .row-law .mh-cat { border-left: 4px solid #ef4444; }
+  .row-know .mh-cat { border-left: 4px solid #3b82f6; }
+  .row-proc .mh-cat { border-left: 4px solid #10b981; }
+  .row-mem .mh-cat { border-left: 4px solid #8b5cf6; }
+
+  /* Content cells */
+  .mc {
+    background: #0d1117; border: 1px solid #1e293b; border-radius: 8px;
+    padding: 12px 14px; font-size: 0.72rem; color: #94a3b8; line-height: 1.6;
+    transition: all 0.2s; cursor: default;
+  }
+  .mc:hover { background: #111827; border-color: #334155; }
+  .mc .mc-title { font-size: 0.78rem; font-weight: 700; color: #e2e8f0; margin-bottom: 4px; }
+  .mc .mc-example { font-size: 0.65rem; color: #475569; margin-top: 6px; font-style: italic; }
+
+  .row-law .mc { border-top: 2px solid #ef444433; }
+  .row-know .mc { border-top: 2px solid #3b82f633; }
+  .row-proc .mc { border-top: 2px solid #10b98133; }
+  .row-mem .mc { border-top: 2px solid #8b5cf633; }
+
+  /* Dimmed cell for MEM */
+  .mc-dim { opacity: 0.5; }
+  .mc-dim .mc-title { color: #64748b; }
+
+  /* ===== PRINCIPLES ===== */
+  .principles {
+    margin-top: 36px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+  }
+  .principle {
+    background: #111827; border: 1px solid #1e293b; border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .principle h3 { font-size: 0.8rem; color: #f8fafc; margin-bottom: 6px; }
+  .principle p { font-size: 0.72rem; color: #94a3b8; line-height: 1.6; }
+  .principle .tag {
+    display: inline-block; font-size: 0.55rem; padding: 2px 8px; border-radius: 4px;
+    font-weight: 700; margin-right: 4px;
+  }
+  .tag-yes { background: #10b98133; color: #10b981; }
+  .tag-no { background: #ef444433; color: #ef4444; }
+
+  /* ===== EXAMPLE TOPIC ===== */
+  .example-section { margin-top: 36px; }
+  .example-section h2 { font-size: 1rem; color: #f8fafc; margin-bottom: 16px; }
+  .example-tree {
+    background: #111827; border: 1px solid #1e293b; border-radius: 12px;
+    padding: 20px 24px;
+  }
+  .et-topic { font-size: 0.85rem; font-weight: 700; color: #f8fafc; margin-bottom: 12px; }
+  .et-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; padding-left: 16px; }
+  .et-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+  .et-content { font-size: 0.75rem; color: #94a3b8; }
+  .et-content strong { color: #e2e8f0; }
+  .et-layer { font-size: 0.55rem; padding: 1px 6px; border-radius: 4px; background: #1e293b; color: #64748b; margin-left: 6px; }
+  .et-divider { height: 1px; background: #1e293b; margin: 8px 0 8px 16px; }
+
+  @media (max-width: 800px) {
+    .matrix { grid-template-columns: 100px repeat(3, 1fr); }
+    .principles { grid-template-columns: 1fr; }
+    body { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>📊 Matice — Kategorie × Vrstva</h1>
+<div class="subtitle">Dvouosý model Mozkotron v2.0 — co čtenář hledá × jak hluboko se dokument noří</div>
+
+<div class="matrix-wrap">
+  <div class="axis-y-label">← Kategorie (co hledám) →</div>
+  <div class="axis-x-label">← Vrstva (jak hluboký dokument) →</div>
+
+  <div class="matrix">
+
+    <!-- HEADER ROW -->
+    <div class="mh mh-corner"></div>
+    <div class="mh mh-layer">
+      <div class="mh-code">BIMG</div>
+      <div class="mh-name">Big Image</div>
+      <div class="mh-limit">Bez limitu · subpages</div>
+    </div>
+    <div class="mh mh-layer">
+      <div class="mh-code">SOP</div>
+      <div class="mh-name">Postup</div>
+      <div class="mh-limit">Bez limitu · per role</div>
+    </div>
+    <div class="mh mh-layer">
+      <div class="mh-code">CHL</div>
+      <div class="mh-name">Cheat List</div>
+      <div class="mh-limit">1–2 strany · zkrácená ref.</div>
+    </div>
+
+    <!-- ROW: LAW -->
+    <div class="row-law"><div class="mh-cat">
+      <div class="cat-icon">📜</div>
+      <div class="cat-code">LAW</div>
+      <div class="cat-label">Co platí</div>
+      <div class="cat-q">„Co musím dodržet?"</div>
+    </div></div>
+    <div class="row-law"><div class="mc">
+      <div class="mc-title">Kompletní pravidla</div>
+      Všechna pravidla tématu na jednom místě. Závazný dokument. Vždy aktuální (R019).
+      <div class="mc-example">Reklamační řád — lhůty, odpovědnosti, výjimky, eskalace</div>
+    </div></div>
+    <div class="row-law"><div class="mc">
+      <div class="mc-title">Postup dodržování</div>
+      Jak konkrétní role pravidlo dodržuje. Kroky, screenshoty, diagram.
+      <div class="mc-example">Jak přijmout reklamaci na prodejně — 5 kroků v Money S4</div>
+    </div></div>
+    <div class="row-law"><div class="mc">
+      <div class="mc-title">Quick ref pravidel</div>
+      Zkrácená verze SOPky. Tabulka, checklist.
+      <div class="mc-example">Reklamační lhůty — tabulka per typ zboží</div>
+    </div></div>
+
+    <!-- ROW: KNOW -->
+    <div class="row-know"><div class="mh-cat">
+      <div class="cat-icon">💡</div>
+      <div class="cat-code">KNOW</div>
+      <div class="cat-label">Proč to tak je</div>
+      <div class="cat-q">„Proč to dává smysl?"</div>
+    </div></div>
+    <div class="row-know"><div class="mc">
+      <div class="mc-title">Kompletní kontext</div>
+      Proč to tak je, jaká data za tím stojí, zkušenosti, logika rozhodnutí.
+      <div class="mc-example">DPH — sazby, řádky přiznání, novelizace, dopady na firmu</div>
+    </div></div>
+    <div class="row-know"><div class="mc">
+      <div class="mc-title">Aplikovaná znalost</div>
+      Jak konkrétní role znalost používá. Screenshoty, příklady.
+      <div class="mc-example">DPH pro fakturanty — co kontrolovat na přijaté faktuře</div>
+    </div></div>
+    <div class="row-know"><div class="mc">
+      <div class="mc-title">Quick ref znalostí</div>
+      Zkrácená verze pro rychlou orientaci.
+      <div class="mc-example">DPH sazby — tabulka per typ zboží/služby</div>
+    </div></div>
+
+    <!-- ROW: PROC -->
+    <div class="row-proc"><div class="mh-cat">
+      <div class="cat-icon">🔧</div>
+      <div class="cat-code">PROC</div>
+      <div class="cat-label">Jak to udělat</div>
+      <div class="cat-q">„Jak to provedu?"</div>
+    </div></div>
+    <div class="row-proc"><div class="mc">
+      <div class="mc-title">Kompletní proces</div>
+      Celý proces od A do Z. Všechny role, kroky, systémy, návaznosti.
+      <div class="mc-example">Příjem zboží — logistika + administrativa + komunikace sklad↔office</div>
+    </div></div>
+    <div class="row-proc"><div class="mc">
+      <div class="mc-title">Postup per role</div>
+      Konkrétní kroky pro jednoho člověka. Text, obrázky, screenshoty, diagram.
+      <div class="mc-example">Příjem zboží — skladník: kontrola, třídění, umístění</div>
+    </div></div>
+    <div class="row-proc"><div class="mc">
+      <div class="mc-title">Quick ref postupu</div>
+      Zkrácená verze pro rychlé připomenutí.
+      <div class="mc-example">Příjem zboží — checklist „co zkontrolovat"</div>
+    </div></div>
+
+    <!-- ROW: MEM -->
+    <div class="row-mem"><div class="mh-cat">
+      <div class="cat-icon">📝</div>
+      <div class="cat-code">MEM</div>
+      <div class="cat-label">Co se změnilo</div>
+      <div class="cat-q">„Co se stalo a proč?"</div>
+    </div></div>
+    <div class="row-mem"><div class="mc mc-dim">
+      <div class="mc-title">Žurnál</div>
+      Datovaný deník rozhodnutí a událostí per tematický blok. Nemá vrstvy — je to chronologický záznam.
+      <div class="mc-example">Duben 2026: přidány softshellky, důvod: zaměstnanci si stěžovali na zimu při práci venku</div>
+    </div></div>
+    <div class="row-mem"><div class="mc mc-dim" style="grid-column: span 2; text-align: center; padding: 20px;">
+      MEM nemá vrstvy SOP/CHL — je to žurnál, ne postup.<br>
+      Změny se zapisují do příslušného LAW/KNOW/PROC dokumentu (R019).
+    </div></div>
+
+  </div><!-- /matrix -->
+</div><!-- /matrix-wrap -->
+
+<!-- ===== PRINCIPLES ===== -->
+<div class="principles">
+  <div class="principle">
+    <h3>📜 Zákon, ne zákon + novela</h3>
+    <p>Dokument je vždy aktuální a kompletní. Změna = přepis dokumentu + nová verze. Čtenář nikdy nečte „základ + přílepky". Předchozí verze zůstává v historii. MEM zaznamenává PROČ se změnilo, ne CO se změnilo.</p>
+  </div>
+  <div class="principle">
+    <h3>🔀 Osy jsou nezávislé</h3>
+    <p>Ze stejného tématu (např. reklamace) vznikne LAW BIMG (kompletní pravidla), LAW SOP (postup dodržování per role), KNOW BIMG (proč to tak je), PROC SOP (jak to udělat v systému). Kategorie × vrstva = libovolná kombinace.</p>
+  </div>
+  <div class="principle">
+    <h3>👤 Čtenář vidí česky</h3>
+    <p>Na stránce stojí „Co platí", „Proč to tak je", „Jak to udělat". Žádné LAW/KNOW/PROC. Interní kódy jsou jen ve frontmatter pro systém a architekta.</p>
+  </div>
+  <div class="principle">
+    <h3>📝 MEM = žurnál bokem</h3>
+    <p>MEM není plnohodnotná dokumentace. Je to deník per tematický blok — zaznamenává rozhodnutí, události, důvody změn. Slouží jako paměť pro budoucí rozhodování.</p>
+  </div>
+</div>
+
+<!-- ===== EXAMPLE TOPIC ===== -->
+<div class="example-section">
+  <h2>🎯 Příklad — téma „Firemní oblečení"</h2>
+  <div class="example-tree">
+    <div class="et-topic">👔 Firemní oblečení</div>
+
+    <div class="et-row">
+      <div class="et-icon">📜</div>
+      <div class="et-content"><strong>Co platí</strong> — pravidlo nošení, kdo musí, co přesně, sezónní varianty <span class="et-layer">BIMG</span></div>
+    </div>
+
+    <div class="et-row">
+      <div class="et-icon">💡</div>
+      <div class="et-content"><strong>Proč to tak je</strong> — profesionalita, rozpoznatelnost, fotomontáže per role, nákupní data, dodavatel, vektory <span class="et-layer">BIMG</span></div>
+    </div>
+
+    <div class="et-divider"></div>
+
+    <div class="et-row">
+      <div class="et-icon">🔧</div>
+      <div class="et-content"><strong>Jak vydat oblečení</strong> — onboarding: kdo změří, kolik kusů, formulář, evidence <span class="et-layer">SOP</span></div>
+    </div>
+    <div class="et-row">
+      <div class="et-icon">🔧</div>
+      <div class="et-content"><strong>Jak vrátit oblečení</strong> — offboarding: co vrací, stav, formulář <span class="et-layer">SOP</span></div>
+    </div>
+    <div class="et-row">
+      <div class="et-icon">🔧</div>
+      <div class="et-content"><strong>Jak se o oblečení starat</strong> — praní, údržba, výměna <span class="et-layer">SOP</span></div>
+    </div>
+
+    <div class="et-divider"></div>
+
+    <div class="et-row">
+      <div class="et-icon">📝</div>
+      <div class="et-content"><strong>Žurnál</strong> — „Duben 2026: softshellky místo vest. Říjen 2025: nový dodavatel triček." <span class="et-layer">MEM</span></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,9 @@
+node_modules/
+.docusaurus/
+build/
+data/analytics.sqlite
+*.log
+@eaDir/
+.obsidian/
+.DS_Store
+.SynologyWorkingDirectory/

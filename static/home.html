@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mozkotron — Přehled</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #0f172a; color: #e2e8f0; line-height: 1.6;
+    padding-bottom: 60px;
+  }
+  a { color: #38bdf8; text-decoration: none; }
+  a:hover { text-decoration: underline; color: #0ea5e9; }
+
+  /* ===== LAYOUT: sidebar + main ===== */
+  .home-layout {
+    display: flex;
+    min-height: calc(100vh - 60px);
+    /* Plná šířka — shodné s Docusaurus docs layout */
+  }
+
+  /* Sidebar is injected by sidebar-tree.js (260px fixed left) */
+
+  /* Sidebar tree items styled by sidebar-tree.js */
+
+  /* --- Pravý obsah --- */
+  .home-main {
+    flex: 1;
+    padding: 1.5rem 2rem;
+    /* sidebar-tree.js sets margin-left on .home-content or body */
+    min-width: 0;
+  }
+  .home-main-inner {
+    max-width: 1100px;
+  }
+
+  @media (max-width: 800px) {
+    .home-layout { flex-direction: column; }
+    .home-main { padding: 1rem; }
+  }
+
+  /* Header */
+  .home-header { margin-bottom: 1.5rem; }
+  .home-header h1 { font-size: 1.5rem; color: #f8fafc; margin-bottom: 0.2rem; }
+  .home-header .greeting { color: #94a3b8; font-size: 0.9rem; }
+
+  /* Widget grid */
+  .widget-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.2rem;
+  }
+  @media (max-width: 1000px) {
+    .widget-grid { grid-template-columns: 1fr; }
+  }
+  .widget-full { grid-column: 1 / -1; }
+
+  /* Widget card */
+  .widget {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 1.2rem 1.5rem;
+  }
+  .widget-title {
+    font-size: 0.95rem; font-weight: 600; color: #38bdf8;
+    margin-bottom: 1rem;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .widget-title .wt-icon { font-size: 1.1rem; }
+  .widget-title .wt-badge {
+    background: #f59e0b22; color: #f59e0b;
+    font-size: 0.7rem; font-weight: 700;
+    padding: 1px 8px; border-radius: 10px; margin-left: auto;
+  }
+
+  /* Stats cards row */
+  .stats-row {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 0.8rem; margin-bottom: 1rem;
+  }
+  .stat-card {
+    background: #0f172a; border: 1px solid #334155;
+    border-radius: 10px; padding: 0.8rem; text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 800; color: #f8fafc; }
+  .stat-label { font-size: 0.72rem; color: #94a3b8; margin-top: 0.15rem; }
+
+  /* Progress bar (large) */
+  .progress-lg {
+    width: 100%; height: 10px; background: #334155;
+    border-radius: 5px; margin-top: 0.8rem; overflow: hidden;
+  }
+  .progress-lg-fill {
+    height: 100%; border-radius: 5px;
+    background: linear-gradient(90deg, #38bdf8, #10b981);
+    transition: width 0.6s ease;
+  }
+  .progress-label {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 0.78rem; color: #94a3b8; margin-top: 0.3rem;
+  }
+
+  /* Recent pages list */
+  .recent-list { list-style: none; }
+  .recent-item {
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 0.45rem 0; border-bottom: 1px solid #334155;
+    font-size: 0.82rem;
+  }
+  .recent-item:last-child { border-bottom: none; }
+  .recent-item .ri-icon { flex-shrink: 0; opacity: 0.6; }
+  .recent-item .ri-title { flex: 1; color: #e2e8f0; }
+  .recent-item .ri-title a { color: #e2e8f0; }
+  .recent-item .ri-title a:hover { color: #38bdf8; }
+  .recent-item .ri-meta { font-size: 0.72rem; color: #94a3b8; white-space: nowrap; }
+
+  /* Unread pages */
+  .unread-list { list-style: none; }
+  .unread-item {
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 0.5rem 0.3rem; border-bottom: 1px solid #334155;
+    font-size: 0.82rem;
+  }
+  .unread-item:last-child { border-bottom: none; }
+  .unread-item .ui-icon { flex-shrink: 0; }
+  .unread-item .ui-title { flex: 1; }
+  .unread-item .ui-title a { color: #e2e8f0; }
+  .unread-item .ui-title a:hover { color: #38bdf8; }
+  .unread-item .ui-folder { font-size: 0.72rem; color: #94a3b8; margin-left: 0.3rem; }
+  .unread-item .ui-badge {
+    font-size: 0.68rem; font-weight: 600; padding: 1px 7px;
+    border-radius: 10px; flex-shrink: 0;
+  }
+  .badge-required { background: #10b98122; color: #10b981; }
+  .badge-info { background: #0ea5e922; color: #0ea5e9; }
+
+  /* Quick links */
+  .quick-links { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+  .quick-link {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    background: #0f172a; border: 1px solid #334155;
+    border-radius: 8px; padding: 0.5rem 1rem;
+    font-size: 0.85rem; color: #e2e8f0;
+    transition: all 0.15s; cursor: pointer; text-decoration: none;
+  }
+  .quick-link:hover {
+    border-color: #38bdf8; color: #38bdf8; text-decoration: none;
+    background: #334155;
+  }
+  .quick-link .ql-icon { font-size: 1rem; }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center; padding: 1.5rem; color: #94a3b8; font-size: 0.85rem;
+  }
+  .empty-state .es-icon { font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.4; }
+
+  /* Loading */
+  .loading { text-align: center; padding: 2rem; color: #94a3b8; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+
+<div class="home-layout">
+
+  <!-- Sidebar tree is injected by /js/sidebar-tree.js -->
+
+  <!-- HLAVNÍ OBSAH — widgety -->
+  <main class="home-main">
+    <div class="home-main-inner">
+      <div class="home-header">
+        <h1 id="greeting-title">Mozkotron</h1>
+        <div class="greeting" id="greeting-sub">Načítám přehled...</div>
+      </div>
+
+      <div class="widget-grid" id="widget-grid">
+        <div class="loading">Načítám data...</div>
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+// ---------------------------------------------------------------------------
+// SVG ikony
+// ---------------------------------------------------------------------------
+function svgFolder(color) {
+  return '<svg width="14" height="12" viewBox="0 0 16 14" fill="none" style="vertical-align:middle;flex-shrink:0;">' +
+    '<path d="M1 2C1 1.45 1.45 1 2 1H6L8 3H14C14.55 3 15 3.45 15 4V12C15 12.55 14.55 13 14 13H2C1.45 13 1 12.55 1 12V2Z" fill="' + color + '" opacity="0.85"/>' +
+    '<path d="M1 4H15V12C15 12.55 14.55 13 14 13H2C1.45 13 1 12.55 1 12V4Z" fill="' + color + '"/>' +
+  '</svg>';
+}
+function svgDoc(color) {
+  return '<svg width="14" height="16" viewBox="0 0 14 16" fill="none" style="vertical-align:middle;flex-shrink:0;">' +
+    '<path d="M2 1C1.45 1 1 1.45 1 2V14C1 14.55 1.45 15 2 15H12C12.55 15 13 14.55 13 14V5L9 1H2Z" fill="' + color + '" opacity="0.15" stroke="' + color + '" stroke-width="0.8"/>' +
+    '<path d="M9 1V5H13" stroke="' + color + '" stroke-width="0.8" fill="' + color + '" opacity="0.25"/>' +
+    '<line x1="3.5" y1="8" x2="10.5" y2="8" stroke="' + color + '" stroke-width="0.6" opacity="0.4"/>' +
+    '<line x1="3.5" y1="10" x2="10.5" y2="10" stroke="' + color + '" stroke-width="0.6" opacity="0.4"/>' +
+    '<line x1="3.5" y1="12" x2="8" y2="12" stroke="' + color + '" stroke-width="0.6" opacity="0.4"/>' +
+  '</svg>';
+}
+
+function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function formatTime(ms) {
+  if (!ms || ms <= 0) return '0 min';
+  var sec = Math.round(ms / 1000);
+  if (sec < 60) return sec + ' s';
+  var min = Math.round(sec / 60);
+  if (min < 60) return min + ' min';
+  var h = Math.floor(min / 60);
+  var m = min % 60;
+  return h + ' h ' + (m > 0 ? m + ' min' : '');
+}
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  var d = new Date(iso + 'Z');
+  var now = new Date();
+  var diff = now - d;
+  if (diff < 3600000) return Math.round(diff / 60000) + ' min zpět';
+  if (diff < 86400000) return Math.round(diff / 3600000) + ' h zpět';
+  if (diff < 172800000) return 'včera';
+  return d.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short' });
+}
+
+function getGreeting() {
+  var h = new Date().getHours();
+  if (h < 6) return 'Dobrý večer';
+  if (h < 12) return 'Dobré ráno';
+  if (h < 18) return 'Dobré odpoledne';
+  return 'Dobrý večer';
+}
+
+// ---------------------------------------------------------------------------
+// Sidebar — strom dokumentů
+// ---------------------------------------------------------------------------
+// Sidebar rendered by /js/sidebar-tree.js
+
+// ---------------------------------------------------------------------------
+// Widgety — hlavní obsah
+// ---------------------------------------------------------------------------
+async function loadHome() {
+  try {
+    var resp = await fetch('/api/home');
+    if (!resp.ok) throw new Error('API error ' + resp.status);
+    var data = await resp.json();
+    renderWidgets(data);
+  } catch (e) {
+    document.getElementById('widget-grid').innerHTML =
+      '<div class="empty-state"><div class="es-icon">⚠️</div>Nepodařilo se načíst data.<br><small>' + esc(e.message) + '</small></div>';
+  }
+}
+
+function renderWidgets(data) {
+  var user = data.user;
+  document.getElementById('greeting-title').textContent = getGreeting() + ', ' + user.firstName + '!';
+  document.getElementById('greeting-sub').textContent = 'Tvůj osobní přehled v Mozkotron';
+
+  var grid = document.getElementById('widget-grid');
+  var html = '';
+  var w = data.widgets;
+
+  // --- Widget: Statistiky čtení ---
+  if (w.readingStats && w.readingStats.enabled) {
+    var s = w.readingStats;
+    html += '<div class="widget">';
+    html += '<div class="widget-title"><span class="wt-icon">📊</span> ' + esc(s.title) + '</div>';
+    html += '<div class="stats-row">';
+    html += '<div class="stat-card"><div class="stat-value">' + s.pagesRead + '</div><div class="stat-label">Přečteno stránek</div></div>';
+    html += '<div class="stat-card"><div class="stat-value">' + s.totalAvailable + '</div><div class="stat-label">Celkem přiřazeno</div></div>';
+    html += '<div class="stat-card"><div class="stat-value">' + formatTime(s.totalActiveTimeMs) + '</div><div class="stat-label">Celkový čas</div></div>';
+    html += '<div class="stat-card"><div class="stat-value">' + s.confirmsDone + '</div><div class="stat-label">Potvrzení</div></div>';
+    html += '</div>';
+    html += '<div class="progress-lg"><div class="progress-lg-fill" style="width:' + s.progressPct + '%"></div></div>';
+    html += '<div class="progress-label"><span>' + s.progressPct + '% přečteno</span>';
+    if (s.lastActivity) {
+      html += '<span>Poslední aktivita: ' + formatDate(s.lastActivity) + '</span>';
+    }
+    html += '</div>';
+    if (s.recentPages && s.recentPages.length > 0) {
+      html += '<div style="margin-top:1rem; color:#92400e; font-size:0.82rem; font-weight:600; margin-bottom:0.5rem;">Naposledy navštívené</div>';
+      html += '<ul class="recent-list">';
+      for (var i = 0; i < s.recentPages.length; i++) {
+        var rp = s.recentPages[i];
+        html += '<li class="recent-item">';
+        html += '<span class="ri-icon">' + svgDoc('#8b8070') + '</span>';
+        html += '<span class="ri-title"><a href="' + esc(rp.url) + '">' + esc(rp.title) + '</a></span>';
+        html += '<span class="ri-meta">' + formatDate(rp.lastVisit) + '</span>';
+        html += '<span class="ri-meta" style="width:60px;text-align:right">' + formatTime(rp.totalTimeMs) + '</span>';
+        html += '</li>';
+      }
+      html += '</ul>';
+    }
+    html += '</div>';
+  }
+
+  // --- Widget: Nepřečtené stránky ---
+  if (w.unreadPages && w.unreadPages.enabled) {
+    var u = w.unreadPages;
+    var badge = u.totalUnread > 0 ? '<span class="wt-badge">' + u.totalUnread + '</span>' : '';
+    html += '<div class="widget">';
+    html += '<div class="widget-title"><span class="wt-icon">📋</span> ' + esc(u.title) + badge + '</div>';
+    if (u.pages.length === 0) {
+      html += '<div class="empty-state"><div class="es-icon">✅</div>Všechny přiřazené stránky máš přečtené!</div>';
+    } else {
+      html += '<ul class="unread-list">';
+      for (var j = 0; j < u.pages.length; j++) {
+        var pg = u.pages[j];
+        var typeBadge = pg.accessType === 'required'
+          ? '<span class="ui-badge badge-required">povinné</span>'
+          : '<span class="ui-badge badge-info">informační</span>';
+        html += '<li class="unread-item">';
+        html += '<span class="ui-icon">' + svgDoc(pg.accessType === 'required' ? '#4ade80' : '#60a5fa') + '</span>';
+        html += '<span class="ui-title"><a href="' + esc(pg.url) + '">' + esc(pg.title) + '</a>';
+        if (pg.folder) html += '<span class="ui-folder">/ ' + esc(pg.folder) + '</span>';
+        html += '</span>';
+        html += typeBadge;
+        html += '</li>';
+      }
+      html += '</ul>';
+      if (u.totalUnread > u.pages.length) {
+        html += '<div style="text-align:center; margin-top:0.5rem; font-size:0.78rem; color:#8b8070;">a dalších ' + (u.totalUnread - u.pages.length) + ' stránek...</div>';
+      }
+    }
+    html += '</div>';
+  }
+
+  // --- Widget: Rychlé odkazy ---
+  if (w.quickLinks && w.quickLinks.enabled) {
+    var ql = w.quickLinks;
+    html += '<div class="widget widget-full">';
+    html += '<div class="widget-title"><span class="wt-icon">🔗</span> ' + esc(ql.title) + '</div>';
+    if (ql.links.length === 0) {
+      html += '<div class="empty-state" style="padding:0.8rem;">Zatím nejsou nastaveny žádné rychlé odkazy. Správce je může přidat v administraci.</div>';
+    } else {
+      html += '<div class="quick-links">';
+      for (var k = 0; k < ql.links.length; k++) {
+        var link = ql.links[k];
+        html += '<a class="quick-link" href="' + esc(link.url) + '">';
+        html += '<span class="ql-icon">' + (link.icon || '📄') + '</span>';
+        html += esc(link.label);
+        html += '</a>';
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+
+  grid.innerHTML = html;
+}
+
+loadHome();
+</script>
+
+<script src="/js/sidebar-tree.js"></script>
+<script src="/js/status-bar.js"></script>
+</body>
+</html>

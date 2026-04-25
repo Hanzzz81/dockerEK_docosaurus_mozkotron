@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📚 Průvodce tvorbou obsahu — Mozkotron</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #0d0d1a; color: #d0d0d8; min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 40px 20px;
+  }
+  .header {
+    text-align: center; margin-bottom: 48px; max-width: 640px;
+  }
+  .header h1 {
+    font-size: 1.8rem; font-weight: 700; color: #e2e8f0; margin-bottom: 12px;
+  }
+  .header p {
+    font-size: 0.95rem; color: #94a3b8; line-height: 1.6;
+  }
+  .grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+    max-width: 720px; width: 100%;
+  }
+  .card {
+    background: #13132a; border: 1px solid #1e293b; border-radius: 12px;
+    padding: 24px; text-decoration: none; color: inherit;
+    transition: all 0.2s ease;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .card:hover {
+    border-color: #334155; background: #1a1a3a; transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .card-icon { font-size: 2rem; }
+  .card-title { font-size: 1.05rem; font-weight: 600; color: #e2e8f0; }
+  .card-desc { font-size: 0.82rem; color: #94a3b8; line-height: 1.5; }
+  .card-badge {
+    display: inline-block; font-size: 0.65rem; font-weight: 600;
+    padding: 2px 8px; border-radius: 10px; margin-top: 4px; width: fit-content;
+  }
+  .badge-understand { background: #1e3a5f; color: #60a5fa; }
+  .badge-workflow { background: #1a3d2e; color: #4ade80; }
+  .badge-train { background: #3d2e1a; color: #fbbf24; }
+
+  .section-label {
+    grid-column: 1 / -1; font-size: 0.75rem; font-weight: 600;
+    color: #64748b; text-transform: uppercase; letter-spacing: 0.08em;
+    margin-top: 12px; padding-left: 4px;
+  }
+  .card.full-width { grid-column: 1 / -1; }
+
+  .back-link {
+    margin-top: 48px; font-size: 0.85rem; color: #64748b;
+    text-decoration: none;
+  }
+  .back-link:hover { color: #94a3b8; }
+
+  @media (max-width: 600px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📚 Průvodce tvorbou obsahu</h1>
+  <p>Vše o tom, jak v Mozkotron tvořit a kategorizovat dokumentaci.<br>
+  Vyber si, co právě potřebuješ — porozumět modelu, vidět workflow, nebo si procvičit kategorizaci.</p>
+</div>
+
+<div class="grid">
+  <div class="section-label">Porozumět modelu</div>
+
+  <a class="card" href="/firma/jak-dokumentujeme/matice.html">
+    <div class="card-icon">📊</div>
+    <div class="card-title">Matice kategorií × vrstev</div>
+    <div class="card-desc">Dvouosý model: 4 kategorie (LAW/PROC/KNOW/MEM) × 3 vrstvy (BIMG/SOP/CHL). Vizuální přehled celého systému.</div>
+    <span class="card-badge badge-understand">Porozumění</span>
+  </a>
+
+  <a class="card" href="/firma/jak-dokumentujeme/pruvodce-kategorie.html">
+    <div class="card-icon">🎓</div>
+    <div class="card-title">Průvodce kategoriemi</div>
+    <div class="card-desc">Interaktivní trénink s rozhodovacím stromem, srovnávací tabulkou a kvízem. Nauč se rozlišovat LAW/PROC/KNOW/MEM.</div>
+    <span class="card-badge badge-train">Trénink</span>
+  </a>
+
+  <div class="section-label">Workflow tvorby</div>
+
+  <a class="card" href="/firma/jak-dokumentujeme/workflow-diagram.html">
+    <div class="card-icon">🗺️</div>
+    <div class="card-title">Flow diagram</div>
+    <div class="card-desc">12 kroků tvorby obsahu v přehledném flow. Předpoklady vlevo, systémová pravidla vpravo. Klikni na krok pro detail.</div>
+    <span class="card-badge badge-workflow">Workflow</span>
+  </a>
+
+  <a class="card" href="/firma/jak-dokumentujeme/workflow-tvorba.html">
+    <div class="card-icon">📋</div>
+    <div class="card-title">Swimlane workflow</div>
+    <div class="card-desc">5 drah: Editor → Systém → Claude → Architekt → Čtenář. Kdo co dělá a kdy. Fáze a karty s detaily.</div>
+    <span class="card-badge badge-workflow">Workflow</span>
+  </a>
+
+  <a class="card full-width" href="/firma/jak-dokumentujeme/workflow-vyvojak.html">
+    <div class="card-icon">🔄</div>
+    <div class="card-title">Vývojový diagram</div>
+    <div class="card-desc">Vizuální vývoják s propojenými uzly a šipkami. 10 hlavních kroků od triggeru po feedback. Klikni na uzel pro detail.</div>
+    <span class="card-badge badge-workflow">Workflow</span>
+  </a>
+</div>
+
+<a class="back-link" href="/">← Zpět na hlavní stránku</a>
+
+</body>
+</html>

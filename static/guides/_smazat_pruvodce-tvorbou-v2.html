@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📚 Průvodce tvorbou obsahu — Mozkotron</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:#0f1117; color:#e2e8f0; line-height:1.6; }
+
+/* NAV */
+.topnav { position:fixed; top:0; left:0; right:0; z-index:200; background:#0a0a1a; border-bottom:1px solid #1e293b; padding:8px 24px; display:flex; align-items:center; gap:16px; }
+.topnav a { color:#64748b; text-decoration:none; font-size:0.78rem; transition:color 0.2s; }
+.topnav a:hover { color:#cbd5e1; }
+.topnav a.active { color:#f8fafc; font-weight:600; }
+
+/* LAYOUT */
+.page-wrap { display:flex; margin-top:42px; }
+.main-content { flex:1; min-width:0; max-width:1200px; margin:0 auto; padding:0 32px 60px; }
+
+/* STICKY OUTLINE */
+.outline {
+  position:sticky; top:56px; align-self:flex-start;
+  width:200px; min-width:200px; padding:16px 0 16px 20px;
+  font-size:0.72rem; z-index:50;
+}
+.outline-inner { border-left:2px solid #1e293b; padding-left:12px; }
+.outline a {
+  display:block; color:#475569; text-decoration:none; padding:5px 0;
+  transition:all 0.25s; border-left:2px solid transparent; margin-left:-14px; padding-left:12px;
+}
+.outline a:hover { color:#94a3b8; }
+.outline a.active { color:#f8fafc; border-left-color:#3b82f6; font-weight:600; }
+
+/* SECTIONS */
+.section { padding:48px 0 40px; }
+.section + .section { border-top:1px solid #1e293b; }
+.section-num { font-size:0.65rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.12em; margin-bottom:6px; }
+.section h2 { font-size:1.3rem; color:#f8fafc; margin-bottom:6px; }
+.section .lead { font-size:0.85rem; color:#94a3b8; margin-bottom:28px; }
+
+/* ===== SECTION 1: CATEGORY CARDS (large) ===== */
+.cat-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; margin-bottom:24px; }
+.cat-card {
+  border-radius:14px; padding:24px 22px; border:2px solid #1e293b;
+  transition:all 0.25s; cursor:pointer; position:relative;
+}
+.cat-card:hover { transform:translateY(-3px); border-color:#334155; }
+.cat-card.expanded { border-color:#475569; }
+.cat-icon { font-size:2.4rem; margin-bottom:10px; }
+.cat-code { font-size:1.1rem; font-weight:800; margin-bottom:4px; }
+.cat-label { font-size:0.82rem; margin-bottom:8px; }
+.cat-q { font-size:0.78rem; font-style:italic; padding:5px 12px; border-radius:8px; display:inline-block; margin-bottom:4px; }
+.cat-expand-icon { position:absolute; top:16px; right:16px; font-size:0.7rem; color:#475569; transition:transform 0.3s; }
+.cat-card.expanded .cat-expand-icon { transform:rotate(180deg); }
+
+/* Expandable detail */
+.cat-detail { max-height:0; overflow:hidden; transition:max-height 0.4s ease; }
+.cat-card.expanded .cat-detail { max-height:600px; }
+.cat-detail-inner { padding-top:16px; border-top:1px solid #1e293b30; margin-top:12px; }
+.cat-detail h4 { font-size:0.78rem; font-weight:700; color:#e2e8f0; margin-bottom:8px; }
+.cat-detail ul { list-style:none; padding:0; margin:0 0 12px; }
+.cat-detail li { font-size:0.72rem; color:#94a3b8; padding:3px 0 3px 16px; position:relative; }
+.cat-detail li::before { content:'•'; position:absolute; left:4px; color:#475569; }
+.cat-detail .cat-examples { font-size:0.68rem; color:#64748b; }
+.cat-detail .cat-examples strong { color:#94a3b8; }
+
+/* Category colors */
+.cat-law { background:#ef444408; border-color:#ef444440; }
+.cat-law .cat-code { color:#ef4444; }
+.cat-law .cat-label { color:#fca5a5; }
+.cat-law .cat-q { background:#ef444418; color:#fca5a5; }
+.cat-law.expanded { background:#ef444412; }
+
+.cat-proc { background:#3b82f608; border-color:#3b82f640; }
+.cat-proc .cat-code { color:#3b82f6; }
+.cat-proc .cat-label { color:#93c5fd; }
+.cat-proc .cat-q { background:#3b82f618; color:#93c5fd; }
+.cat-proc.expanded { background:#3b82f612; }
+
+.cat-know { background:#10b98108; border-color:#10b98140; }
+.cat-know .cat-code { color:#10b981; }
+.cat-know .cat-label { color:#6ee7b7; }
+.cat-know .cat-q { background:#10b98118; color:#6ee7b7; }
+.cat-know.expanded { background:#10b98112; }
+
+.cat-mem { background:#8b5cf608; border-color:#8b5cf640; }
+.cat-mem .cat-code { color:#8b5cf6; }
+.cat-mem .cat-label { color:#c4b5fd; }
+.cat-mem .cat-q { background:#8b5cf618; color:#c4b5fd; }
+.cat-mem.expanded { background:#8b5cf612; }
+
+/* MNEMONIC */
+.mnemonic { display:flex; gap:8px; justify-content:center; margin-bottom:32px; flex-wrap:wrap; }
+.mnemonic span { font-size:0.78rem; font-weight:700; padding:6px 16px; border-radius:20px; }
+.mn-law { background:#ef444428; color:#ef4444; }
+.mn-proc { background:#3b82f628; color:#3b82f6; }
+.mn-know { background:#10b98128; color:#10b981; }
+.mn-mem { background:#8b5cf628; color:#8b5cf6; }
+
+/* DECISION TREE + QUIZ area */
+.dtree-quiz-wrap { display:flex; gap:20px; align-items:flex-start; margin-bottom:32px; }
+.dtree-col { flex:1; min-width:0; }
+.quiz-col { flex:1; min-width:0; max-width:0; overflow:hidden; transition:all 0.5s ease; opacity:0; }
+.quiz-col.open { max-width:600px; opacity:1; }
+
+.dtree { background:#111827; border:1px solid #1e293b; border-radius:12px; padding:24px; }
+.dtree-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.dtree-header span { font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.1em; }
+.dtree-step { display:flex; align-items:flex-start; gap:12px; margin-bottom:14px; }
+.dtree-step:last-child { margin-bottom:0; }
+.dtree-num { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:800; flex-shrink:0; color:#fff; }
+.dtree-body { flex:1; }
+.dtree-q { font-size:0.85rem; font-weight:600; color:#e2e8f0; }
+.dtree-a { font-size:0.75rem; color:#94a3b8; margin-top:4px; }
+.dtree-result { display:inline-block; font-size:0.7rem; font-weight:700; padding:2px 10px; border-radius:6px; margin-top:4px; }
+.dtree-arrow { text-align:center; color:#475569; font-size:0.75rem; margin:4px 0 4px 40px; }
+
+/* Quiz toggle button */
+.quiz-toggle-btn {
+  padding:8px 16px; background:#1e293b; border:1px solid #334155; border-radius:8px;
+  color:#f59e0b; font-size:0.75rem; font-weight:600; cursor:pointer; transition:all 0.2s;
+  white-space:nowrap;
+}
+.quiz-toggle-btn:hover { background:#334155; border-color:#475569; }
+.quiz-toggle-btn.active { background:#f59e0b18; border-color:#f59e0b; }
+
+/* Inline quiz */
+.inline-quiz { background:#111827; border:1px solid #1e293b; border-radius:12px; padding:20px; }
+.inline-quiz h3 { font-size:0.9rem; color:#f59e0b; margin-bottom:4px; }
+.inline-quiz .iq-sub { font-size:0.72rem; color:#64748b; margin-bottom:16px; }
+.quiz-card { background:#0d1117; border:1px solid #1e293b; border-radius:10px; padding:14px; margin-bottom:10px; }
+.quiz-card.answered { opacity:0.85; }
+.quiz-num { font-size:0.65rem; color:#64748b; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; }
+.quiz-scenario { font-size:0.85rem; color:#f8fafc; font-style:italic; margin-bottom:10px; }
+.quiz-options { display:flex; gap:6px; flex-wrap:wrap; }
+.quiz-opt {
+  padding:6px 14px; background:#1e293b; border:2px solid #334155; border-radius:8px;
+  color:#e2e8f0; cursor:pointer; font-size:0.78rem; transition:all 0.2s;
+}
+.quiz-opt:hover:not(.disabled) { background:#334155; border-color:#475569; }
+.quiz-opt.correct { border-color:#10b981; background:#10b98122; color:#6ee7b7; }
+.quiz-opt.wrong { border-color:#ef4444; background:#ef444422; color:#fca5a5; }
+.quiz-opt.disabled { cursor:default; opacity:0.5; }
+.quiz-opt.disabled.correct { opacity:1; }
+.quiz-explain { display:none; margin-top:10px; padding:10px 14px; background:#0f172a; border-radius:8px; font-size:0.75rem; color:#94a3b8; }
+.quiz-explain.show { display:block; }
+.quiz-explain strong { color:#e2e8f0; }
+.quiz-score { text-align:center; padding:12px; font-size:0.85rem; font-weight:600; color:#f8fafc; }
+.quiz-reset { display:block; margin:8px auto 0; padding:6px 16px; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#e2e8f0; cursor:pointer; font-size:0.75rem; }
+.quiz-reset:hover { background:#334155; }
+
+/* ===== SECTION 2: MATRIX ===== */
+.layer-cards { display:flex; gap:12px; margin-bottom:28px; }
+.layer-card { flex:1; background:#111827; border:1px solid #1e293b; border-radius:12px; padding:18px 16px; }
+.layer-card .lc-icon { font-size:1.6rem; margin-bottom:6px; }
+.layer-card .lc-code { font-size:0.9rem; font-weight:800; color:#f8fafc; }
+.layer-card .lc-name { font-size:0.72rem; color:#94a3b8; margin-bottom:4px; }
+.layer-card .lc-desc { font-size:0.7rem; color:#64748b; }
+
+/* Interactive matrix */
+.matrix-wrap { overflow-x:auto; margin-bottom:28px; }
+.matrix { display:grid; grid-template-columns:auto repeat(4,1fr); gap:2px; min-width:700px; }
+.mh { background:#111827; border:1px solid #1e293b; border-radius:8px; padding:10px 12px; text-align:center; transition:all 0.3s; }
+.mh-corner { background:transparent; border:none; }
+.mh-code { font-size:0.85rem; font-weight:800; }
+.mh-name { font-size:0.62rem; color:#64748b; margin-top:2px; }
+.mc {
+  background:#0d1117; border:1px solid #1e293b; border-radius:8px;
+  padding:10px 12px; font-size:0.7rem; color:#94a3b8; line-height:1.5;
+  transition:all 0.3s; cursor:pointer; position:relative;
+}
+.mc:hover { background:#111827; border-color:#334155; }
+.mc.highlighted { background:#111827; border-color:#475569; box-shadow:0 0 12px #3b82f610; z-index:10; }
+.mc-t { font-size:0.75rem; font-weight:700; color:#e2e8f0; margin-bottom:3px; }
+.mc-ex { font-size:0.62rem; color:#475569; font-style:italic; margin-top:4px; }
+.mc-dim { opacity:0.45; cursor:default; }
+.mc-dim.highlighted { opacity:0.6; }
+/* Row header (layer) */
+.mh-layer { text-align:left; padding:12px 14px; transition:all 0.3s; }
+.mh-layer.highlighted { background:#1e293b; border-color:#475569; }
+.mh-layer .layer-code { font-size:0.82rem; font-weight:800; color:#f8fafc; }
+.mh-layer .layer-name { font-size:0.62rem; color:#64748b; }
+.mh-layer .layer-limit { font-size:0.58rem; color:#475569; font-style:italic; margin-top:2px; }
+/* Category column header colors */
+.mh-law { border-bottom:3px solid #ef4444; }
+.mh-proc { border-bottom:3px solid #3b82f6; }
+.mh-know { border-bottom:3px solid #10b981; }
+.mh-mem { border-bottom:3px solid #8b5cf6; }
+.mh.col-highlighted { background:#1e293b; border-color:#475569; }
+.mc-law { border-top:2px solid #ef444425; }
+.mc-proc { border-top:2px solid #3b82f625; }
+.mc-know { border-top:2px solid #10b98125; }
+.mc-mem { border-top:2px solid #8b5cf625; }
+
+/* Matrix detail panel */
+.matrix-detail {
+  max-height:0; overflow:hidden; transition:max-height 0.4s ease;
+  background:#0f172a; border-radius:0 0 12px 12px; margin-top:-2px;
+}
+.matrix-detail.open { max-height:500px; border:1px solid #1e293b; border-top:none; }
+.matrix-detail-inner { padding:20px; }
+.matrix-detail h4 { font-size:0.85rem; font-weight:700; color:#f8fafc; margin-bottom:4px; }
+.matrix-detail .md-sub { font-size:0.72rem; color:#64748b; margin-bottom:12px; }
+.md-examples { margin-bottom:16px; }
+.md-examples li { font-size:0.75rem; color:#94a3b8; padding:3px 0 3px 16px; position:relative; list-style:none; }
+.md-examples li::before { content:'→'; position:absolute; left:0; color:#475569; font-size:0.7rem; }
+.md-divider { height:1px; background:#1e293b; margin:12px 0; }
+.md-real-title { font-size:0.72rem; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px; }
+.md-real-empty { font-size:0.7rem; color:#334155; font-style:italic; }
+
+/* Layer creation order */
+.layer-order { display:flex; gap:10px; margin-bottom:8px; }
+.layer-rule { flex:1; background:#111827; border:1px solid #1e293b; border-radius:10px; padding:16px 18px; display:flex; align-items:flex-start; gap:12px; }
+.layer-rule-icon { font-size:1.4rem; flex-shrink:0; }
+.layer-rule-text { flex:1; }
+.layer-rule-text strong { color:#e2e8f0; font-size:0.82rem; }
+.layer-rule-text p { font-size:0.72rem; color:#94a3b8; margin-top:2px; }
+
+/* ===== SECTION 3: FOLDER STRUCTURE ===== */
+.folder-types { display:flex; gap:16px; margin-bottom:24px; }
+.folder-type { flex:1; border-radius:10px; padding:16px; }
+.folder-type-sekce { border:2px dashed #475569; }
+.folder-type-kap { border:2px solid #a78bfa; }
+.tree-box { background:#0d1117; border:1px solid #334155; border-radius:10px; padding:16px 20px; margin-bottom:24px; }
+.tree-box pre { font-family:'SF Mono',Consolas,monospace; font-size:0.75rem; color:#94a3b8; line-height:1.9; margin:0; }
+
+/* META TABLE */
+.meta-table { width:100%; border-collapse:separate; border-spacing:0; font-size:0.75rem; margin-bottom:24px; }
+.meta-table th { text-align:left; padding:8px 12px; background:#111827; color:#94a3b8; font-weight:600; font-size:0.68rem; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #1e293b; }
+.meta-table td { padding:8px 12px; border-bottom:1px solid #1e293b15; }
+.meta-table code { background:#1e293b; padding:1px 6px; border-radius:3px; font-size:0.7rem; color:#e2e8f0; }
+.meta-table tr:hover td { background:#111827; }
+
+/* ===== SECTION 4: FLOWCHART ===== */
+.flowchart { display:flex; flex-direction:column; gap:0; align-items:center; }
+.fc-block {
+  width:100%; max-width:700px; background:#111827; border:1px solid #1e293b; border-radius:12px;
+  padding:18px 22px; display:flex; align-items:flex-start; gap:14px; transition:all 0.2s;
+}
+.fc-block:hover { border-color:#334155; }
+.fc-num { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:800; flex-shrink:0; color:#fff; }
+.fc-body { flex:1; }
+.fc-title { font-size:0.9rem; font-weight:700; color:#f8fafc; margin-bottom:3px; }
+.fc-desc { font-size:0.72rem; color:#94a3b8; line-height:1.5; }
+.fc-role-tag { font-size:0.6rem; font-weight:600; padding:2px 10px; border-radius:8px; float:right; margin-left:8px; }
+.fc-arrow { color:#334155; font-size:1.6rem; line-height:1; padding:4px 0; text-align:center; }
+.fc-branch { display:flex; gap:12px; width:100%; max-width:700px; }
+.fc-branch .fc-block { flex:1; }
+.fc-arrow-branch { display:flex; gap:12px; width:100%; max-width:700px; justify-content:center; }
+.fc-arrow-branch span { flex:1; text-align:center; color:#334155; font-size:1.4rem; }
+
+/* Role colors for flowchart */
+.fc-editor { border-left:3px solid #10b981; }
+.fc-editor .fc-num { background:#10b981; color:#000; }
+.fc-editor .fc-role-tag { background:#10b98118; color:#10b981; }
+.fc-claude { border-left:3px solid #3b82f6; }
+.fc-claude .fc-num { background:#3b82f6; }
+.fc-claude .fc-role-tag { background:#3b82f618; color:#3b82f6; }
+.fc-system { border-left:3px solid #64748b; }
+.fc-system .fc-num { background:#64748b; }
+.fc-system .fc-role-tag { background:#64748b18; color:#94a3b8; }
+.fc-reader { border-left:3px solid #f59e0b; }
+.fc-reader .fc-num { background:#f59e0b; color:#000; }
+.fc-reader .fc-role-tag { background:#f59e0b18; color:#f59e0b; }
+.fc-feedback { border-left:3px solid #7c3aed; }
+.fc-feedback .fc-num { background:#7c3aed; }
+.fc-feedback .fc-role-tag { background:#7c3aed18; color:#a78bfa; }
+
+.wf-legend { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:20px; }
+.wf-legend-item { display:flex; align-items:center; gap:6px; font-size:0.7rem; color:#94a3b8; }
+.wf-legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+
+/* Triggers */
+.trigger-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:28px; }
+.trigger-card { background:#1e293b; border:1px solid #334155; border-radius:10px; padding:12px 14px; text-align:center; }
+.trigger-card .t-icon { font-size:1.3rem; margin-bottom:2px; }
+.trigger-card .t-title { font-size:0.72rem; font-weight:600; color:#e2e8f0; }
+.trigger-card .t-desc { font-size:0.6rem; color:#64748b; margin-top:2px; }
+
+/* ===== SECTION 5: ACCESS ===== */
+.access-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:24px; }
+.access-card { background:#111827; border:1px solid #1e293b; border-radius:10px; padding:14px 16px; }
+.access-card .ac-layer { font-size:0.82rem; font-weight:800; color:#f8fafc; margin-bottom:4px; }
+.access-card .ac-who { font-size:0.72rem; color:#94a3b8; }
+.access-card .ac-icon { font-size:1.2rem; margin-bottom:6px; }
+
+/* FOOTER */
+.footer { max-width:1200px; margin:0 auto; padding:32px 24px; text-align:center; }
+.footer a { color:#64748b; text-decoration:none; font-size:0.8rem; }
+.footer a:hover { color:#94a3b8; }
+
+@media (max-width:900px) {
+  .outline { display:none; }
+  .cat-grid { grid-template-columns:1fr; }
+  .trigger-grid { grid-template-columns:1fr 1fr; }
+  .access-grid { grid-template-columns:1fr; }
+  .layer-cards { flex-direction:column; }
+  .layer-order { flex-direction:column; }
+  .folder-types { flex-direction:column; }
+  .dtree-quiz-wrap { flex-direction:column; }
+  .quiz-col { max-width:100%!important; }
+  .quiz-col.open { max-width:100%!important; }
+  .fc-branch { flex-direction:column; }
+}
+
+/* ===== READING MODE ===== */
+.reading-bar {
+  position:fixed; top:42px; left:0; right:0; height:3px; z-index:199;
+  background:#1e293b; display:none;
+}
+.reading-bar-fill { height:100%; width:0%; background:linear-gradient(90deg,#10b981,#34d399); transition:width 0.4s ease; border-radius:0 2px 2px 0; }
+body.reading-mode .reading-bar { display:block; }
+
+.reading-toggle {
+  padding:5px 12px; background:#1e293b; border:1px solid #334155; border-radius:6px;
+  color:#94a3b8; font-size:0.72rem; cursor:pointer; transition:all 0.2s; margin-left:auto;
+  white-space:nowrap;
+}
+.reading-toggle:hover { background:#334155; color:#e2e8f0; }
+.reading-toggle.active { background:#10b98120; border-color:#10b981; color:#10b981; }
+
+.reading-pct {
+  font-size:0.7rem; font-weight:700; color:#10b981; margin-right:4px; display:none;
+}
+body.reading-mode .reading-pct { display:inline; }
+
+.reading-unread {
+  padding:3px 10px; background:#ef444420; border:1px solid #ef444440; border-radius:6px;
+  color:#fca5a5; font-size:0.68rem; font-weight:600; cursor:pointer; transition:all 0.2s;
+  display:none; white-space:nowrap;
+}
+.reading-unread:hover { background:#ef444435; border-color:#ef4444; color:#fff; }
+body.reading-mode .reading-unread { display:inline-block; }
+body.reading-mode .reading-unread.all-done { background:#10b98120; border-color:#10b981; color:#10b981; cursor:default; }
+
+/* Flash animation for scrolled-to unread element */
+@keyframes flashUnread {
+  0% { box-shadow:0 0 0 0 #ef444460; }
+  50% { box-shadow:0 0 0 6px #ef444430; }
+  100% { box-shadow:0 0 0 0 #ef444400; }
+}
+body.reading-mode .readable.flash-unread {
+  animation:flashUnread 0.8s ease 2;
+  background:#ef444415;
+  border-left-color:#ef4444;
+}
+
+/* Readable elements in reading mode */
+body.reading-mode .readable {
+  cursor:pointer; position:relative; border-radius:4px;
+  transition:all 0.2s; padding-left:4px;
+  border-left:3px solid transparent;
+}
+body.reading-mode .readable:hover:not(.read) {
+  background:#10b98112; border-left-color:#10b98160;
+  box-shadow:inset 0 0 0 1px #10b98115;
+}
+body.reading-mode .readable.read {
+  color:#10b98190 !important; border-left-color:#10b98140;
+  background:#10b98108;
+}
+body.reading-mode .readable.read::after {
+  content:'✓'; position:absolute; right:-18px; top:50%; transform:translateY(-50%);
+  font-size:0.6rem; color:#10b981; font-weight:700;
+}
+/* Special: list items get check on left */
+body.reading-mode li.readable.read::after { right:auto; left:-20px; }
+body.reading-mode li.readable.read::before { color:#10b981 !important; }
+
+/* Hint label in reading mode */
+body.reading-mode .reading-hint {
+  display:block; text-align:center; padding:8px; font-size:0.68rem;
+  color:#10b98160; margin-bottom:16px;
+}
+.reading-hint { display:none; }
+
+/* In reading mode: interactive containers show dblclick hint on hover */
+body.reading-mode .cat-card { cursor:default; }
+body.reading-mode .cat-card > .cat-expand-icon::after { content:' (2×klik)'; font-size:0.55rem; color:#475569; }
+body.reading-mode .mc:not(.mc-dim) { cursor:default; }
+
+/* Completion celebration */
+.reading-complete {
+  display:none; position:fixed; bottom:24px; right:24px; z-index:300;
+  background:#10b981; color:#000; padding:14px 24px; border-radius:12px;
+  font-size:0.9rem; font-weight:700; box-shadow:0 8px 32px #10b98140;
+  animation:celebrateIn 0.5s ease;
+}
+.reading-complete.show { display:block; }
+@keyframes celebrateIn { from { transform:translateY(20px) scale(0.9); opacity:0; } to { transform:translateY(0) scale(1); opacity:1; } }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a href="/guides/pruvodce-tvorbou" class="active">📚 Průvodce tvorbou</a>
+  <a href="/guides/workflow-vyvojak">🔄 Vývoják (detail)</a>
+  <a href="/">🏠 Domů</a>
+  <span class="reading-pct" id="readingPct">0%</span>
+  <button class="reading-unread" id="readingUnread" onclick="scrollToUnread()">— nepřečteno</button>
+  <button class="reading-toggle" id="readingToggle" onclick="toggleReadingMode()">📖 Režim čtení</button>
+</nav>
+
+<div class="reading-bar" id="readingBar"><div class="reading-bar-fill" id="readingBarFill"></div></div>
+<div class="reading-complete" id="readingComplete">🎉 100% — Všechno přečteno!</div>
+
+<div class="page-wrap">
+
+<!-- STICKY OUTLINE -->
+<aside class="outline" id="outline">
+  <div class="outline-inner">
+    <a href="#s1" class="active" data-section="s1">1 · Co píšu</a>
+    <a href="#s2" data-section="s2">2 · V jaké formě</a>
+    <a href="#s3" data-section="s3">3 · Kam to dám</a>
+    <a href="#s4" data-section="s4">4 · Jak to probíhá</a>
+    <a href="#s5" data-section="s5">5 · Kdo to uvidí</a>
+  </div>
+</aside>
+
+<div class="main-content">
+
+<!-- ========== SEKCE 1: CO PÍŠU ========== -->
+<div class="section" id="s1">
+  <div class="section-num">Sekce 1</div>
+  <h2>Co píšu? — 4 kategorie obsahu</h2>
+  <p class="lead">Každá informace ve firmě spadá do jedné ze čtyř kategorií. Kategorie říká CO to je. Klikni na kartu pro detail.</p>
+
+  <div class="cat-grid">
+    <!-- LAW -->
+    <div class="cat-card cat-law" data-expandable="card">
+      <div class="cat-expand-icon">▼</div>
+      <div class="cat-icon">⚖️</div>
+      <div class="cat-code">LAW</div>
+      <div class="cat-label">Co platí — pravidla, mantinely</div>
+      <div class="cat-q">„Co musím dodržet?"</div>
+      <div class="cat-detail">
+        <div class="cat-detail-inner">
+          <h4>Co sem patří:</h4>
+          <ul>
+            <li>Závazná pravidla, politiky a mantinely firmy</li>
+            <li>Nařízení vedení, interní normy, směrnice</li>
+            <li>Práva a povinnosti zaměstnanců</li>
+            <li>Lhůty, limity, eskalační pravidla</li>
+          </ul>
+          <h4>Příklady:</h4>
+          <div class="cat-examples">
+            <strong>→</strong> Reklamační řád — lhůty, odpovědnosti, výjimky<br>
+            <strong>→</strong> Pravidla nošení firemního oblečení<br>
+            <strong>→</strong> Zakázky nad 50 000 Kč — podpis obou jednatelů
+          </div>
+          <div style="margin-top:10px; padding-top:10px; border-top:1px solid #1e293b30;">
+            <div class="md-real-title">Z naší wiki:</div>
+            <div class="md-real-empty">Zatím žádné LAW dokumenty v systému.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROC -->
+    <div class="cat-card cat-proc" data-expandable="card">
+      <div class="cat-expand-icon">▼</div>
+      <div class="cat-icon">🔧</div>
+      <div class="cat-code">PROC</div>
+      <div class="cat-label">Jak to udělat — postupy, procedury</div>
+      <div class="cat-q">„Jak to provedu?"</div>
+      <div class="cat-detail">
+        <div class="cat-detail-inner">
+          <h4>Co sem patří:</h4>
+          <ul>
+            <li>Kroky, které někdo opakovaně dělá</li>
+            <li>Návody na práci v systémech (Money S4, e-shop...)</li>
+            <li>Technické postupy (zapojení, instalace, oprava)</li>
+            <li>Checklisty a diagramy procesů</li>
+          </ul>
+          <h4>Příklady:</h4>
+          <div class="cat-examples">
+            <strong>→</strong> Jak vytvořit objednávku v Money S4<br>
+            <strong>→</strong> Příjem zboží na sklad — kontrola, třídění<br>
+            <strong>→</strong> Jak zapojit myčku nádobí — schéma
+          </div>
+          <div style="margin-top:10px; padding-top:10px; border-top:1px solid #1e293b30;">
+            <div class="md-real-title">Z naší wiki:</div>
+            <div class="md-real-empty">Zatím žádné PROC dokumenty v systému.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KNOW -->
+    <div class="cat-card cat-know" data-expandable="card">
+      <div class="cat-expand-icon">▼</div>
+      <div class="cat-icon">🧠</div>
+      <div class="cat-code">KNOW</div>
+      <div class="cat-label">Proč to tak je — znalosti, kontext</div>
+      <div class="cat-q">„Proč to dává smysl?"</div>
+      <div class="cat-detail">
+        <div class="cat-detail-inner">
+          <h4>Co sem patří:</h4>
+          <ul>
+            <li>Produktové znalosti, parametry, srovnání</li>
+            <li>Vysvětlení procesů, logika rozhodnutí</li>
+            <li>Kontextové informace pro lepší rozhodování</li>
+            <li>Odborné znalosti (DPH, legislativa, technika)</li>
+          </ul>
+          <h4>Příklady:</h4>
+          <div class="cat-examples">
+            <strong>→</strong> Samsung Bespoke 2026 — přehled modelů a cen<br>
+            <strong>→</strong> Srovnání expedičních služeb (PPL vs Zásilkovna vs DPD)<br>
+            <strong>→</strong> DPH — sazby, řádky přiznání, dopady na firmu
+          </div>
+          <div style="margin-top:10px; padding-top:10px; border-top:1px solid #1e293b30;">
+            <div class="md-real-title">Z naší wiki:</div>
+            <div class="md-real-empty">Zatím žádné KNOW dokumenty v systému.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MEM -->
+    <div class="cat-card cat-mem" data-expandable="card">
+      <div class="cat-expand-icon">▼</div>
+      <div class="cat-icon">✏️</div>
+      <div class="cat-code">MEM</div>
+      <div class="cat-label">Co se změnilo — záznamy, žurnál</div>
+      <div class="cat-q">„Co se stalo a proč?"</div>
+      <div class="cat-detail">
+        <div class="cat-detail-inner">
+          <h4>Co sem patří:</h4>
+          <ul>
+            <li>Jednorázové záznamy událostí s datem</li>
+            <li>Rozhodnutí vedení + důvody</li>
+            <li>Post-mortemy, incidenty, změny</li>
+            <li>Porady — co se rozhodlo a proč</li>
+          </ul>
+          <h4>Příklady:</h4>
+          <div class="cat-examples">
+            <strong>→</strong> Porada 15.4.2026: přechod z PPL na Zásilkovnu<br>
+            <strong>→</strong> Post-mortem: výpadek e-shopu 3.3.2026<br>
+            <strong>→</strong> Duben 2026: softshellky místo vest — stížnosti na zimu
+          </div>
+          <div style="margin-top:10px; padding-top:10px; border-top:1px solid #1e293b30;">
+            <div class="md-real-title">Z naší wiki:</div>
+            <div class="md-real-empty">Zatím žádné MEM dokumenty v systému.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mnemonic">
+    <span class="mn-law">⚖️ MUSÍ</span>
+    <span class="mn-proc">🔧 DĚLÁ</span>
+    <span class="mn-know">🧠 VÍ</span>
+    <span class="mn-mem">✏️ STALO SE</span>
+  </div>
+
+  <div class="reading-hint">📖 Režim čtení zapnut — klik = potvrzení přečtení, 2×klik = rozbalení karty</div>
+
+  <!-- Decision tree + Quiz side-by-side -->
+  <div class="dtree-quiz-wrap">
+    <div class="dtree-col">
+      <div class="dtree">
+        <div class="dtree-header">
+          <span>Rozhodovací strom</span>
+          <button class="quiz-toggle-btn" id="quizToggle" onclick="toggleQuiz()">🎯 Natrénuj si to</button>
+        </div>
+
+        <div class="dtree-step">
+          <div class="dtree-num" style="background:#8b5cf6;">1</div>
+          <div class="dtree-body">
+            <div class="dtree-q">Je to jednorázový záznam události nebo rozhodnutí?</div>
+            <div class="dtree-a">Ano → <span class="dtree-result" style="background:#8b5cf628;color:#8b5cf6;">MEM</span></div>
+          </div>
+        </div>
+        <div class="dtree-arrow">↓ Ne</div>
+
+        <div class="dtree-step">
+          <div class="dtree-num" style="background:#ef4444;">2</div>
+          <div class="dtree-body">
+            <div class="dtree-q">Říká to, co se MUSÍ dodržet? Porušení = problém?</div>
+            <div class="dtree-a">Ano → <span class="dtree-result" style="background:#ef444428;color:#ef4444;">LAW</span></div>
+          </div>
+        </div>
+        <div class="dtree-arrow">↓ Ne</div>
+
+        <div class="dtree-step">
+          <div class="dtree-num" style="background:#3b82f6;">3</div>
+          <div class="dtree-body">
+            <div class="dtree-q">Má to konkrétní kroky, které někdo opakovaně dělá?</div>
+            <div class="dtree-a">Ano → <span class="dtree-result" style="background:#3b82f628;color:#3b82f6;">PROC</span></div>
+          </div>
+        </div>
+        <div class="dtree-arrow">↓ Ne</div>
+
+        <div class="dtree-step">
+          <div class="dtree-num" style="background:#10b981;">4</div>
+          <div class="dtree-body">
+            <div class="dtree-q">Je to znalost, kontext nebo vysvětlení?</div>
+            <div class="dtree-a">Ano → <span class="dtree-result" style="background:#10b98128;color:#10b981;">KNOW</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quiz panel (slides out) -->
+    <div class="quiz-col" id="quizCol">
+      <div class="inline-quiz">
+        <h3>🎯 Kvíz — rozlišování kategorií</h3>
+        <div class="iq-sub">10 scénářů z Elektro Kutílek. Klikni na správnou kategorii.</div>
+        <div id="quizContainer"></div>
+        <div class="quiz-score" id="scoreText" style="display:none;"></div>
+        <button class="quiz-reset" id="resetBtn" style="display:none;" onclick="resetQuiz()">🔄 Zkusit znovu</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== SEKCE 2: V JAKÉ FORMĚ ========== -->
+<div class="section" id="s2">
+  <div class="section-num">Sekce 2</div>
+  <h2>V jaké formě? — 3 hloubky dokumentu</h2>
+  <p class="lead">Každý dokument má jednu ze tří hloubek (vrstev). Vrstva říká JAK hluboko se dokument noří. Klikni na buňku matice pro příklady.</p>
+
+  <div class="layer-cards">
+    <div class="layer-card">
+      <div class="lc-icon">🏔️</div>
+      <div class="lc-code">BIMG</div>
+      <div class="lc-name">Big Image</div>
+      <div class="lc-desc">Kompletní dokumentace tématu. Neomezená délka, subpages povolené. Vždy se tvoří první.</div>
+    </div>
+    <div class="layer-card">
+      <div class="lc-icon">📋</div>
+      <div class="lc-code">SOP</div>
+      <div class="lc-name">Postup per role</div>
+      <div class="lc-desc">Kroky pro konkrétní roli. Číslované, se screenshoty. Délka podle tématu.</div>
+    </div>
+    <div class="layer-card">
+      <div class="lc-icon">⚡</div>
+      <div class="lc-code">CHL</div>
+      <div class="lc-name">Cheat List</div>
+      <div class="lc-desc">Quick reference. 1×A4 tisknutelný. Tabulka, checklist nebo diagram.</div>
+    </div>
+  </div>
+
+  <div style="font-size:0.82rem;font-weight:700;color:#f8fafc;margin-bottom:12px;">Matice: Kategorie × Hloubka <span style="font-weight:400;color:#64748b;font-size:0.72rem;">(klikni na buňku)</span></div>
+  <div class="matrix-wrap">
+    <div class="matrix" id="matrix">
+      <!-- Header row -->
+      <div class="mh mh-corner"></div>
+      <div class="mh mh-law" data-col="law"><div class="mh-code" style="color:#ef4444;">⚖️ LAW</div><div class="mh-name">Co platí</div></div>
+      <div class="mh mh-proc" data-col="proc"><div class="mh-code" style="color:#3b82f6;">🔧 PROC</div><div class="mh-name">Jak to udělat</div></div>
+      <div class="mh mh-know" data-col="know"><div class="mh-code" style="color:#10b981;">🧠 KNOW</div><div class="mh-name">Proč to tak je</div></div>
+      <div class="mh mh-mem" data-col="mem"><div class="mh-code" style="color:#8b5cf6;">✏️ MEM</div><div class="mh-name">Co se změnilo</div></div>
+
+      <!-- Row: BIMG -->
+      <div class="mh mh-layer" data-row="bimg"><div class="layer-code">🏔️ BIMG</div><div class="layer-name">Big Image</div><div class="layer-limit">Bez limitu</div></div>
+      <div class="mc mc-law" data-row="bimg" data-col="law" data-expandable="matrix"><div class="mc-t">Kompletní pravidla</div>Závazný dokument — lhůty, odpovědnosti, výjimky<div class="mc-ex">Reklamační řád</div></div>
+      <div class="mc mc-proc" data-row="bimg" data-col="proc" data-expandable="matrix"><div class="mc-t">Kompletní proces</div>Celý proces od A do Z — všechny role, systémy<div class="mc-ex">Příjem zboží — kompletní logistika</div></div>
+      <div class="mc mc-know" data-row="bimg" data-col="know" data-expandable="matrix"><div class="mc-t">Kompletní kontext</div>Proč, jaká data, zkušenosti, logika rozhodnutí<div class="mc-ex">DPH — sazby, novelizace, dopady</div></div>
+      <div class="mc mc-mem mc-dim" data-row="bimg" data-col="mem" data-expandable="matrix"><div class="mc-t">Žurnál</div>Chronologický deník rozhodnutí a událostí<div class="mc-ex">Duben 2026: softshellky</div></div>
+
+      <!-- Row: SOP -->
+      <div class="mh mh-layer" data-row="sop"><div class="layer-code">📋 SOP</div><div class="layer-name">Postup</div><div class="layer-limit">Bez limitu · per role</div></div>
+      <div class="mc mc-law" data-row="sop" data-col="law" data-expandable="matrix"><div class="mc-t">Postup dodržování</div>Jak pravidlo dodržovat — kroky, screenshoty<div class="mc-ex">Jak přijmout reklamaci — 5 kroků</div></div>
+      <div class="mc mc-proc" data-row="sop" data-col="proc" data-expandable="matrix"><div class="mc-t">Postup per role</div>Kroky pro jednoho člověka — text, obrázky<div class="mc-ex">Příjem zboží — skladník</div></div>
+      <div class="mc mc-know" data-row="sop" data-col="know" data-expandable="matrix"><div class="mc-t">Aplikovaná znalost</div>Jak roli znalost používá — příklady<div class="mc-ex">DPH pro fakturanty</div></div>
+      <div class="mc mc-mem mc-dim" data-row="sop" data-col="mem" style="text-align:center;display:flex;align-items:center;justify-content:center;"><span style="color:#64748b;font-size:0.68rem;">MEM nemá SOP</span></div>
+
+      <!-- Row: CHL -->
+      <div class="mh mh-layer" data-row="chl"><div class="layer-code">⚡ CHL</div><div class="layer-name">Cheat List</div><div class="layer-limit">1×A4 · quick ref</div></div>
+      <div class="mc mc-law" data-row="chl" data-col="law" data-expandable="matrix"><div class="mc-t">Quick ref pravidel</div>Zkrácená verze — tabulka, checklist<div class="mc-ex">Reklamační lhůty per typ</div></div>
+      <div class="mc mc-proc" data-row="chl" data-col="proc" data-expandable="matrix"><div class="mc-t">Quick ref postupu</div>Zkrácená verze pro připomenutí<div class="mc-ex">Příjem zboží — checklist</div></div>
+      <div class="mc mc-know" data-row="chl" data-col="know" data-expandable="matrix"><div class="mc-t">Quick ref znalostí</div>Tabulka pro rychlou orientaci<div class="mc-ex">DPH sazby per typ</div></div>
+      <div class="mc mc-mem mc-dim" data-row="chl" data-col="mem" style="text-align:center;display:flex;align-items:center;justify-content:center;"><span style="color:#64748b;font-size:0.68rem;">—</span></div>
+    </div>
+  </div>
+
+  <!-- Matrix detail panel -->
+  <div class="matrix-detail" id="matrixDetail">
+    <div class="matrix-detail-inner" id="matrixDetailInner"></div>
+  </div>
+
+  <div style="font-size:0.82rem;font-weight:700;color:#f8fafc;margin:28px 0 12px;">Pořadí tvorby vrstev</div>
+  <div class="layer-order">
+    <div class="layer-rule">
+      <div class="layer-rule-icon">1️⃣</div>
+      <div class="layer-rule-text">
+        <strong>Vždy nejdřív BIMG</strong>
+        <p>Téma bez dokumentace → začni Big Image. Je to základ pro SOP a CHL.</p>
+      </div>
+    </div>
+    <div class="layer-rule">
+      <div class="layer-rule-icon">2️⃣</div>
+      <div class="layer-rule-text">
+        <strong>Pak SOP per role</strong>
+        <p>BIMG existuje + konkrétní člověk potřebuje kroky → SOP s odkazem na BIMG.</p>
+      </div>
+    </div>
+    <div class="layer-rule">
+      <div class="layer-rule-icon">3️⃣</div>
+      <div class="layer-rule-text">
+        <strong>Nakonec CHL</strong>
+        <p>SOP existuje + potřeba rychlé nápovědy → CHL na 1×A4 (k monitoru).</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== SEKCE 3: KAM TO DÁM ========== -->
+<div class="section" id="s3">
+  <div class="section-num">Sekce 3</div>
+  <h2>Kam to dám? — Složky a metadata</h2>
+  <p class="lead">Dva typy složek + povinná metadata v každé kapitole.</p>
+
+  <div class="folder-types">
+    <div class="folder-type folder-type-sekce">
+      <div style="font-size:0.72rem;font-weight:700;color:#94a3b8;margin-bottom:6px;">SEKCE (organizační)</div>
+      <div style="font-size:0.82rem;color:#e2e8f0;margin-bottom:6px;">📁 <code style="color:#64748b;">01-finance/</code></div>
+      <div style="font-size:0.7rem;color:#94a3b8;">Prefix: <strong style="color:#cbd5e1;">číslo</strong> · Jen organizace a řazení · Nemá vlastní obsah</div>
+    </div>
+    <div class="folder-type folder-type-kap">
+      <div style="font-size:0.72rem;font-weight:700;color:#a78bfa;margin-bottom:6px;">KAPITOLA (obsahová)</div>
+      <div style="font-size:0.82rem;color:#e2e8f0;margin-bottom:6px;">📖 <code style="color:#a78bfa;">Saldokonto/</code></div>
+      <div style="font-size:0.7rem;color:#94a3b8;">Prefix: <strong style="color:#cbd5e1;">písmeno</strong> · Trackovaný celek · index.md + části + HTML + img/</div>
+    </div>
+  </div>
+
+  <div class="tree-box">
+    <div style="font-size:0.72rem;font-weight:700;color:#38bdf8;margin-bottom:8px;">Příklad struktury</div>
+    <pre><span style="color:#64748b;">docs/</span>
+  <span style="color:#94a3b8;">01-finance/</span>                    <span style="color:#475569;">← sekce</span>
+    <span style="color:#94a3b8;">01-ucetnictvi/</span>             <span style="color:#475569;">← sekce</span>
+      <span style="color:#a78bfa;">Saldokonto/</span>              <span style="color:#a78bfa80;">← kapitola</span>
+        <span style="color:#64748b;">_category_.json</span>        <span style="color:#475569;">← metadata</span>
+        <span style="color:#38bdf8;">index.md</span>               <span style="color:#475569;">← popis kapitoly</span>
+        <span style="color:#e2e8f0;">01-kontrola.md</span>         <span style="color:#475569;">← část 1</span>
+        <span style="color:#e2e8f0;">02-parovani.md</span>         <span style="color:#475569;">← část 2</span>
+        <span style="color:#fbbf24;">diagram.html</span>           <span style="color:#475569;">← interaktivní vizuál</span>
+        <span style="color:#64748b;">img/</span>                   <span style="color:#475569;">← obrázky</span></pre>
+  </div>
+
+  <div style="font-size:0.82rem;font-weight:700;color:#f8fafc;margin-bottom:12px;">Metadata v _category_.json</div>
+  <table class="meta-table">
+    <thead><tr><th>Pole</th><th>Hodnoty</th><th>Popis</th></tr></thead>
+    <tbody>
+      <tr><td><code>unit</code></td><td><code>true</code></td><td>Označuje kapitolu (trackovaný celek)</td></tr>
+      <tr><td><code>layer</code></td><td><code>bimg</code> · <code>sop</code> · <code>chl</code></td><td>Hloubka / typ dokumentu</td></tr>
+      <tr><td><code>category</code></td><td><code>law</code> · <code>proc</code> · <code>know</code> · <code>mem</code></td><td>Obsahová kategorie</td></tr>
+      <tr><td><code>audience</code></td><td><code>["finance","prodej",...]</code></td><td>Cílové role (z AOR oblastí)</td></tr>
+    </tbody>
+  </table>
+
+  <div style="font-size:0.82rem;font-weight:700;color:#f8fafc;margin-bottom:12px;">Frontmatter v MD souborech</div>
+  <table class="meta-table">
+    <thead><tr><th>Pole</th><th>Příklad</th><th>Poznámka</th></tr></thead>
+    <tbody>
+      <tr><td><code>title</code></td><td><code>"📋 Kontrola saldokonta"</code></td><td>Vždy s emoji</td></tr>
+      <tr><td><code>sidebar_label</code></td><td><code>"Kontrola"</code></td><td>Krátký název pro menu</td></tr>
+      <tr><td><code>sidebar_position</code></td><td><code>1</code></td><td>Pořadí v navigaci</td></tr>
+      <tr><td><code>description</code></td><td><code>"Měsíční kontrola..."</code></td><td>1 věta</td></tr>
+      <tr><td><code>source_bimg</code></td><td><code>"saldokonto-bimg"</code></td><td>Jen u SOP/CHL — odkaz na rodičovský BIMG</td></tr>
+      <tr><td><code>version</code>, <code>author</code>, <code>date</code></td><td>—</td><td>Verzování</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ========== SEKCE 4: JAK TO PROBÍHÁ ========== -->
+<div class="section" id="s4">
+  <div class="section-num">Sekce 4</div>
+  <h2>Jak to probíhá? — Workflow tvorby</h2>
+  <p class="lead">Od podnětu po zpětnou vazbu — kdo co dělá a v jakém pořadí.</p>
+
+  <div class="wf-legend">
+    <div class="wf-legend-item"><div class="wf-legend-dot" style="background:#10b981;"></div>Editor (manažer)</div>
+    <div class="wf-legend-item"><div class="wf-legend-dot" style="background:#3b82f6;"></div>Claude (AI)</div>
+    <div class="wf-legend-item"><div class="wf-legend-dot" style="background:#64748b;"></div>Systém</div>
+    <div class="wf-legend-item"><div class="wf-legend-dot" style="background:#f59e0b;"></div>Čtenář</div>
+    <div class="wf-legend-item"><div class="wf-legend-dot" style="background:#7c3aed;"></div>Zpětná vazba</div>
+  </div>
+
+  <div style="font-size:0.82rem;font-weight:700;color:#7c3aed;margin-bottom:12px;">Co spouští tvorbu?</div>
+  <div class="trigger-grid">
+    <div class="trigger-card"><div class="t-icon">🐛</div><div class="t-title">Chyba z neznalosti</div><div class="t-desc">Zaměstnanec nevěděl postup</div></div>
+    <div class="trigger-card"><div class="t-icon">❓</div><div class="t-title">Opakovaná otázka</div><div class="t-desc">Stejný dotaz podruhé, potřetí</div></div>
+    <div class="trigger-card"><div class="t-icon">📋</div><div class="t-title">Nový proces</div><div class="t-desc">Nový postup, potřeba zapsat</div></div>
+    <div class="trigger-card"><div class="t-icon">⚖️</div><div class="t-title">Nové pravidlo</div><div class="t-desc">Vedení rozhodlo nový mantinel</div></div>
+    <div class="trigger-card"><div class="t-icon">💬</div><div class="t-title">Zpětná vazba</div><div class="t-desc">Čtenář nahlásil chybu</div></div>
+    <div class="trigger-card"><div class="t-icon">🏗️</div><div class="t-title">AOR audit</div><div class="t-desc">Systematická kontrola pokrytí</div></div>
+  </div>
+
+  <div style="font-size:0.82rem;font-weight:700;color:#f8fafc;margin-bottom:16px;">Vývojový diagram</div>
+
+  <div class="flowchart">
+    <!-- 1 -->
+    <div class="fc-block fc-editor">
+      <div class="fc-num">1</div>
+      <div class="fc-body">
+        <span class="fc-role-tag">Editor</span>
+        <div class="fc-title">⚡ Identifikace potřeby</div>
+        <div class="fc-desc">Podnět z terénu (chyba, otázka, nový proces). Editor rozhodne: „Tohle téma potřebuje dokumentaci."</div>
+      </div>
+    </div>
+    <div class="fc-arrow">↓</div>
+
+    <!-- 2 -->
+    <div class="fc-block fc-editor">
+      <div class="fc-num">2</div>
+      <div class="fc-body">
+        <span class="fc-role-tag">Editor</span>
+        <div class="fc-title">🏷️ Kategorizace</div>
+        <div class="fc-desc">LAW / PROC / KNOW / MEM? Rozhodovací strom ze sekce 1. Věcné rozhodnutí editora.</div>
+      </div>
+    </div>
+    <div class="fc-arrow">↓</div>
+
+    <!-- 3 -->
+    <div class="fc-block fc-editor">
+      <div class="fc-num">3</div>
+      <div class="fc-body">
+        <span class="fc-role-tag">Editor</span>
+        <div class="fc-title">📥 Sběr vstupů + artefaktů</div>
+        <div class="fc-desc">Téma, znalost, audience, screenshoty, podklady — vše od editora. Vstupní materiál pro Claude.</div>
+      </div>
+    </div>
+    <div class="fc-arrow">↓</div>
+
+    <!-- 4+5 branch -->
+    <div class="fc-branch">
+      <div class="fc-block fc-claude">
+        <div class="fc-num">4</div>
+        <div class="fc-body">
+          <span class="fc-role-tag">Claude</span>
+          <div class="fc-title">🔎 Analýza</div>
+          <div class="fc-desc">Čte vstupy, ověřuje co existuje, určuje AOR oblast.</div>
+        </div>
+      </div>
+      <div class="fc-block fc-claude">
+        <div class="fc-num">5</div>
+        <div class="fc-body">
+          <span class="fc-role-tag">Claude</span>
+          <div class="fc-title">🔀 Volba vrstev</div>
+          <div class="fc-desc">BIMG vždy první. +SOP pokud existuje postup. +CHL pokud potřeba quick ref.</div>
+        </div>
+      </div>
+    </div>
+    <div class="fc-arrow">↓</div>
+
+    <!-- 6 -->
+    <div class="fc-block fc-claude">
+      <div class="fc-num">6</div>
+      <div class="fc-body">
+        <span class="fc-role-tag">Claude</span>
+        <div class="fc-title">✍️ Tvorba dokumentu</div>
+        <div class="fc-desc">Claude píše podle šablony, constraintů a manifestu. Frontmatter, struktura, obsah. Výstup: MD soubory + metadata.</div>
+      </div>
+    </div>
+    <div class="fc-arrow">↓</div>
+
+    <!-- 7 -->
+    <div class="fc-block fc-editor">
+      <div class="fc-num">7</div>
+      <div class="fc-body">
+        <span class="fc-role-tag">Editor</span>
+        <div class="fc-title">✅ Revize + schválení</div>
+        <div class="fc-desc">Editor kontroluje věcnou správnost. Opravy → zpět na krok 6. Schváleno → publikace.</div>
+      </div>
+    </div>
+    <div class="fc-arrow">↓</div>
+
+    <!-- 8 -->
+    <div class="fc-block fc-system">
+      <div class="fc-num">8</div>
+      <div class="fc-body">
+        <span class="fc-role-tag">Systém</span>
+        <div class="fc-title">🚀 Publikace</div>
+        <div class="fc-desc">Dokument se uloží do docs/, Docusaurus ho zobrazí. Přístupová matice se aplikuje automaticky.</div>
+      </div>
+    </div>
+    <div class="fc-arrow">↓</div>
+
+    <!-- 9 -->
+    <div class="fc-block fc-reader">
+      <div class="fc-num">9</div>
+      <div class="fc-body">
+        <span class="fc-role-tag">Čtenář</span>
+        <div class="fc-title">👁️ Čtení + potvrzení</div>
+        <div class="fc-desc">Čtenář čte, systém trackuje čas a postup. U povinných stránek potvrdí přečtení.</div>
+      </div>
+    </div>
+    <div class="fc-arrow">↓</div>
+
+    <!-- 10 -->
+    <div class="fc-block fc-feedback">
+      <div class="fc-num">10</div>
+      <div class="fc-body">
+        <span class="fc-role-tag">Zpětná vazba</span>
+        <div class="fc-title">💬 Zpětná vazba → nový podnět</div>
+        <div class="fc-desc">Čtenář nahlásí chybu, položí otázku, navrhne zlepšení → vrací se na krok 1. Dashboard ukazuje čtenost, stáří a pokrytí.</div>
+      </div>
+    </div>
+    <div style="text-align:center;color:#475569;font-size:0.72rem;margin-top:8px;">↩️ Cyklus se opakuje</div>
+  </div>
+</div>
+
+<!-- ========== SEKCE 5: KDO TO UVIDÍ ========== -->
+<div class="section" id="s5">
+  <div class="section-num">Sekce 5</div>
+  <h2>Kdo to uvidí? — Přístupová matice</h2>
+  <p class="lead">Viditelnost se řídí vrstvou a audience polem v _category_.json.</p>
+
+  <div class="access-grid">
+    <div class="access-card">
+      <div class="ac-icon">🏔️</div>
+      <div class="ac-layer">BIMG</div>
+      <div class="ac-who">Vidí <strong style="color:#f8fafc;">architekt a vedení</strong> — kompletní dokumentace je pro řízení, ne pro denní práci.</div>
+    </div>
+    <div class="access-card">
+      <div class="ac-icon">📋 ⚡</div>
+      <div class="ac-layer">SOP + CHL</div>
+      <div class="ac-who">Vidí <strong style="color:#f8fafc;">cílová audience</strong> — kdo to potřebuje pro svou práci (prodej, finance, sklad...).</div>
+    </div>
+    <div class="access-card">
+      <div class="ac-icon">⚖️</div>
+      <div class="ac-layer">LAW (všechny vrstvy)</div>
+      <div class="ac-who">Vidí <strong style="color:#f8fafc;">celá firma</strong> — pravidla musí znát všichni.</div>
+    </div>
+  </div>
+
+  <div style="background:#111827;border:1px solid #1e293b;border-radius:10px;padding:16px 20px;font-size:0.75rem;color:#94a3b8;">
+    <strong style="color:#e2e8f0;">Princip:</strong> Dokument je vždy <strong>aktuální a kompletní</strong>. Změna = přepis dokumentu + nová verze. Čtenář nikdy nečte „základ + přílepky". MEM zaznamenává PROČ se změnilo, ne CO se změnilo. Při změně BIMG → kaskádová revize všech navázaných SOP/CHL.
+  </div>
+</div>
+
+</div><!-- /main-content -->
+</div><!-- /page-wrap -->
+
+<div class="footer">
+  <a href="/guides/workflow-vyvojak">🔄 Podrobný vývoják →</a>
+  <span style="color:#334155;margin:0 12px;">·</span>
+  <a href="/">🏠 Domů</a>
+</div>
+
+<script>
+// ============================================
+// OUTLINE — IntersectionObserver
+// ============================================
+const sections = document.querySelectorAll('.section[id]');
+const outlineLinks = document.querySelectorAll('.outline a');
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      outlineLinks.forEach(a => a.classList.remove('active'));
+      const link = document.querySelector('.outline a[data-section="' + entry.target.id + '"]');
+      if (link) link.classList.add('active');
+    }
+  });
+}, { rootMargin: '-80px 0px -60% 0px', threshold: 0 });
+
+sections.forEach(s => observer.observe(s));
+
+// Smooth scroll
+outlineLinks.forEach(a => {
+  a.addEventListener('click', (e) => {
+    e.preventDefault();
+    const target = document.getElementById(a.dataset.section);
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+});
+
+// ============================================
+// CATEGORY CARDS — toggle (reading mode: double-click)
+// ============================================
+function toggleCard(el) {
+  el.classList.toggle('expanded');
+}
+
+// Event delegation for expandable cards
+document.querySelectorAll('[data-expandable="card"]').forEach(card => {
+  // Single click — in reading mode: nothing (handled by readable); normal: toggle
+  card.addEventListener('click', (e) => {
+    if (readingMode) return; // reading mode uses dblclick
+    // Don't toggle if clicking inside quiz or other interactive
+    if (e.target.closest('.quiz-opt, button')) return;
+    toggleCard(card);
+  });
+  // Double click — always toggles
+  card.addEventListener('dblclick', (e) => {
+    if (!readingMode) return; // normal mode uses single click
+    toggleCard(card);
+  });
+});
+
+// ============================================
+// QUIZ — inline slide-out
+// ============================================
+const quizData = [
+  { scenario: '„Zaměstnanci mají nárok na 5 týdnů dovolené ročně."', correct: 'law', explain: 'Je to <strong>pravidlo</strong> s nárokem — závazná politika firmy. → <strong>LAW</strong>' },
+  { scenario: '„Jak vytvořit novou objednávku v Money S4: klikni na Objednávky → Nová → vyplň pole..."', correct: 'proc', explain: 'Krok za krokem v systému. Má konkrétní sekvenci. → <strong>PROC</strong>' },
+  { scenario: '„Samsung řada Bespoke 2026 — přehled modelů, cen a technických parametrů"', correct: 'know', explain: 'Produktová znalost. Informuje, nepřikazuje. → <strong>KNOW</strong>' },
+  { scenario: '„Porada 15.4.2026: rozhodli jsme přejít z PPL na Zásilkovnu jako primárního dopravce"', correct: 'mem', explain: 'Záznam konkrétní události s datem. → <strong>MEM</strong>' },
+  { scenario: '„Každá zakázka nad 50 000 Kč musí mít podpis obou jednatelů."', correct: 'law', explain: 'Závazné pravidlo. Porušení = riziko. → <strong>LAW</strong>' },
+  { scenario: '„Jak zapojit myčku nádobí — schéma připojení vody, odpadu a elektřiny"', correct: 'proc', explain: 'Technický postup s kroky. → <strong>PROC</strong>' },
+  { scenario: '„Srovnání expedičních služeb: PPL, Zásilkovna, DPD — ceny, lhůty, spolehlivost"', correct: 'know', explain: 'Srovnávací přehled. Informuje pro rozhodnutí. → <strong>KNOW</strong>' },
+  { scenario: '„Post-mortem: výpadek e-shopu 3.3.2026 — příčina, průběh, poučení"', correct: 'mem', explain: 'Záznam incidentu s datem. → <strong>MEM</strong>' },
+  { scenario: '„Zboží na skladě se kontroluje inventurou 1× měsíčně, vždy poslední pátek."', correct: 'law', explain: 'Závazné pravidlo s frekvencí. CO se musí dělat (ne JAK). → <strong>LAW</strong>' },
+  { scenario: '„Jak provést měsíční inventuru: krok 1 — vytiskni seznam, krok 2 — projdi regál po regálu..."', correct: 'proc', explain: 'Postup s kroky. → <strong>PROC</strong>' },
+];
+
+let quizScore = 0, quizAnswered = 0;
+
+function buildQuiz() {
+  const c = document.getElementById('quizContainer');
+  c.innerHTML = quizData.map((q, i) => `
+    <div class="quiz-card" id="quiz-${i}">
+      <div class="quiz-num">Otázka ${i+1} / ${quizData.length}</div>
+      <div class="quiz-scenario">${q.scenario}</div>
+      <div class="quiz-options">
+        <button class="quiz-opt" onclick="quizAnswer(${i},'law')">⚖️ LAW</button>
+        <button class="quiz-opt" onclick="quizAnswer(${i},'proc')">🔧 PROC</button>
+        <button class="quiz-opt" onclick="quizAnswer(${i},'know')">🧠 KNOW</button>
+        <button class="quiz-opt" onclick="quizAnswer(${i},'mem')">📝 MEM</button>
+      </div>
+      <div class="quiz-explain" id="explain-${i}">${q.explain}</div>
+    </div>
+  `).join('');
+}
+
+function quizAnswer(idx, answer) {
+  const card = document.getElementById('quiz-'+idx);
+  if (card.classList.contains('answered')) return;
+  card.classList.add('answered');
+  const correct = quizData[idx].correct;
+  card.querySelectorAll('.quiz-opt').forEach(b => {
+    b.classList.add('disabled');
+    const cat = b.textContent.includes('LAW') ? 'law' :
+                b.textContent.includes('PROC') ? 'proc' :
+                b.textContent.includes('KNOW') ? 'know' : 'mem';
+    if (cat === correct) b.classList.add('correct');
+    if (cat === answer && answer !== correct) b.classList.add('wrong');
+  });
+  document.getElementById('explain-'+idx).classList.add('show');
+  quizAnswered++;
+  if (answer === correct) quizScore++;
+  const st = document.getElementById('scoreText');
+  st.style.display = 'block';
+  st.textContent = `${quizScore} / ${quizAnswered} správně` + (quizAnswered === quizData.length ? ` — ${Math.round(quizScore/quizData.length*100)}%` : '');
+  if (quizAnswered === quizData.length) document.getElementById('resetBtn').style.display = 'block';
+}
+
+function resetQuiz() {
+  quizScore = 0; quizAnswered = 0;
+  document.getElementById('scoreText').style.display = 'none';
+  document.getElementById('resetBtn').style.display = 'none';
+  buildQuiz();
+}
+
+function toggleQuiz() {
+  const col = document.getElementById('quizCol');
+  const btn = document.getElementById('quizToggle');
+  col.classList.toggle('open');
+  btn.classList.toggle('active');
+  if (col.classList.contains('open') && !document.querySelector('#quizContainer .quiz-card')) {
+    buildQuiz();
+  }
+}
+
+// ============================================
+// MATRIX — interactive highlight + detail
+// ============================================
+const matrixExamples = {
+  'bimg-law': {
+    title: '⚖️ LAW × 🏔️ BIMG — Kompletní pravidla',
+    desc: 'Závazný dokument se všemi pravidly tématu. Lhůty, odpovědnosti, výjimky, eskalace.',
+    examples: ['Reklamační řád — kompletní pravidla, lhůty, odpovědnosti, výjimky','Pravidla firemního oblečení — kdo musí, co přesně, sezónní varianty','Pravidla zakázek — limity, schvalovací proces, odpovědnosti'],
+  },
+  'bimg-proc': {
+    title: '🔧 PROC × 🏔️ BIMG — Kompletní proces',
+    desc: 'Celý proces od A do Z. Všechny role, kroky, systémy, návaznosti.',
+    examples: ['Příjem zboží — logistika + administrativa + komunikace sklad↔office','Objednávkový proces — od poptávky po dodání zákazníkovi','Servisní zakázka — příjem, diagnostika, oprava, výdej'],
+  },
+  'bimg-know': {
+    title: '🧠 KNOW × 🏔️ BIMG — Kompletní kontext',
+    desc: 'Proč to tak je, jaká data za tím stojí, zkušenosti, logika rozhodnutí.',
+    examples: ['DPH — sazby, řádky přiznání, novelizace, dopady na firmu','Samsung Bespoke 2026 — kompletní přehled modelů, parametrů, cen','Expediční služby — srovnání PPL, Zásilkovna, DPD, historie spolupráce'],
+  },
+  'bimg-mem': {
+    title: '✏️ MEM × 🏔️ BIMG — Žurnál',
+    desc: 'Chronologický deník rozhodnutí a událostí per tematický blok.',
+    examples: ['Žurnál firemního oblečení — „Duben 2026: softshellky místo vest"','Žurnál expedice — „Říjen 2025: přechod na Zásilkovnu jako primární"','Žurnál e-shopu — incidenty, výpadky, rozhodnutí o platformě'],
+  },
+  'sop-law': {
+    title: '⚖️ LAW × 📋 SOP — Postup dodržování',
+    desc: 'Jak konkrétní role pravidlo dodržuje. Kroky, screenshoty, diagram.',
+    examples: ['Jak přijmout reklamaci na prodejně — 5 kroků v Money S4','Jak schválit zakázku nad limit — postup pro vedoucího','Kontrola firemního oblečení — co kontrolovat při vydávání'],
+  },
+  'sop-proc': {
+    title: '🔧 PROC × 📋 SOP — Postup per role',
+    desc: 'Konkrétní kroky pro jednoho člověka. Text, obrázky, screenshoty.',
+    examples: ['Příjem zboží — skladník: kontrola, třídění, umístění','Příjem zboží — administrativní pracovník: zadání do systému','Servisní zakázka — technik: diagnostika, oprava, zápis'],
+  },
+  'sop-know': {
+    title: '🧠 KNOW × 📋 SOP — Aplikovaná znalost',
+    desc: 'Jak roli znalost používá — příklady, screenshoty.',
+    examples: ['DPH pro fakturanty — co kontrolovat na přijaté faktuře','Produktové parametry pro prodejce — co zdůraznit zákazníkovi','Záruční podmínky per značka — přehled pro servisní techniky'],
+  },
+  'chl-law': {
+    title: '⚖️ LAW × ⚡ CHL — Quick ref pravidel',
+    desc: 'Zkrácená verze — tabulka, checklist. 1×A4 k monitoru.',
+    examples: ['Reklamační lhůty — tabulka per typ zboží','Checklist: co musí obsahovat faktura','Limity zakázek — kdo schvaluje per částka'],
+  },
+  'chl-proc': {
+    title: '🔧 PROC × ⚡ CHL — Quick ref postupu',
+    desc: 'Zkrácená verze pro rychlé připomenutí.',
+    examples: ['Příjem zboží — checklist „co zkontrolovat"','Objednávka v Money S4 — 5 kroků na kartičce','Servisní protokol — šablona k vyplnění'],
+  },
+  'chl-know': {
+    title: '🧠 KNOW × ⚡ CHL — Quick ref znalostí',
+    desc: 'Tabulka pro rychlou orientaci.',
+    examples: ['DPH sazby — tabulka per typ zboží/služby','Rozměry spotřebičů per značka — tabulka','Kontakty na dodavatele — quick list'],
+  },
+};
+
+let activeCell = null;
+
+function doMatrixClick(el) {
+  const row = el.dataset.row;
+  const col = el.dataset.col;
+  if (!row || !col) return;
+
+  const key = row + '-' + col;
+  const detail = document.getElementById('matrixDetail');
+  const inner = document.getElementById('matrixDetailInner');
+
+  // Clear all highlights
+  document.querySelectorAll('.mc.highlighted, .mh.highlighted, .mh.col-highlighted').forEach(e => {
+    e.classList.remove('highlighted','col-highlighted');
+  });
+
+  // If clicking same cell, close
+  if (activeCell === key) {
+    activeCell = null;
+    detail.classList.remove('open');
+    return;
+  }
+
+  activeCell = key;
+
+  // Highlight row
+  document.querySelectorAll('[data-row="'+row+'"]').forEach(e => e.classList.add('highlighted'));
+  // Highlight column header + cells
+  document.querySelectorAll('[data-col="'+col+'"]').forEach(e => {
+    if (e.classList.contains('mh')) e.classList.add('col-highlighted');
+    else e.classList.add('highlighted');
+  });
+
+  // Show detail
+  const data = matrixExamples[key];
+  if (data) {
+    inner.innerHTML = `
+      <h4>${data.title}</h4>
+      <div class="md-sub">${data.desc}</div>
+      <ul class="md-examples">${data.examples.map(ex => '<li>'+ex+'</li>').join('')}</ul>
+      <div class="md-divider"></div>
+      <div class="md-real-title">Reálné dokumenty z naší wiki:</div>
+      <div class="md-real-empty">Zatím žádné dokumenty v této kombinaci.</div>
+    `;
+    detail.classList.add('open');
+  } else {
+    detail.classList.remove('open');
+  }
+}
+
+// Matrix cells — event delegation (reading mode: dblclick)
+document.querySelectorAll('[data-expandable="matrix"]').forEach(cell => {
+  cell.addEventListener('click', () => {
+    if (readingMode) return;
+    doMatrixClick(cell);
+  });
+  cell.addEventListener('dblclick', () => {
+    if (!readingMode) return;
+    doMatrixClick(cell);
+  });
+});
+
+// Close detail when clicking outside matrix
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.matrix') && !e.target.closest('.matrix-detail')) {
+    document.querySelectorAll('.mc.highlighted, .mh.highlighted, .mh.col-highlighted').forEach(el => {
+      el.classList.remove('highlighted','col-highlighted');
+    });
+    document.getElementById('matrixDetail').classList.remove('open');
+    activeCell = null;
+  }
+});
+
+// ============================================
+// READING MODE
+// ============================================
+let readingMode = false;
+let readableElements = [];
+
+// Selectors for readable content (text elements the user should process)
+const READABLE_SELECTORS = [
+  '.section h2',
+  '.section .lead',
+  '.cat-card .cat-code',
+  '.cat-card .cat-label',
+  '.cat-card .cat-q',
+  '.cat-detail li',
+  '.cat-detail .cat-examples',
+  '.mnemonic span',
+  '.dtree-q',
+  '.dtree-a',
+  '.layer-card .lc-code',
+  '.layer-card .lc-desc',
+  '.mc .mc-t',
+  '.layer-rule-text strong',
+  '.layer-rule-text p',
+  '.folder-type > div',
+  '.tree-box pre',
+  '.meta-table td',
+  '.trigger-card .t-title',
+  '.trigger-card .t-desc',
+  '.fc-title',
+  '.fc-desc',
+  '.access-card .ac-layer',
+  '.access-card .ac-who',
+  '.section-num',
+];
+
+function toggleReadingMode() {
+  readingMode = !readingMode;
+  document.body.classList.toggle('reading-mode', readingMode);
+  document.getElementById('readingToggle').classList.toggle('active', readingMode);
+
+  if (readingMode) {
+    initReadableElements();
+  } else {
+    // Remove readable class but keep read state for re-toggle
+    document.getElementById('readingComplete').classList.remove('show');
+  }
+}
+
+function initReadableElements() {
+  // Only init once — collect all readable elements
+  if (readableElements.length > 0) {
+    updateProgress();
+    return;
+  }
+
+  const selector = READABLE_SELECTORS.join(', ');
+  const elements = document.querySelectorAll(selector);
+
+  elements.forEach((el, i) => {
+    // Skip elements that are inside hidden/collapsed sections or are empty
+    if (!el.textContent.trim()) return;
+    // Skip elements inside .cat-detail (they might not be visible)
+    // They'll become readable when the card is expanded
+
+    el.classList.add('readable');
+    el.dataset.readIdx = readableElements.length;
+    readableElements.push(el);
+
+    el.addEventListener('click', function readClick(e) {
+      if (!readingMode) return;
+      // Don't interfere with other click handlers on parent elements
+      e.stopPropagation();
+
+      this.classList.toggle('read');
+      updateProgress();
+    });
+  });
+
+  updateProgress();
+}
+
+function updateProgress() {
+  const total = readableElements.length;
+  if (total === 0) return;
+
+  const read = readableElements.filter(el => el.classList.contains('read')).length;
+  const unread = total - read;
+  const pct = Math.round((read / total) * 100);
+
+  document.getElementById('readingBarFill').style.width = pct + '%';
+  document.getElementById('readingPct').textContent = pct + '%';
+
+  // Update unread counter
+  const unreadBtn = document.getElementById('readingUnread');
+  if (unread > 0) {
+    unreadBtn.textContent = unread + ' nepřečteno';
+    unreadBtn.classList.remove('all-done');
+  } else {
+    unreadBtn.textContent = '✓ vše přečteno';
+    unreadBtn.classList.add('all-done');
+  }
+
+  // Celebration at 100%
+  const complete = document.getElementById('readingComplete');
+  if (pct >= 100) {
+    complete.classList.add('show');
+    setTimeout(() => complete.classList.remove('show'), 4000);
+  } else {
+    complete.classList.remove('show');
+  }
+}
+
+function scrollToUnread() {
+  // Find first unread element
+  const firstUnread = readableElements.find(el => !el.classList.contains('read'));
+  if (!firstUnread) return;
+
+  // If element is inside a collapsed card, expand it first
+  const parentCard = firstUnread.closest('[data-expandable="card"]');
+  if (parentCard && !parentCard.classList.contains('expanded')) {
+    toggleCard(parentCard);
+    // Wait for expand animation
+    setTimeout(() => doScrollToElement(firstUnread), 350);
+  } else {
+    doScrollToElement(firstUnread);
+  }
+}
+
+function doScrollToElement(el) {
+  el.scrollIntoView({ behavior:'smooth', block:'center' });
+
+  // Flash it
+  el.classList.add('flash-unread');
+  setTimeout(() => el.classList.remove('flash-unread'), 1800);
+}
+</script>
+
+</body>
+</html>

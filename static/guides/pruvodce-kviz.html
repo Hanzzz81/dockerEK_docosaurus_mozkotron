@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎯 Kvíz — Kategorie dokumentů</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0f1117; color: #e2e8f0; line-height: 1.6;
+  }
+
+  /* Navigation */
+  .nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: #111827; border-bottom: 1px solid #1e293b;
+    display: flex; gap: 0; padding: 0 20px;
+  }
+  .nav-btn {
+    padding: 12px 20px; background: none; border: none; color: #64748b;
+    font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    border-bottom: 3px solid transparent; transition: all 0.2s;
+    text-decoration: none;
+  }
+  .nav-btn:hover { color: #e2e8f0; background: #1e293b; }
+  .nav-btn.active { color: #f59e0b; border-bottom-color: #f59e0b; }
+
+  /* Main content */
+  .content { max-width: 900px; margin: 0 auto; padding: 70px 24px 40px; }
+
+  h1 { font-size: 1.5rem; color: #f8fafc; margin-bottom: 8px; }
+  .subtitle { font-size: 0.85rem; color: #64748b; margin-bottom: 24px; }
+
+  /* Quiz */
+  .quiz-card {
+    background: #111827; border: 1px solid #1e293b; border-radius: 12px;
+    padding: 20px; margin-bottom: 16px; transition: opacity 0.3s;
+  }
+  .quiz-card.answered { opacity: 0.85; }
+  .quiz-num {
+    font-size: 0.75rem; color: #64748b; text-transform: uppercase;
+    letter-spacing: 0.05em; margin-bottom: 8px;
+  }
+  .quiz-scenario {
+    font-size: 1rem; color: #f8fafc; margin-bottom: 16px;
+    font-style: italic; line-height: 1.5;
+  }
+  .quiz-options { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 0; }
+  .quiz-opt {
+    padding: 8px 20px; background: #1e293b; border: 2px solid #334155;
+    border-radius: 8px; color: #e2e8f0; cursor: pointer;
+    font-size: 0.9rem; transition: all 0.2s;
+  }
+  .quiz-opt:hover:not(.disabled) { background: #334155; border-color: #475569; }
+  .quiz-opt.correct { border-color: #10b981; background: #10b98122; color: #6ee7b7; }
+  .quiz-opt.wrong { border-color: #ef4444; background: #ef444422; color: #fca5a5; }
+  .quiz-opt.disabled { cursor: default; opacity: 0.5; }
+  .quiz-opt.disabled.correct { opacity: 1; }
+
+  .quiz-explain {
+    display: none; margin-top: 12px; padding: 12px 16px;
+    background: #0f172a; border-radius: 8px; font-size: 0.85rem;
+    color: #94a3b8; line-height: 1.5;
+  }
+  .quiz-explain.show { display: block; animation: fadeIn 0.3s; }
+  .quiz-explain strong { color: #e2e8f0; }
+
+  .score-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #111827; border-top: 1px solid #1e293b;
+    padding: 12px 24px; display: none; align-items: center;
+    justify-content: center; gap: 16px;
+  }
+  .score-bar.show { display: flex; }
+  .score-text { font-size: 0.9rem; color: #f8fafc; font-weight: 600; }
+  .score-reset {
+    padding: 6px 16px; background: #1e293b; border: 1px solid #334155;
+    border-radius: 6px; color: #e2e8f0; cursor: pointer; font-size: 0.8rem;
+  }
+  .score-reset:hover { background: #334155; }
+
+  /* Legend */
+  .legend {
+    display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px;
+    padding: 16px; background: #111827; border-radius: 10px; border: 1px solid #1e293b;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <a class="nav-btn" href="/guides/pruvodce-tvorbou">📚 Průvodce tvorbou</a>
+  <a class="nav-btn active" href="/guides/pruvodce-kviz">🎯 Kvíz</a>
+  <a class="nav-btn" href="/guides/workflow-vyvojak">🔄 Vývoják</a>
+  <a class="nav-btn" href="/guides/progress">📊 Progress</a>
+</div>
+
+<div class="content">
+
+<h1>🎯 Kvíz — Ověř si, jak rozlišuješ kategorie</h1>
+<p class="subtitle">10 reálných scénářů z prostředí Elektro Kutílek. Klikni na správnou kategorii.</p>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div> <strong>LAW</strong> — musí se</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div> <strong>PROC</strong> — jak se to dělá</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div> <strong>KNOW</strong> — dobré vědět</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div> <strong>MEM</strong> — stalo se</div>
+</div>
+
+<div id="quizContainer"></div>
+
+<div class="score-bar" id="scoreBar">
+  <div class="score-text" id="scoreText">0 / 10 správně</div>
+  <button class="score-reset" onclick="resetQuiz()">🔄 Zkusit znovu</button>
+</div>
+
+</div>
+
+<script>
+const quizData = [
+  {
+    scenario: '„Zaměstnanci mají nárok na 5 týdnů dovolené ročně."',
+    correct: 'law',
+    explain: 'Je to <strong>pravidlo</strong> s nárokem — závazná politika firmy. Porušení = problém. → <strong>LAW</strong>'
+  },
+  {
+    scenario: '„Jak vytvořit novou objednávku v Money S4: klikni na Objednávky → Nová → vyplň pole..."',
+    correct: 'proc',
+    explain: 'Krok za krokem v systému. Dá se natrénovat, má konkrétní sekvenci. → <strong>PROC</strong>'
+  },
+  {
+    scenario: '„Samsung řada Bespoke 2026 — přehled modelů, cen a technických parametrů"',
+    correct: 'know',
+    explain: 'Produktová znalost. Informuje prodejce, nepřikazuje ani nenavádí kroky. → <strong>KNOW</strong>'
+  },
+  {
+    scenario: '„Porada 15.4.2026: rozhodli jsme přejít z PPL na Zásilkovnu jako primárního dopravce"',
+    correct: 'mem',
+    explain: 'Záznam konkrétní události s datem. Historický snapshot rozhodnutí. → <strong>MEM</strong>'
+  },
+  {
+    scenario: '„Každá zakázka nad 50 000 Kč musí mít podpis obou jednatelů."',
+    correct: 'law',
+    explain: 'Závazné pravidlo s autoritou. Porušení = finanční/právní riziko. → <strong>LAW</strong>'
+  },
+  {
+    scenario: '„Jak zapojit myčku nádobí — schéma připojení vody, odpadu a elektřiny"',
+    correct: 'proc',
+    explain: 'Technický postup s kroky. I když je vizuální (schéma), jde o návod „jak udělat". → <strong>PROC</strong>'
+  },
+  {
+    scenario: '„Srovnání expedičních služeb: PPL, Zásilkovna, DPD — ceny, lhůty, spolehlivost"',
+    correct: 'know',
+    explain: 'Srovnávací přehled. Informuje pro rozhodnutí, ale sám nerozhoduje. → <strong>KNOW</strong>'
+  },
+  {
+    scenario: '„Post-mortem: výpadek e-shopu 3.3.2026 — příčina, průběh, poučení"',
+    correct: 'mem',
+    explain: 'Záznam incidentu s datem. I když obsahuje poučení, primárně dokumentuje CO se stalo. → <strong>MEM</strong>'
+  },
+  {
+    scenario: '„Zboží na skladě se kontroluje inventurou 1× měsíčně, vždy poslední pátek."',
+    correct: 'law',
+    explain: 'Závazné pravidlo s frekvencí a termínem. Říká CO se musí dělat (ne JAK). <br>⚠️ „JAK provést inventuru" by byl PROC. → <strong>LAW</strong>'
+  },
+  {
+    scenario: '„Jak provést měsíční inventuru: krok 1 — vytiskni seznam, krok 2 — projdi regál po regálu..."',
+    correct: 'proc',
+    explain: 'Postup s kroky, jak fyzicky provést inventuru. → <strong>PROC</strong>'
+  },
+];
+
+let quizScore = 0;
+let quizAnswered = 0;
+
+function buildQuiz() {
+  const container = document.getElementById('quizContainer');
+  container.innerHTML = quizData.map((q, i) => `
+    <div class="quiz-card" id="quiz-${i}">
+      <div class="quiz-num">Otázka ${i + 1} / ${quizData.length}</div>
+      <div class="quiz-scenario">${q.scenario}</div>
+      <div class="quiz-options">
+        <button class="quiz-opt" onclick="quizAnswer(${i},'law')">⚖️ LAW</button>
+        <button class="quiz-opt" onclick="quizAnswer(${i},'proc')">🔧 PROC</button>
+        <button class="quiz-opt" onclick="quizAnswer(${i},'know')">🧠 KNOW</button>
+        <button class="quiz-opt" onclick="quizAnswer(${i},'mem')">📝 MEM</button>
+      </div>
+      <div class="quiz-explain" id="explain-${i}">${q.explain}</div>
+    </div>
+  `).join('');
+}
+
+function quizAnswer(idx, answer) {
+  const card = document.getElementById('quiz-' + idx);
+  if (card.classList.contains('answered')) return;
+  card.classList.add('answered');
+
+  const correct = quizData[idx].correct;
+  const buttons = card.querySelectorAll('.quiz-opt');
+  buttons.forEach(b => {
+    b.classList.add('disabled');
+    const btnCat = b.textContent.includes('LAW') ? 'law' :
+                   b.textContent.includes('PROC') ? 'proc' :
+                   b.textContent.includes('KNOW') ? 'know' : 'mem';
+    if (btnCat === correct) b.classList.add('correct');
+    if (btnCat === answer && answer !== correct) b.classList.add('wrong');
+  });
+
+  document.getElementById('explain-' + idx).classList.add('show');
+
+  quizAnswered++;
+  if (answer === correct) quizScore++;
+
+  const bar = document.getElementById('scoreBar');
+  bar.classList.add('show');
+  document.getElementById('scoreText').textContent =
+    `${quizScore} / ${quizAnswered} správně` +
+    (quizAnswered === quizData.length ? ` — ${Math.round(quizScore/quizData.length*100)}%` : '');
+}
+
+function resetQuiz() {
+  quizScore = 0;
+  quizAnswered = 0;
+  document.getElementById('scoreBar').classList.remove('show');
+  buildQuiz();
+}
+
+buildQuiz();
+</script>
+
+</body>
+</html>

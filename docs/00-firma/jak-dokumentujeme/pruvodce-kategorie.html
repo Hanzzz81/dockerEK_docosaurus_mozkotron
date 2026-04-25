@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎓 Kategorie dokumentů — Trénink</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0f1117; color: #e2e8f0; line-height: 1.6;
+  }
+
+  /* Navigation */
+  .nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: #111827; border-bottom: 1px solid #1e293b;
+    display: flex; gap: 0; padding: 0 20px;
+  }
+  .nav-btn {
+    padding: 12px 20px; background: none; border: none; color: #64748b;
+    font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    border-bottom: 3px solid transparent; transition: all 0.2s;
+  }
+  .nav-btn:hover { color: #e2e8f0; background: #1e293b; }
+  .nav-btn.active { color: #f59e0b; border-bottom-color: #f59e0b; }
+
+  /* Main content */
+  .content { max-width: 900px; margin: 0 auto; padding: 70px 24px 40px; }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  h1 { font-size: 1.5rem; color: #f8fafc; margin-bottom: 8px; }
+  h2 { font-size: 1.15rem; color: #f8fafc; margin: 28px 0 12px; }
+  h3 { font-size: 0.95rem; color: #cbd5e1; margin: 20px 0 8px; }
+  .subtitle { font-size: 0.85rem; color: #64748b; margin-bottom: 24px; }
+
+  /* Category cards */
+  .cat-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0;
+  }
+  .cat-card {
+    background: #111827; border: 2px solid #1e293b; border-radius: 12px;
+    padding: 16px; transition: all 0.3s;
+  }
+  .cat-card:hover { border-color: #334155; transform: translateY(-2px); }
+  .cat-card.law { border-left: 4px solid #ef4444; }
+  .cat-card.proc { border-left: 4px solid #3b82f6; }
+  .cat-card.know { border-left: 4px solid #10b981; }
+  .cat-card.mem { border-left: 4px solid #a855f7; }
+
+  .cat-card .emoji { font-size: 1.8rem; margin-bottom: 8px; }
+  .cat-card .name { font-size: 1rem; font-weight: 700; color: #f8fafc; margin-bottom: 4px; }
+  .cat-card .tagline { font-size: 0.75rem; color: #94a3b8; font-style: italic; margin-bottom: 10px; }
+  .cat-card .def { font-size: 0.8rem; color: #cbd5e1; margin-bottom: 10px; }
+  .cat-card .examples { font-size: 0.75rem; color: #64748b; }
+  .cat-card .examples strong { color: #94a3b8; }
+
+  /* Decision tree */
+  .tree { margin: 20px 0; }
+  .tree-node {
+    background: #111827; border: 1px solid #1e293b; border-radius: 10px;
+    padding: 16px; margin-bottom: 12px; transition: all 0.3s;
+  }
+  .tree-node.highlight { border-color: #f59e0b; background: #1a1800; }
+  .tree-question {
+    font-size: 0.9rem; font-weight: 700; color: #f8fafc; margin-bottom: 10px;
+  }
+  .tree-options { display: flex; gap: 10px; flex-wrap: wrap; }
+  .tree-opt {
+    padding: 8px 16px; border-radius: 8px; border: 1px solid #334155;
+    background: #1e293b; color: #e2e8f0; font-size: 0.8rem; cursor: pointer;
+    transition: all 0.2s; font-weight: 500;
+  }
+  .tree-opt:hover { background: #334155; border-color: #475569; }
+  .tree-opt.selected { border-color: #f59e0b; background: #f59e0b22; color: #fcd34d; }
+
+  .tree-result {
+    display: none; margin-top: 16px; padding: 14px; border-radius: 10px;
+    font-size: 0.85rem; font-weight: 600;
+  }
+  .tree-result.show { display: block; animation: fadeIn 0.3s; }
+  .tree-result.law { background: #ef444422; border: 1px solid #ef4444; color: #fca5a5; }
+  .tree-result.proc { background: #3b82f622; border: 1px solid #3b82f6; color: #93c5fd; }
+  .tree-result.know { background: #10b98122; border: 1px solid #10b981; color: #6ee7b7; }
+  .tree-result.mem { background: #a855f722; border: 1px solid #a855f7; color: #c4b5fd; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: none; } }
+
+  /* Comparison table */
+  .comp-table {
+    width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.8rem;
+  }
+  .comp-table th {
+    background: #1e293b; color: #f8fafc; padding: 10px 12px; text-align: left;
+    font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .comp-table td {
+    padding: 10px 12px; border-bottom: 1px solid #1e293b; color: #cbd5e1;
+    vertical-align: top;
+  }
+  .comp-table tr:hover td { background: #111827; }
+  .comp-table .cat-tag {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+  }
+  .tag-law { background: #ef444433; color: #fca5a5; }
+  .tag-proc { background: #3b82f633; color: #93c5fd; }
+  .tag-know { background: #10b98133; color: #6ee7b7; }
+  .tag-mem { background: #a855f733; color: #c4b5fd; }
+
+  /* Edge cases */
+  .edge-case {
+    background: #111827; border: 1px solid #1e293b; border-radius: 10px;
+    padding: 16px; margin-bottom: 12px;
+  }
+  .edge-case .scenario { font-size: 0.85rem; color: #f8fafc; margin-bottom: 8px; font-weight: 600; }
+  .edge-case .trap { font-size: 0.8rem; color: #f59e0b; margin-bottom: 6px; }
+  .edge-case .answer { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Quiz */
+  .quiz-card {
+    background: #111827; border: 1px solid #1e293b; border-radius: 12px;
+    padding: 20px; margin-bottom: 16px; transition: all 0.3s;
+  }
+  .quiz-card.answered { opacity: 0.85; }
+  .quiz-num {
+    font-size: 0.65rem; color: #475569; text-transform: uppercase;
+    letter-spacing: 0.1em; margin-bottom: 6px;
+  }
+  .quiz-scenario {
+    font-size: 0.9rem; color: #f8fafc; font-weight: 600; margin-bottom: 14px;
+    line-height: 1.5;
+  }
+  .quiz-options { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 0; }
+  .quiz-opt {
+    padding: 8px 18px; border-radius: 8px; border: 2px solid #334155;
+    background: #1e293b; color: #e2e8f0; font-size: 0.8rem; cursor: pointer;
+    transition: all 0.2s; font-weight: 600;
+  }
+  .quiz-opt:hover:not(.disabled) { background: #334155; border-color: #475569; }
+  .quiz-opt.correct { border-color: #10b981; background: #10b98122; color: #6ee7b7; }
+  .quiz-opt.wrong { border-color: #ef4444; background: #ef444422; color: #fca5a5; }
+  .quiz-opt.disabled { cursor: default; opacity: 0.5; }
+  .quiz-opt.disabled.correct { opacity: 1; }
+
+  .quiz-explain {
+    display: none; margin-top: 14px; padding: 12px; border-radius: 8px;
+    background: #0f1117; border: 1px solid #1e293b;
+    font-size: 0.8rem; color: #94a3b8; line-height: 1.5;
+  }
+  .quiz-explain.show { display: block; animation: fadeIn 0.3s; }
+  .quiz-explain strong { color: #e2e8f0; }
+
+  /* Score */
+  .score-bar {
+    position: sticky; bottom: 0; left: 0; right: 0;
+    background: #111827; border-top: 1px solid #1e293b;
+    padding: 12px 24px; display: none; justify-content: space-between;
+    align-items: center; z-index: 50;
+  }
+  .score-bar.show { display: flex; }
+  .score-text { font-size: 0.85rem; color: #f8fafc; font-weight: 600; }
+  .score-reset {
+    padding: 6px 16px; border-radius: 6px; border: 1px solid #334155;
+    background: #1e293b; color: #e2e8f0; font-size: 0.75rem; cursor: pointer;
+  }
+  .score-reset:hover { background: #334155; }
+
+  /* Mnemonic */
+  .mnemonic {
+    background: linear-gradient(135deg, #1a1800, #111827);
+    border: 1px dashed #f59e0b44; border-radius: 12px;
+    padding: 20px; margin: 20px 0; text-align: center;
+  }
+  .mnemonic .big { font-size: 1.3rem; font-weight: 800; color: #fcd34d; margin-bottom: 8px; }
+  .mnemonic .sub { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Key principle box */
+  .principle {
+    background: #0f1117; border-left: 3px solid #f59e0b;
+    padding: 12px 16px; margin: 16px 0; border-radius: 0 8px 8px 0;
+    font-size: 0.85rem; color: #cbd5e1;
+  }
+  .principle strong { color: #fcd34d; }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .cat-grid { grid-template-columns: 1fr; }
+    .nav-btn { padding: 10px 12px; font-size: 0.75rem; }
+  }
+</style>
+</head>
+<body>
+<!-- Navigace průvodce tvorbou -->
+<nav style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#0a0a1a;border-bottom:1px solid #1e293b;padding:6px 16px;display:flex;align-items:center;gap:12px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:0.78rem;">
+  <a href="/firma/jak-dokumentujeme/pruvodce-tvorbou.html" style="color:#94a3b8;text-decoration:none;font-weight:600;margin-right:8px;">📚 Průvodce</a>
+  <a href="/firma/jak-dokumentujeme/matice.html" style="color:#64748b;text-decoration:none;">📊 Matice</a>
+  <a href="/firma/jak-dokumentujeme/pruvodce-kategorie.html" style="color:#64748b;text-decoration:none;">🎓 Kategorie</a>
+  <a href="/firma/jak-dokumentujeme/workflow-diagram.html" style="color:#64748b;text-decoration:none;">🗺️ Flow</a>
+  <a href="/firma/jak-dokumentujeme/workflow-tvorba.html" style="color:#64748b;text-decoration:none;">📋 Swimlane</a>
+  <a href="/firma/jak-dokumentujeme/workflow-vyvojak.html" style="color:#64748b;text-decoration:none;">🔄 Vývoják</a>
+  <style>.guide-nav a:hover{color:#cbd5e1!important;}</style>
+</nav>
+<div style="height:36px;"></div>
+<!-- /Navigace -->
+
+
+<nav class="nav">
+  <button class="nav-btn active" onclick="showPage('overview')">📋 Přehled</button>
+  <button class="nav-btn" onclick="showPage('tree')">🌳 Rozhodovací strom</button>
+  <button class="nav-btn" onclick="showPage('matrix')">📊 Matice + hranice</button>
+  <button class="nav-btn" onclick="showPage('quiz')">🎯 Kvíz</button>
+</nav>
+
+<div class="content">
+
+<!-- ============================================ -->
+<!-- PAGE 1: OVERVIEW -->
+<!-- ============================================ -->
+<div id="page-overview" class="page active">
+
+<h1>🎓 Čtyři kategorie dokumentů v Mozkotronu</h1>
+<p class="subtitle">Tréninkový materiál pro editory a manažery — naučte se rozlišovat LAW, PROC, KNOW a MEM</p>
+
+<div class="principle">
+  <strong>Klíčový princip:</strong> Kategorie říká, CO informace JE (její podstata). Vrstva (BIMG/SOP/CHL) říká, JAK je zpracovaná. To jsou dvě nezávislé osy — nejdřív vždy rozhodněte kategorii.
+</div>
+
+<div class="cat-grid">
+  <div class="cat-card law">
+    <div class="emoji">⚖️</div>
+    <div class="name">LAW — Pravidla</div>
+    <div class="tagline">„Takhle to MUSÍ být."</div>
+    <div class="def">Závazná pravidla, politiky, architektonická rozhodnutí. Když se poruší, je to problém. Mají autoritu — někdo je schválil a platí.</div>
+    <div class="examples"><strong>Příklady:</strong> Reklamační řád, GDPR postup, pravidla pro použití loga, cenová politika, pravidlo fakturace do 48h, bezpečnostní protokol NAS</div>
+  </div>
+
+  <div class="cat-card proc">
+    <div class="emoji">🔧</div>
+    <div class="name">PROC — Proceduray</div>
+    <div class="tagline">„Takhle se to DĚLÁ."</div>
+    <div class="def">Standardní operační postupy. Krok za krokem, jak vykonat konkrétní činnost. Mají jednoho vlastníka, dají se natrénovat, dají se auditovat.</div>
+    <div class="examples"><strong>Příklady:</strong> Jak přijmout zboží na sklad, jak vyřídit reklamaci, jak založit zakázku v Money S4, jak onboardovat nového zaměstnance</div>
+  </div>
+
+  <div class="cat-card know">
+    <div class="emoji">🧠</div>
+    <div class="name">KNOW — Znalosti</div>
+    <div class="tagline">„Tohle potřebuješ VĚDĚT."</div>
+    <div class="def">Expertní znalosti, produktové informace, referenční materiály. Nepřikazují ani nenavádějí — informují. Čtenář je vstřebá a aplikuje vlastním úsudkem.</div>
+    <div class="examples"><strong>Příklady:</strong> Přehled značek praček (parametry, ceny, marže), srovnání expedičních služeb, jak funguje invertor v klimatizaci, daňové limity pro rok 2026</div>
+  </div>
+
+  <div class="cat-card mem">
+    <div class="emoji">📝</div>
+    <div class="name">MEM — Záznamy</div>
+    <div class="tagline">„Tohle se STALO / ROZHODLO."</div>
+    <div class="def">Záznamy z jednání, rozhodnutí, incidenty, retrospektivy. Mají datum, jsou jednorázové (neaktualizují se), slouží jako historický kontext.</div>
+    <div class="examples"><strong>Příklady:</strong> Zápis z porady 15.4.2026, rozhodnutí o změně dodavatele, post-mortem výpadku e-shopu, retrospektiva Q1 2026</div>
+  </div>
+</div>
+
+<div class="mnemonic">
+  <div class="big">⚖️ MUSÍ → 🔧 DĚLÁ → 🧠 VÍ → 📝 STALO</div>
+  <div class="sub">Pravidlo → Postup → Znalost → Záznam</div>
+</div>
+
+<h2>🔑 Tři klíčové otázky pro rozlišení</h2>
+
+<table class="comp-table">
+  <tr>
+    <th>Otázka</th>
+    <th>LAW ⚖️</th>
+    <th>PROC 🔧</th>
+    <th>KNOW 🧠</th>
+    <th>MEM 📝</th>
+  </tr>
+  <tr>
+    <td><strong>Dá se porušit?</strong></td>
+    <td>Ano, a je to problém</td>
+    <td>Ano, ale jde o efektivitu</td>
+    <td>Ne — nedá se „porušit" znalost</td>
+    <td>Ne — je to fakt, stalo se to</td>
+  </tr>
+  <tr>
+    <td><strong>Má kroky 1→2→3?</strong></td>
+    <td>Ne — říká CO, ne JAK</td>
+    <td>Ano — to je jeho podstata</td>
+    <td>Ne — je to reference</td>
+    <td>Ne — je to chronologie</td>
+  </tr>
+  <tr>
+    <td><strong>Stárne?</strong></td>
+    <td>Platí, dokud se nezruší</td>
+    <td>Platí, dokud se nezmění</td>
+    <td>Může zastarávat průběžně</td>
+    <td>Nestárne — je to snapshot</td>
+  </tr>
+</table>
+
+</div>
+
+<!-- ============================================ -->
+<!-- PAGE 2: DECISION TREE -->
+<!-- ============================================ -->
+<div id="page-tree" class="page">
+
+<h1>🌳 Rozhodovací strom</h1>
+<p class="subtitle">Odpověz na 3 otázky a dozvíš se správnou kategorii. Klikej na odpovědi.</p>
+
+<div class="tree" id="decisionTree">
+
+  <div class="tree-node highlight" id="q1">
+    <div class="tree-question">❶ Je to záznam něčeho, co se stalo? (jednání, rozhodnutí, incident, retrospektiva)</div>
+    <div class="tree-options">
+      <button class="tree-opt" onclick="treeAnswer(1,'yes')">✅ Ano, je to záznam události</button>
+      <button class="tree-opt" onclick="treeAnswer(1,'no')">❌ Ne, je to obecně platná informace</button>
+    </div>
+  </div>
+
+  <div class="tree-node" id="q1-result" style="display:none">
+    <div class="tree-result mem show">
+      📝 <strong>MEM — Záznam</strong><br>
+      Má konkrétní datum, popisuje co se stalo nebo rozhodlo. Neaktualizuje se — je to historický snapshot.
+      <br><br><em>Příklady: Zápis z porady, rozhodnutí o dodavateli, post-mortem incidentu</em>
+    </div>
+  </div>
+
+  <div class="tree-node" id="q2" style="display:none">
+    <div class="tree-question">❷ Říká to, co se MUSÍ dodržovat? (pravidlo, politika, závazné rozhodnutí)</div>
+    <div class="tree-options">
+      <button class="tree-opt" onclick="treeAnswer(2,'yes')">✅ Ano, je to pravidlo / závazek</button>
+      <button class="tree-opt" onclick="treeAnswer(2,'no')">❌ Ne, je to návod nebo informace</button>
+    </div>
+  </div>
+
+  <div class="tree-node" id="q2-result" style="display:none">
+    <div class="tree-result law show">
+      ⚖️ <strong>LAW — Pravidlo</strong><br>
+      Pokud se poruší, je to problém. Má autoritu — někdo ho schválil. Platí, dokud se explicitně nezruší.
+      <br><br><em>Příklady: Reklamační řád, GDPR postup, cenová politika, bezpečnostní protokol</em>
+    </div>
+  </div>
+
+  <div class="tree-node" id="q3" style="display:none">
+    <div class="tree-question">❸ Popisuje to KROKY, jak něco udělat? (postup, návod, recept)</div>
+    <div class="tree-options">
+      <button class="tree-opt" onclick="treeAnswer(3,'yes')">✅ Ano, jsou tam kroky 1→2→3</button>
+      <button class="tree-opt" onclick="treeAnswer(3,'no')">❌ Ne, je to spíš informace / přehled</button>
+    </div>
+  </div>
+
+  <div class="tree-node" id="q3-result-proc" style="display:none">
+    <div class="tree-result proc show">
+      🔧 <strong>PROC — Procedura</strong><br>
+      Krok za krokem. Dá se natrénovat, dá se auditovat, má jednoho vlastníka.
+      <br><br><em>Příklady: Příjem zboží, vyřízení reklamace, založení zakázky v Money S4</em>
+    </div>
+  </div>
+
+  <div class="tree-node" id="q3-result-know" style="display:none">
+    <div class="tree-result know show">
+      🧠 <strong>KNOW — Znalost</strong><br>
+      Referenční materiál. Nepřikazuje, nenavádí — informuje. Čtenář aplikuje vlastním úsudkem.
+      <br><br><em>Příklady: Přehled značek, srovnání služeb, technické parametry, daňové limity</em>
+    </div>
+  </div>
+
+</div>
+
+<button onclick="resetTree()" style="margin-top:16px; padding:8px 20px; border-radius:8px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; font-size:0.8rem; cursor:pointer;">🔄 Znovu od začátku</button>
+
+<h2>⚠️ Časté pasti</h2>
+
+<div class="edge-case">
+  <div class="scenario">📌 „Jak vyřídit reklamaci" — je to LAW nebo PROC?</div>
+  <div class="trap">⚠️ Past: Reklamační řád je LAW, ale postup vyřízení reklamace je PROC.</div>
+  <div class="answer">💡 Reklamační <strong>řád</strong> (co platí, lhůty, práva) = <span class="cat-tag tag-law">LAW</span>. Reklamační <strong>postup</strong> (krok 1: přijmi, krok 2: zapiš...) = <span class="cat-tag tag-proc">PROC</span>.</div>
+</div>
+
+<div class="edge-case">
+  <div class="scenario">📌 „Přehled našich dodavatelů" — je to KNOW nebo MEM?</div>
+  <div class="trap">⚠️ Past: Pokud je to živý seznam (aktualizuje se), je to KNOW. Pokud je to snapshot k datu, je to MEM.</div>
+  <div class="answer">💡 Živý přehled dodavatelů s kontakty a podmínkami = <span class="cat-tag tag-know">KNOW</span>. Zápis „rozhodli jsme se změnit dodavatele X na Y" = <span class="cat-tag tag-mem">MEM</span>.</div>
+</div>
+
+<div class="edge-case">
+  <div class="scenario">📌 „Pravidlo: faktury se posílají do 48h" — je to LAW nebo PROC?</div>
+  <div class="trap">⚠️ Past: Pravidlo samo o sobě je LAW. Postup „jak vystavit fakturu" je PROC.</div>
+  <div class="answer">💡 „Faktury do 48h" = <span class="cat-tag tag-law">LAW</span> (závazek). „Jak vystavit fakturu v Money S4" = <span class="cat-tag tag-proc">PROC</span> (kroky).</div>
+</div>
+
+<div class="edge-case">
+  <div class="scenario">📌 „Jak funguje invertor v klimatizaci" — je to KNOW nebo PROC?</div>
+  <div class="trap">⚠️ Past: Vysvětlení principu není postup. Nemá kroky, které bys prováděl.</div>
+  <div class="answer">💡 Vysvětlení technologie = <span class="cat-tag tag-know">KNOW</span>. „Jak nainstalovat klimatizaci s invertorem" (kroky) = <span class="cat-tag tag-proc">PROC</span>.</div>
+</div>
+
+<div class="edge-case">
+  <div class="scenario">📌 „Rozhodli jsme, že budeme používat Money S4" — je to LAW nebo MEM?</div>
+  <div class="trap">⚠️ Past: Rozhodnutí samo o sobě je MEM (stalo se). Ale pokud z něj vznikne politika „všichni používají Money S4", ta je LAW.</div>
+  <div class="answer">💡 Zápis rozhodnutí z porady = <span class="cat-tag tag-mem">MEM</span>. Výsledná politika „systémem firmy je Money S4" = <span class="cat-tag tag-law">LAW</span>. Jedno rozhodnutí může vyrobit obojí.</div>
+</div>
+
+</div>
+
+<!-- ============================================ -->
+<!-- PAGE 3: MATRIX -->
+<!-- ============================================ -->
+<div id="page-matrix" class="page">
+
+<h1>📊 Srovnávací matice</h1>
+<p class="subtitle">Systematický přehled rozdílů mezi kategoriemi</p>
+
+<h2>🔍 Vlastnosti kategorií</h2>
+
+<table class="comp-table">
+  <tr>
+    <th>Vlastnost</th>
+    <th>⚖️ LAW</th>
+    <th>🔧 PROC</th>
+    <th>🧠 KNOW</th>
+    <th>📝 MEM</th>
+  </tr>
+  <tr>
+    <td><strong>Podstata</strong></td>
+    <td>Pravidlo, závazek</td>
+    <td>Postup, návod</td>
+    <td>Znalost, reference</td>
+    <td>Záznam, snapshot</td>
+  </tr>
+  <tr>
+    <td><strong>Kdo rozhoduje?</strong></td>
+    <td>Management</td>
+    <td>Vlastník procesu</td>
+    <td>Expert / editor</td>
+    <td>Účastník události</td>
+  </tr>
+  <tr>
+    <td><strong>Tón dokumentu</strong></td>
+    <td>„Musíš / nesmíš"</td>
+    <td>„Udělej krok 1, pak 2"</td>
+    <td>„Tohle je dobré vědět"</td>
+    <td>„Stalo se / rozhodli jsme"</td>
+  </tr>
+  <tr>
+    <td><strong>Aktualizace</strong></td>
+    <td>Při změně politiky</td>
+    <td>Při změně procesu</td>
+    <td>Průběžně (stárne)</td>
+    <td>Nikdy (je to snapshot)</td>
+  </tr>
+  <tr>
+    <td><strong>Porušení</strong></td>
+    <td>= problém, eskalace</td>
+    <td>= neefektivita, chyba</td>
+    <td>nelze „porušit"</td>
+    <td>nelze „porušit"</td>
+  </tr>
+  <tr>
+    <td><strong>Typický formát</strong></td>
+    <td>Odstavce, definice</td>
+    <td>Číslovaný seznam kroků</td>
+    <td>Tabulky, přehledy, texty</td>
+    <td>Chronologický zápis</td>
+  </tr>
+  <tr>
+    <td><strong>Má kroky?</strong></td>
+    <td>Ne</td>
+    <td>Vždy</td>
+    <td>Ne</td>
+    <td>Občas (co se stalo)</td>
+  </tr>
+  <tr>
+    <td><strong>Má datum vzniku?</strong></td>
+    <td>Ano (platnost od)</td>
+    <td>Ano (verze)</td>
+    <td>Ano (aktuálnost)</td>
+    <td>Klíčové (identifikátor)</td>
+  </tr>
+</table>
+
+<h2>🏭 Příklady z Elektro Kutílek</h2>
+
+<table class="comp-table">
+  <tr>
+    <th>Situace</th>
+    <th>Kategorie</th>
+    <th>Proč?</th>
+  </tr>
+  <tr>
+    <td>Reklamační řád firmy</td>
+    <td><span class="cat-tag tag-law">LAW</span></td>
+    <td>Závazná politika — kdo poruší, má problém</td>
+  </tr>
+  <tr>
+    <td>Postup vyřízení reklamace krok za krokem</td>
+    <td><span class="cat-tag tag-proc">PROC</span></td>
+    <td>Návod s kroky — dá se natrénovat</td>
+  </tr>
+  <tr>
+    <td>Přehled reklamačních lhůt dle typu zboží</td>
+    <td><span class="cat-tag tag-know">KNOW</span></td>
+    <td>Referenční tabulka — informuje, nepřikazuje</td>
+  </tr>
+  <tr>
+    <td>Zápis: „15.4. — změnili jsme reklamační politiku"</td>
+    <td><span class="cat-tag tag-mem">MEM</span></td>
+    <td>Jednorázový záznam události</td>
+  </tr>
+  <tr style="background:#111827">
+    <td colspan="3" style="color:#475569; font-size:0.7rem; text-align:center">— — —</td>
+  </tr>
+  <tr>
+    <td>GDPR politika — jak nakládáme s daty zákazníků</td>
+    <td><span class="cat-tag tag-law">LAW</span></td>
+    <td>Závazný dokument s právním dopadem</td>
+  </tr>
+  <tr>
+    <td>Jak založit nového zákazníka v Money S4</td>
+    <td><span class="cat-tag tag-proc">PROC</span></td>
+    <td>Krok za krokem v systému</td>
+  </tr>
+  <tr>
+    <td>Srovnání praček Bosch vs Electrolux vs Samsung</td>
+    <td><span class="cat-tag tag-know">KNOW</span></td>
+    <td>Produktová znalost — informuje prodejce</td>
+  </tr>
+  <tr>
+    <td>Zápis z porady: rozhodli jsme přestat prodávat značku X</td>
+    <td><span class="cat-tag tag-mem">MEM</span></td>
+    <td>Záznam rozhodnutí s datem</td>
+  </tr>
+  <tr style="background:#111827">
+    <td colspan="3" style="color:#475569; font-size:0.7rem; text-align:center">— — —</td>
+  </tr>
+  <tr>
+    <td>Pravidlo: všechny faktury do 48h</td>
+    <td><span class="cat-tag tag-law">LAW</span></td>
+    <td>Závazné pravidlo se sankcí</td>
+  </tr>
+  <tr>
+    <td>Jak vystavit fakturu v Money S4</td>
+    <td><span class="cat-tag tag-proc">PROC</span></td>
+    <td>Postup s kroky v systému</td>
+  </tr>
+  <tr>
+    <td>Daňové sazby a limity pro rok 2026</td>
+    <td><span class="cat-tag tag-know">KNOW</span></td>
+    <td>Referenční informace — mění se ročně</td>
+  </tr>
+  <tr>
+    <td>Retrospektiva: proč jsme v Q1 posílali faktury pozdě</td>
+    <td><span class="cat-tag tag-mem">MEM</span></td>
+    <td>Analýza události — historický kontext</td>
+  </tr>
+</table>
+
+<h2>🎯 Jedno téma → čtyři kategorie</h2>
+
+<div class="principle">
+  <strong>Klíčový insight:</strong> Ze stejného tématu (např. „reklamace") může vzniknout dokument v každé kategorii. Kategorie není o tématu — je o povaze informace.
+</div>
+
+</div>
+
+<!-- ============================================ -->
+<!-- PAGE 4: QUIZ -->
+<!-- ============================================ -->
+<div id="page-quiz" class="page">
+
+<h1>🎯 Kvíz — Ověř si, jak rozlišuješ</h1>
+<p class="subtitle">10 reálných scénářů z prostředí Elektro Kutílek. Klikni na správnou kategorii.</p>
+
+<div id="quizContainer"></div>
+
+<div class="score-bar" id="scoreBar">
+  <div class="score-text" id="scoreText">0 / 10 správně</div>
+  <button class="score-reset" onclick="resetQuiz()">🔄 Zkusit znovu</button>
+</div>
+
+</div>
+
+</div><!-- /content -->
+
+<script>
+// ============================================
+// NAVIGATION
+// ============================================
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  event.target.classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+// ============================================
+// DECISION TREE
+// ============================================
+function treeAnswer(q, answer) {
+  // Mark selected
+  const node = document.getElementById('q' + q);
+  node.querySelectorAll('.tree-opt').forEach(o => o.classList.remove('selected'));
+  event.target.classList.add('selected');
+  node.classList.remove('highlight');
+
+  if (q === 1 && answer === 'yes') {
+    document.getElementById('q1-result').style.display = 'block';
+    document.getElementById('q2').style.display = 'none';
+    document.getElementById('q3').style.display = 'none';
+    document.getElementById('q2-result').style.display = 'none';
+    document.getElementById('q3-result-proc').style.display = 'none';
+    document.getElementById('q3-result-know').style.display = 'none';
+  } else if (q === 1 && answer === 'no') {
+    document.getElementById('q1-result').style.display = 'none';
+    document.getElementById('q2').style.display = 'block';
+    document.getElementById('q2').classList.add('highlight');
+    document.getElementById('q3').style.display = 'none';
+    document.getElementById('q2-result').style.display = 'none';
+    document.getElementById('q3-result-proc').style.display = 'none';
+    document.getElementById('q3-result-know').style.display = 'none';
+  } else if (q === 2 && answer === 'yes') {
+    document.getElementById('q2-result').style.display = 'block';
+    document.getElementById('q2').classList.remove('highlight');
+    document.getElementById('q3').style.display = 'none';
+    document.getElementById('q3-result-proc').style.display = 'none';
+    document.getElementById('q3-result-know').style.display = 'none';
+  } else if (q === 2 && answer === 'no') {
+    document.getElementById('q2-result').style.display = 'none';
+    document.getElementById('q2').classList.remove('highlight');
+    document.getElementById('q3').style.display = 'block';
+    document.getElementById('q3').classList.add('highlight');
+    document.getElementById('q3-result-proc').style.display = 'none';
+    document.getElementById('q3-result-know').style.display = 'none';
+  } else if (q === 3 && answer === 'yes') {
+    document.getElementById('q3').classList.remove('highlight');
+    document.getElementById('q3-result-proc').style.display = 'block';
+    document.getElementById('q3-result-know').style.display = 'none';
+  } else if (q === 3 && answer === 'no') {
+    document.getElementById('q3').classList.remove('highlight');
+    document.getElementById('q3-result-know').style.display = 'block';
+    document.getElementById('q3-result-proc').style.display = 'none';
+  }
+}
+
+function resetTree() {
+  ['q1-result','q2','q2-result','q3','q3-result-proc','q3-result-know'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+  document.getElementById('q1').classList.add('highlight');
+  document.querySelectorAll('.tree-opt').forEach(o => o.classList.remove('selected'));
+}
+
+// ============================================
+// QUIZ
+// ============================================
+const quizData = [
+  {
+    scenario: '„Zaměstnanci mají nárok na 5 týdnů dovolené ročně."',
+    correct: 'law',
+    explain: 'Je to <strong>pravidlo</strong> s nárokem — závazná politika firmy. Porušení = problém. → <strong>LAW</strong>'
+  },
+  {
+    scenario: '„Jak vytvořit novou objednávku v Money S4: klikni na Objednávky → Nová → vyplň pole..."',
+    correct: 'proc',
+    explain: 'Krok za krokem v systému. Dá se natrénovat, má konkrétní sekvenci. → <strong>PROC</strong>'
+  },
+  {
+    scenario: '„Samsung řada Bespoke 2026 — přehled modelů, cen a technických parametrů"',
+    correct: 'know',
+    explain: 'Produktová znalost. Informuje prodejce, nepřikazuje ani nenavádí kroky. → <strong>KNOW</strong>'
+  },
+  {
+    scenario: '„Porada 15.4.2026: rozhodli jsme přejít z PPL na Zásilkovnu jako primárního dopravce"',
+    correct: 'mem',
+    explain: 'Záznam konkrétní události s datem. Historický snapshot rozhodnutí. → <strong>MEM</strong>'
+  },
+  {
+    scenario: '„Každá zakázka nad 50 000 Kč musí mít podpis obou jednatelů."',
+    correct: 'law',
+    explain: 'Závazné pravidlo s autoritou. Porušení = finanční/právní riziko. → <strong>LAW</strong>'
+  },
+  {
+    scenario: '„Jak zapojit myčku nádobí — schéma připojení vody, odpadu a elektřiny"',
+    correct: 'proc',
+    explain: 'Technický postup s kroky. I když je vizuální (schéma), jde o návod „jak udělat". → <strong>PROC</strong>'
+  },
+  {
+    scenario: '„Srovnání expedičních služeb: PPL, Zásilkovna, DPD — ceny, lhůty, spolehlivost"',
+    correct: 'know',
+    explain: 'Srovnávací přehled. Informuje pro rozhodnutí, ale sám nerozhoduje. → <strong>KNOW</strong>'
+  },
+  {
+    scenario: '„Post-mortem: výpadek e-shopu 3.3.2026 — příčina, průběh, poučení"',
+    correct: 'mem',
+    explain: 'Záznam incidentu s datem. I když obsahuje poučení, primárně dokumentuje CO se stalo. → <strong>MEM</strong>'
+  },
+  {
+    scenario: '„Zboží na skladě se kontroluje inventurou 1× měsíčně, vždy poslední pátek."',
+    correct: 'law',
+    explain: 'Závazné pravidlo s frekvencí a termínem. Říká CO se musí dělat (ne JAK). <br>⚠️ „JAK provést inventuru" by byl PROC. → <strong>LAW</strong>'
+  },
+  {
+    scenario: '„Jak provést měsíční inventuru: krok 1 — vytiskni seznam, krok 2 — projdi regál po regálu..."',
+    correct: 'proc',
+    explain: 'Postup s kroky, jak fyzicky provést inventuru. → <strong>PROC</strong>'
+  },
+];
+
+let quizScore = 0;
+let quizAnswered = 0;
+
+function buildQuiz() {
+  const container = document.getElementById('quizContainer');
+  container.innerHTML = quizData.map((q, i) => `
+    <div class="quiz-card" id="quiz-${i}">
+      <div class="quiz-num">Otázka ${i + 1} / ${quizData.length}</div>
+      <div class="quiz-scenario">${q.scenario}</div>
+      <div class="quiz-options">
+        <button class="quiz-opt" onclick="quizAnswer(${i},'law')">⚖️ LAW</button>
+        <button class="quiz-opt" onclick="quizAnswer(${i},'proc')">🔧 PROC</button>
+        <button class="quiz-opt" onclick="quizAnswer(${i},'know')">🧠 KNOW</button>
+        <button class="quiz-opt" onclick="quizAnswer(${i},'mem')">📝 MEM</button>
+      </div>
+      <div class="quiz-explain" id="explain-${i}">${q.explain}</div>
+    </div>
+  `).join('');
+}
+
+function quizAnswer(idx, answer) {
+  const card = document.getElementById('quiz-' + idx);
+  if (card.classList.contains('answered')) return;
+  card.classList.add('answered');
+
+  const correct = quizData[idx].correct;
+  const buttons = card.querySelectorAll('.quiz-opt');
+  buttons.forEach(b => {
+    b.classList.add('disabled');
+    const btnCat = b.textContent.includes('LAW') ? 'law' :
+                   b.textContent.includes('PROC') ? 'sop' :
+                   b.textContent.includes('KNOW') ? 'know' : 'mem';
+    if (btnCat === correct) b.classList.add('correct');
+    if (btnCat === answer && answer !== correct) b.classList.add('wrong');
+  });
+
+  document.getElementById('explain-' + idx).classList.add('show');
+
+  quizAnswered++;
+  if (answer === correct) quizScore++;
+
+  const bar = document.getElementById('scoreBar');
+  bar.classList.add('show');
+  document.getElementById('scoreText').textContent =
+    `${quizScore} / ${quizAnswered} správně` +
+    (quizAnswered === quizData.length ? ` — ${Math.round(quizScore/quizData.length*100)}%` : '');
+}
+
+function resetQuiz() {
+  quizScore = 0;
+  quizAnswered = 0;
+  document.getElementById('scoreBar').classList.remove('show');
+  buildQuiz();
+}
+
+// Init
+buildQuiz();
+</script>
+
+</body>
+</html>

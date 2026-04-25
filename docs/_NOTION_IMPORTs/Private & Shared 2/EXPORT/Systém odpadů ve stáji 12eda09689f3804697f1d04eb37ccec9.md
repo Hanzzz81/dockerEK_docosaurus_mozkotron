@@ -1,0 +1,1 @@
+# Systém odpadů ve stáji

@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mozkotron — Přehled</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: #0f172a; color: #e2e8f0; line-height: 1.6;
+  padding-bottom: 60px;
+}
+a { color: #38bdf8; text-decoration: none; }
+a:hover { text-decoration: underline; color: #0ea5e9; }
+
+/* ===== LAYOUT: sidebar + main ===== */
+.home-layout {
+  display: flex;
+  min-height: calc(100vh - 60px);
+}
+
+.home-main {
+  flex: 1;
+  padding: 1.5rem 2rem;
+  min-width: 0;
+}
+.home-main-inner {
+  max-width: 1100px;
+}
+
+@media (max-width: 800px) {
+  .home-layout { flex-direction: column; }
+  .home-main { padding: 1rem; }
+}
+
+/* ===== ROZCESTNÍK — horizontální řada karet ===== */
+.hub-section { margin-bottom: 1.5rem; }
+
+.hub-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  padding: 0;
+}
+
+/* Každá buňka = karta + satelity pod ní */
+.hub-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-width: 180px;
+  max-width: 240px;
+}
+
+/* ---- Hlavní karta ---- */
+.hub-card {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 20px 16px 16px;
+  border-radius: 14px;
+  border: 2px solid;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-decoration: none;
+  width: 100%; height: 120px;
+  position: relative;
+}
+.hub-card:hover { transform: scale(1.05); box-shadow: 0 8px 32px rgba(0,0,0,0.5); text-decoration: none; }
+.hub-card:active { transform: scale(1.02); }
+
+.hub-card-icon { font-size: 28px; margin-bottom: 6px; transition: transform 0.25s; }
+.hub-card:hover .hub-card-icon { transform: scale(1.15); }
+.hub-card-label { font-size: 14px; font-weight: 700; letter-spacing: 3px; }
+.hub-card-desc { font-size: 9px; margin-top: 4px; opacity: 0.5; letter-spacing: 0.5px; }
+
+/* Barvy karet */
+.hub-card[data-dir="tvorit"] { border-color: #2e7d32; background: linear-gradient(135deg, #1b3a1d 0%, #0d120e 100%); color: #81c784; }
+.hub-card[data-dir="tvorit"]:hover { border-color: #4caf50; }
+.hub-card[data-dir="cist"] { border-color: #1565c0; background: linear-gradient(135deg, #0d2137 0%, #0a0e14 100%); color: #90caf9; }
+.hub-card[data-dir="cist"]:hover { border-color: #42a5f5; }
+.hub-card[data-dir="vyhodnocovat"] { border-color: #7b1fa2; background: linear-gradient(135deg, #1f0e2b 0%, #100a14 100%); color: #ce93d8; }
+.hub-card[data-dir="vyhodnocovat"]:hover { border-color: #ab47bc; }
+.hub-card[data-dir="sprava"] { border-color: #ef6c00; background: linear-gradient(135deg, #2b1a08 0%, #14100a 100%); color: #ffcc80; }
+.hub-card[data-dir="sprava"]:hover { border-color: #ffa726; }
+
+/* Admin badge */
+.hub-card-badge { position: absolute; top: 6px; right: 8px; font-size: 7px; font-weight: 600; letter-spacing: 1px; padding: 2px 5px; border-radius: 3px; background: rgba(255,255,255,0.06); color: #555; }
+
+/* ---- Satelity pod kartou ---- */
+.sat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+  width: 100%;
+}
+.sat {
+  display: flex; align-items: center; gap: 5px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid;
+  cursor: pointer;
+  text-decoration: none;
+  font-size: 10px; font-weight: 600;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.sat:hover { transform: scale(1.03); text-decoration: none; }
+.sat-icon { font-size: 11px; flex-shrink: 0; }
+.sat-label { overflow: hidden; text-overflow: ellipsis; }
+
+/* Barvy satelitů */
+.hub-cell[data-dir="tvorit"] .sat { border-color: #2e7d3260; background: #1b3a1d80; color: #81c784; }
+.hub-cell[data-dir="tvorit"] .sat:hover { border-color: #4caf50; background: #1b3a1d; }
+.hub-cell[data-dir="cist"] .sat { border-color: #1565c060; background: #0d213780; color: #90caf9; }
+.hub-cell[data-dir="cist"] .sat:hover { border-color: #42a5f5; background: #0d2137; }
+.hub-cell[data-dir="vyhodnocovat"] .sat { border-color: #7b1fa260; background: #1f0e2b80; color: #ce93d8; }
+.hub-cell[data-dir="vyhodnocovat"] .sat:hover { border-color: #ab47bc; background: #1f0e2b; }
+.hub-cell[data-dir="sprava"] .sat { border-color: #ef6c0060; background: #2b1a0880; color: #ffcc80; }
+.hub-cell[data-dir="sprava"] .sat:hover { border-color: #ffa726; background: #2b1a08; }
+
+/* Connector line (vertical, from card to satellites) */
+.sat-connector {
+  width: 1px; height: 6px;
+  margin: 0 auto;
+  opacity: 0.25;
+}
+.hub-cell[data-dir="tvorit"] .sat-connector { background: #4caf50; }
+.hub-cell[data-dir="cist"] .sat-connector { background: #42a5f5; }
+.hub-cell[data-dir="vyhodnocovat"] .sat-connector { background: #ab47bc; }
+.hub-cell[data-dir="sprava"] .sat-connector { background: #ffa726; }
+
+/* ===== DASHBOARD WIDGETY ===== */
+
+/* Header */
+.home-header { margin-bottom: 1.5rem; }
+.home-header h1 { font-size: 1.5rem; color: #f8fafc; margin-bottom: 0.2rem; }
+.home-header .greeting { color: #94a3b8; font-size: 0.9rem; }
+
+/* Widget grid */
+.widget-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2rem;
+}
+@media (max-width: 1000px) {
+  .widget-grid { grid-template-columns: 1fr; }
+}
+.widget-full { grid-column: 1 / -1; }
+
+/* Widget card */
+.widget {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 1.2rem 1.5rem;
+}
+.widget-title {
+  font-size: 0.95rem; font-weight: 600; color: #38bdf8;
+  margin-bottom: 1rem;
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.widget-title .wt-icon { font-size: 1.1rem; }
+.widget-title .wt-badge {
+  background: #f59e0b22; color: #f59e0b;
+  font-size: 0.7rem; font-weight: 700;
+  padding: 1px 8px; border-radius: 10px; margin-left: auto;
+}
+
+/* Stats cards row */
+.stats-row {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.8rem; margin-bottom: 1rem;
+}
+.stat-card {
+  background: #0f172a; border: 1px solid #334155;
+  border-radius: 10px; padding: 0.8rem; text-align: center;
+}
+.stat-value { font-size: 1.5rem; font-weight: 800; color: #f8fafc; }
+.stat-label { font-size: 0.72rem; color: #94a3b8; margin-top: 0.15rem; }
+
+/* Progress bar */
+.progress-lg {
+  width: 100%; height: 10px; background: #334155;
+  border-radius: 5px; margin-top: 0.8rem; overflow: hidden;
+}
+.progress-lg-fill {
+  height: 100%; border-radius: 5px;
+  background: linear-gradient(90deg, #38bdf8, #10b981);
+  transition: width 0.6s ease;
+}
+.progress-label {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 0.78rem; color: #94a3b8; margin-top: 0.3rem;
+}
+
+/* Recent pages list */
+.recent-list { list-style: none; }
+.recent-item {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.45rem 0; border-bottom: 1px solid #334155;
+  font-size: 0.82rem;
+}
+.recent-item:last-child { border-bottom: none; }
+.recent-item .ri-icon { flex-shrink: 0; opacity: 0.6; }
+.recent-item .ri-title { flex: 1; color: #e2e8f0; }
+.recent-item .ri-title a { color: #e2e8f0; }
+.recent-item .ri-title a:hover { color: #38bdf8; }
+.recent-item .ri-meta { font-size: 0.72rem; color: #94a3b8; white-space: nowrap; }
+
+/* Unread pages */
+.unread-list { list-style: none; }
+.unread-item {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.5rem 0.3rem; border-bottom: 1px solid #334155;
+  font-size: 0.82rem;
+}
+.unread-item:last-child { border-bottom: none; }
+.unread-item .ui-icon { flex-shrink: 0; }
+.unread-item .ui-title { flex: 1; }
+.unread-item .ui-title a { color: #e2e8f0; }
+.unread-item .ui-title a:hover { color: #38bdf8; }
+.unread-item .ui-folder { font-size: 0.72rem; color: #94a3b8; margin-left: 0.3rem; }
+.unread-item .ui-badge {
+  font-size: 0.68rem; font-weight: 600; padding: 1px 7px;
+  border-radius: 10px; flex-shrink: 0;
+}
+.badge-required { background: #10b98122; color: #10b981; }
+.badge-info { background: #0ea5e922; color: #0ea5e9; }
+
+/* Quick links */
+.quick-links { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.quick-link {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  background: #0f172a; border: 1px solid #334155;
+  border-radius: 8px; padding: 0.5rem 1rem;
+  font-size: 0.85rem; color: #e2e8f0;
+  transition: all 0.15s; cursor: pointer; text-decoration: none;
+}
+.quick-link:hover {
+  border-color: #38bdf8; color: #38bdf8; text-decoration: none;
+  background: #334155;
+}
+.quick-link .ql-icon { font-size: 1rem; }
+
+/* Empty / loading */
+.empty-state {
+  text-align: center; padding: 1.5rem; color: #94a3b8; font-size: 0.85rem;
+}
+.empty-state .es-icon { font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.4; }
+.loading { text-align: center; padding: 2rem; color: #94a3b8; font-size: 0.85rem; }
+
+/* Separator */
+.hub-separator {
+  border: none;
+  border-top: 1px solid #1e293b;
+  margin: 0.5rem 0 1.5rem;
+}
+</style>
+</head>
+<body>
+
+<div class="home-layout">
+
+  <!-- Sidebar tree injected by /js/sidebar-tree.js -->
+
+  <main class="home-main">
+    <div class="home-main-inner">
+
+      <!-- ═══ ROZCESTNÍK ═══ -->
+      <div class="hub-section">
+        <div class="hub-row" id="hubRow">
+
+          <!-- TVOŘIT -->
+          <div class="hub-cell" data-dir="tvorit">
+            <a class="hub-card" data-dir="tvorit" href="/editor">
+              <div class="hub-card-icon">✏️</div>
+              <div class="hub-card-label">TVOŘIT</div>
+              <div class="hub-card-desc">Editor obsahu</div>
+            </a>
+            <div class="sat-connector"></div>
+            <div class="sat-list">
+              <a class="sat" href="/guides/pruvodce-tvorbou"><span class="sat-icon">📚</span><span class="sat-label">Průvodce tvorbou</span></a>
+            </div>
+          </div>
+
+          <!-- ČÍST -->
+          <div class="hub-cell" data-dir="cist">
+            <a class="hub-card" data-dir="cist" href="/palac">
+              <div class="hub-card-icon">📖</div>
+              <div class="hub-card-label">ČÍST</div>
+              <div class="hub-card-desc">Dokumentový palác</div>
+            </a>
+            <div class="sat-connector"></div>
+            <div class="sat-list">
+              <a class="sat" href="/guides/pruvodce-tvorbou"><span class="sat-icon">📚</span><span class="sat-label">Průvodce tvorbou</span></a>
+            </div>
+          </div>
+
+          <!-- VYHODNOCOVAT -->
+          <div class="hub-cell" data-dir="vyhodnocovat">
+            <a class="hub-card" data-dir="vyhodnocovat" href="/statistiky">
+              <div class="hub-card-icon">📊</div>
+              <div class="hub-card-label">VYHODNOCOVAT</div>
+              <div class="hub-card-desc">Statistiky a analytika</div>
+            </a>
+            <div class="sat-connector"></div>
+            <div class="sat-list">
+              <a class="sat" href="/guides/progress"><span class="sat-icon">📈</span><span class="sat-label">Progress obsahu</span></a>
+            </div>
+          </div>
+
+          <!-- SPRÁVA -->
+          <div class="hub-cell" data-dir="sprava" id="spravaCell">
+            <a class="hub-card" data-dir="sprava" href="/admin">
+              <div class="hub-card-badge">ADMIN</div>
+              <div class="hub-card-icon">⚙️</div>
+              <div class="hub-card-label">SPRÁVA</div>
+              <div class="hub-card-desc">Uživatelé a konfigurace</div>
+            </a>
+          </div>
+
+        </div>
+      </div>
+
+      <hr class="hub-separator">
+
+      <!-- ═══ DASHBOARD ═══ -->
+      <div class="home-header">
+        <h1 id="greeting-title">Mozkotron</h1>
+        <div class="greeting" id="greeting-sub">Načítám přehled...</div>
+      </div>
+
+      <div class="widget-grid" id="widget-grid">
+        <div class="loading">Načítám data...</div>
+      </div>
+
+    </div>
+  </main>
+
+</div>
+
+<script>
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+function svgDoc(color) {
+  return '<svg width="14" height="16" viewBox="0 0 14 16" fill="none" style="vertical-align:middle;flex-shrink:0;">' +
+    '<path d="M2 1C1.45 1 1 1.45 1 2V14C1 14.55 1.45 15 2 15H12C12.55 15 13 14.55 13 14V5L9 1H2Z" fill="' + color + '" opacity="0.15" stroke="' + color + '" stroke-width="0.8"/>' +
+    '<path d="M9 1V5H13" stroke="' + color + '" stroke-width="0.8" fill="' + color + '" opacity="0.25"/>' +
+    '<line x1="3.5" y1="8" x2="10.5" y2="8" stroke="' + color + '" stroke-width="0.6" opacity="0.4"/>' +
+    '<line x1="3.5" y1="10" x2="10.5" y2="10" stroke="' + color + '" stroke-width="0.6" opacity="0.4"/>' +
+    '<line x1="3.5" y1="12" x2="8" y2="12" stroke="' + color + '" stroke-width="0.6" opacity="0.4"/>' +
+  '</svg>';
+}
+
+function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function formatTime(ms) {
+  if (!ms || ms <= 0) return '0 min';
+  var sec = Math.round(ms / 1000);
+  if (sec < 60) return sec + ' s';
+  var min = Math.round(sec / 60);
+  if (min < 60) return min + ' min';
+  var h = Math.floor(min / 60);
+  var m = min % 60;
+  return h + ' h ' + (m > 0 ? m + ' min' : '');
+}
+
+function formatDate(iso) {
+  if (!iso) return '\u2014';
+  var d = new Date(iso + 'Z');
+  var now = new Date();
+  var diff = now - d;
+  if (diff < 3600000) return Math.round(diff / 60000) + ' min zp\u011bt';
+  if (diff < 86400000) return Math.round(diff / 3600000) + ' h zp\u011bt';
+  if (diff < 172800000) return 'v\u010dera';
+  return d.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short' });
+}
+
+function getGreeting() {
+  var h = new Date().getHours();
+  if (h < 6) return 'Dobr\u00fd ve\u010der';
+  if (h < 12) return 'Dobr\u00e9 r\u00e1no';
+  if (h < 18) return 'Dobr\u00e9 odpoledne';
+  return 'Dobr\u00fd ve\u010der';
+}
+
+// ---------------------------------------------------------------------------
+// Role check — hide Správa + show/hide editor-only sections
+// ---------------------------------------------------------------------------
+fetch('/api/me')
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (!data.authenticated) return;
+    var isAdmin = (data.access || []).indexOf('*') >= 0;
+    if (!isAdmin) {
+      var cell = document.getElementById('spravaCell');
+      if (cell) cell.style.display = 'none';
+    }
+  });
+
+// ---------------------------------------------------------------------------
+// Dashboard widgets (from /api/home)
+// ---------------------------------------------------------------------------
+async function loadHome() {
+  try {
+    var resp = await fetch('/api/home');
+    if (!resp.ok) throw new Error('API error ' + resp.status);
+    var data = await resp.json();
+    renderWidgets(data);
+  } catch (e) {
+    document.getElementById('widget-grid').innerHTML =
+      '<div class="empty-state"><div class="es-icon">\u26a0\ufe0f</div>Nepoda\u0159ilo se na\u010d\u00edst data.<br><small>' + esc(e.message) + '</small></div>';
+  }
+}
+
+function renderWidgets(data) {
+  var user = data.user;
+  document.getElementById('greeting-title').textContent = getGreeting() + ', ' + user.firstName + '!';
+  document.getElementById('greeting-sub').textContent = 'Tv\u016fj osobn\u00ed p\u0159ehled v Mozkotron';
+
+  var grid = document.getElementById('widget-grid');
+  var html = '';
+  var w = data.widgets;
+
+  // --- Statistiky čtení ---
+  if (w.readingStats && w.readingStats.enabled) {
+    var s = w.readingStats;
+    html += '<div class="widget">';
+    html += '<div class="widget-title"><span class="wt-icon">\ud83d\udcca</span> ' + esc(s.title) + '</div>';
+    html += '<div class="stats-row">';
+    html += '<div class="stat-card"><div class="stat-value">' + s.pagesRead + '</div><div class="stat-label">P\u0159e\u010dteno str\u00e1nek</div></div>';
+    html += '<div class="stat-card"><div class="stat-value">' + s.totalAvailable + '</div><div class="stat-label">Celkem p\u0159i\u0159azeno</div></div>';
+    html += '<div class="stat-card"><div class="stat-value">' + formatTime(s.totalActiveTimeMs) + '</div><div class="stat-label">Celkov\u00fd \u010das</div></div>';
+    html += '<div class="stat-card"><div class="stat-value">' + s.confirmsDone + '</div><div class="stat-label">Potvrzen\u00ed</div></div>';
+    html += '</div>';
+    html += '<div class="progress-lg"><div class="progress-lg-fill" style="width:' + s.progressPct + '%"></div></div>';
+    html += '<div class="progress-label"><span>' + s.progressPct + '% p\u0159e\u010dteno</span>';
+    if (s.lastActivity) {
+      html += '<span>Posledn\u00ed aktivita: ' + formatDate(s.lastActivity) + '</span>';
+    }
+    html += '</div>';
+    if (s.recentPages && s.recentPages.length > 0) {
+      html += '<div style="margin-top:1rem; color:#92400e; font-size:0.82rem; font-weight:600; margin-bottom:0.5rem;">Naposledy nav\u0161t\u00edven\u00e9</div>';
+      html += '<ul class="recent-list">';
+      for (var i = 0; i < s.recentPages.length; i++) {
+        var rp = s.recentPages[i];
+        html += '<li class="recent-item">';
+        html += '<span class="ri-icon">' + svgDoc('#8b8070') + '</span>';
+        html += '<span class="ri-title"><a href="' + esc(rp.url) + '">' + esc(rp.title) + '</a></span>';
+        html += '<span class="ri-meta">' + formatDate(rp.lastVisit) + '</span>';
+        html += '<span class="ri-meta" style="width:60px;text-align:right">' + formatTime(rp.totalTimeMs) + '</span>';
+        html += '</li>';
+      }
+      html += '</ul>';
+    }
+    html += '</div>';
+  }
+
+  // --- Nepřečtené stránky ---
+  if (w.unreadPages && w.unreadPages.enabled) {
+    var u = w.unreadPages;
+    var badge = u.totalUnread > 0 ? '<span class="wt-badge">' + u.totalUnread + '</span>' : '';
+    html += '<div class="widget">';
+    html += '<div class="widget-title"><span class="wt-icon">\ud83d\udccb</span> ' + esc(u.title) + badge + '</div>';
+    if (u.pages.length === 0) {
+      html += '<div class="empty-state"><div class="es-icon">\u2705</div>V\u0161echny p\u0159i\u0159azen\u00e9 str\u00e1nky m\u00e1\u0161 p\u0159e\u010dten\u00e9!</div>';
+    } else {
+      html += '<ul class="unread-list">';
+      for (var j = 0; j < u.pages.length; j++) {
+        var pg = u.pages[j];
+        var typeBadge = pg.accessType === 'required'
+          ? '<span class="ui-badge badge-required">povinn\u00e9</span>'
+          : '<span class="ui-badge badge-info">informa\u010dn\u00ed</span>';
+        html += '<li class="unread-item">';
+        html += '<span class="ui-icon">' + svgDoc(pg.accessType === 'required' ? '#4ade80' : '#60a5fa') + '</span>';
+        html += '<span class="ui-title"><a href="' + esc(pg.url) + '">' + esc(pg.title) + '</a>';
+        if (pg.folder) html += '<span class="ui-folder">/ ' + esc(pg.folder) + '</span>';
+        html += '</span>';
+        html += typeBadge;
+        html += '</li>';
+      }
+      html += '</ul>';
+      if (u.totalUnread > u.pages.length) {
+        html += '<div style="text-align:center; margin-top:0.5rem; font-size:0.78rem; color:#8b8070;">a dal\u0161\u00edch ' + (u.totalUnread - u.pages.length) + ' str\u00e1nek...</div>';
+      }
+    }
+    html += '</div>';
+  }
+
+  // --- Rychlé odkazy ---
+  if (w.quickLinks && w.quickLinks.enabled) {
+    var ql = w.quickLinks;
+    html += '<div class="widget widget-full">';
+    html += '<div class="widget-title"><span class="wt-icon">\ud83d\udd17</span> ' + esc(ql.title) + '</div>';
+    if (ql.links.length === 0) {
+      html += '<div class="empty-state" style="padding:0.8rem;">Zat\u00edm nejsou nastaveny \u017e\u00e1dn\u00e9 rychl\u00e9 odkazy. Spr\u00e1vce je m\u016f\u017ee p\u0159idat v administraci.</div>';
+    } else {
+      html += '<div class="quick-links">';
+      for (var k = 0; k < ql.links.length; k++) {
+        var link = ql.links[k];
+        html += '<a class="quick-link" href="' + esc(link.url) + '">';
+        html += '<span class="ql-icon">' + (link.icon || '\ud83d\udcc4') + '</span>';
+        html += esc(link.label);
+        html += '</a>';
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+
+  grid.innerHTML = html;
+}
+
+loadHome();
+</script>
+
+<script src="/js/sidebar-tree.js"></script>
+<script src="/js/status-bar.js"></script>
+</body>
+</html>

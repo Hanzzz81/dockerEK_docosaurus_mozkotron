@@ -1,0 +1,272 @@
+{
+  "_meta": {
+    "description": "Registr struktury Mozkotron wiki. Organizace podle AOR oblastí Elektro Kutílek.",
+    "last_updated": "2026-04-21",
+    "updated_by": "M01-DOS (Datový OS)"
+  },
+  "sections": [
+    {
+      "folder": "00-firma",
+      "label": "📜 Firma — průřezové",
+      "sidebar_position": 1,
+      "description": "Pravidla a principy platné napříč celou firmou",
+      "topics": [
+        {
+          "folder": "datovy-zakon",
+          "label": "📜 Datový zákon",
+          "description": "Datový zákon, taxonomie dat, principy datového OS",
+          "aor_modules": ["průřezové"]
+        },
+        {
+          "folder": "pravidla-firmy",
+          "label": "🏛️ Pravidla firmy",
+          "description": "DNA firmy, hodnoty, kultura, komunikační pravidla",
+          "aor_modules": ["průřezové"]
+        },
+        {
+          "folder": "jak-dokumentujeme",
+          "label": "📚 Jak dokumentujeme",
+          "description": "Model tvorby dokumentace — Big Image, SOP, Cheat List",
+          "aor_modules": ["průřezové"]
+        }
+      ]
+    },
+    {
+      "folder": "01-management",
+      "label": "🏢 M — Management",
+      "sidebar_position": 2,
+      "description": "Strategie, organizace, řízení, lidé a kapacity",
+      "topics": [
+        {
+          "folder": "strategie",
+          "label": "🎯 Strategie",
+          "description": "Směr firmy, priority a iniciativy, rozhodovací matice",
+          "aor_modules": ["M1.1", "M1.2", "M1.3"]
+        },
+        {
+          "folder": "organizace",
+          "label": "🏗️ Organizace",
+          "description": "Role a odpovědnosti, delegační rámec, zastupnost",
+          "aor_modules": ["M2.1", "M2.2", "M2.3"]
+        },
+        {
+          "folder": "rizeni",
+          "label": "⚙️ Řízení a kontrola",
+          "description": "Rytmus porad, reporting, právní a smluvní rámec",
+          "aor_modules": ["M3.1", "M3.2", "M3.3"]
+        },
+        {
+          "folder": "lide",
+          "label": "👥 Lidé a kultura",
+          "description": "Kultura, nábor, onboarding, hodnocení, nástupnictví",
+          "aor_modules": ["M4.1", "M4.2", "M4.3", "M4.4", "M4.5"]
+        },
+        {
+          "folder": "kapacity",
+          "label": "📊 Kapacity a fokus",
+          "description": "Kapacitní přehled, prioritizace, WIP limity",
+          "aor_modules": ["M5.1", "M5.2"]
+        }
+      ]
+    },
+    {
+      "folder": "02-finance",
+      "label": "💰 F — Finance",
+      "sidebar_position": 3,
+      "description": "Ekonomický model, cashflow, náklady, účetnictví",
+      "topics": [
+        {
+          "folder": "ekonomicky-model",
+          "label": "📈 Ekonomický model",
+          "description": "Maržový model, rozpočet",
+          "aor_modules": ["F1.1", "F1.2"]
+        },
+        {
+          "folder": "cashflow",
+          "label": "💸 Cashflow a likvidita",
+          "description": "Cashflow forecast, pohledávky, závazky, likvidní rezerva",
+          "aor_modules": ["F2.1", "F2.2", "F2.3"]
+        },
+        {
+          "folder": "naklady",
+          "label": "🔍 Nákladové řízení",
+          "description": "Nákladová struktura, fixní vs. variabilní, kontrola",
+          "aor_modules": ["F3.1"]
+        },
+        {
+          "folder": "ucetnictvi",
+          "label": "📋 Účetnictví a compliance",
+          "description": "Účetní správnost, daně, regulace, finanční odolnost",
+          "aor_modules": ["F4.1", "F4.2", "F4.3"]
+        }
+      ]
+    },
+    {
+      "folder": "03-rust",
+      "label": "🚀 R — Růst a marketing",
+      "sidebar_position": 4,
+      "description": "Tržní pozice, akvizice zákazníků, marketing-sales handoff",
+      "topics": [
+        {
+          "folder": "trh",
+          "label": "🎯 Tržní pozice",
+          "description": "Cílové segmenty, hodnotová nabídka, diverzifikace",
+          "aor_modules": ["R1.1", "R1.2", "R1.3"]
+        },
+        {
+          "folder": "akvizice",
+          "label": "📣 Akvizice",
+          "description": "Kanály, rozpočet, kampaně, leady",
+          "aor_modules": ["R2.1", "R2.2"]
+        },
+        {
+          "folder": "predani-leadu",
+          "label": "🤝 Předání leadů",
+          "description": "Marketing→Sales handoff, zpětná vazba z prodeje",
+          "aor_modules": ["R3.1", "R3.2"]
+        }
+      ]
+    },
+    {
+      "folder": "04-nakup",
+      "label": "📦 N — Nákup a sklad",
+      "sidebar_position": 5,
+      "description": "Dodavatelé, objednávkový cyklus, skladové hospodářství",
+      "topics": [
+        {
+          "folder": "dodavatele",
+          "label": "🏭 Dodavatelé",
+          "description": "Strategie, struktura dodavatelů, podmínky, vyjednávání",
+          "aor_modules": ["N1.1", "N1.2"]
+        },
+        {
+          "folder": "objednavky",
+          "label": "📝 Objednávkový cyklus",
+          "description": "Objednávky, schvalování, evidence, kontrola",
+          "aor_modules": ["N2.1", "N2.2"]
+        },
+        {
+          "folder": "sklad",
+          "label": "📦 Skladové hospodářství",
+          "description": "Evidence, inventura, hladiny, správa skladu",
+          "aor_modules": ["N3.1", "N3.2", "N3.3"]
+        }
+      ]
+    },
+    {
+      "folder": "05-prodej",
+      "label": "🛒 P — Prodej",
+      "sidebar_position": 6,
+      "description": "Nabídka a cenotvorba, obchodní výkon, zákaznický vztah",
+      "topics": [
+        {
+          "folder": "nabidka",
+          "label": "🏷️ Nabídka",
+          "description": "Portfolio produktů a služeb, cenotvorba, prodejna",
+          "aor_modules": ["P1.1", "P1.2", "P1.3"]
+        },
+        {
+          "folder": "obchodni-vykon",
+          "label": "📊 Obchodní výkon",
+          "description": "Obchodní postup, pipeline, forecast",
+          "aor_modules": ["P2.1", "P2.2"]
+        },
+        {
+          "folder": "zakaznici",
+          "label": "👤 Zákaznický vztah",
+          "description": "Evidence, CRM, follow-up, retence",
+          "aor_modules": ["P3.1", "P3.2", "P3.3"]
+        }
+      ]
+    },
+    {
+      "folder": "06-dodani",
+      "label": "🚚 D — Dodání a servis",
+      "sidebar_position": 7,
+      "description": "Realizace, logistika, reklamace, kvalita a kapacity",
+      "topics": [
+        {
+          "folder": "realizace",
+          "label": "🔧 Realizace",
+          "description": "Realizační proces, uzavření a předání",
+          "aor_modules": ["D1.1", "D1.2"]
+        },
+        {
+          "folder": "logistika",
+          "label": "🚛 Logistika",
+          "description": "Plánování rozvozu, doručení, kontrola",
+          "aor_modules": ["D2.1", "D2.2"]
+        },
+        {
+          "folder": "reklamace",
+          "label": "⚠️ Reklamace",
+          "description": "Reklamační proces, nápravná opatření",
+          "aor_modules": ["D3.1", "D3.2"]
+        },
+        {
+          "folder": "kvalita",
+          "label": "✅ Kvalita a kapacity",
+          "description": "Standardy, kontroly, kapacity dodání",
+          "aor_modules": ["D4.1", "D4.2"]
+        }
+      ]
+    },
+    {
+      "folder": "07-technologie",
+      "label": "💻 T — Technologie",
+      "sidebar_position": 8,
+      "description": "IT strategie, vývoj, provoz, bezpečnost, infrastruktura, objekt",
+      "topics": [
+        {
+          "folder": "strategie",
+          "label": "🎯 IT strategie",
+          "description": "IT roadmapa, mapa systémů, data governance",
+          "aor_modules": ["T1.1", "T1.2", "T1.3"]
+        },
+        {
+          "folder": "vyvoj",
+          "label": "🛠️ Vývoj",
+          "description": "Backlog, vývoj, testování, nasazení",
+          "aor_modules": ["T2.1", "T2.2", "T2.3"]
+        },
+        {
+          "folder": "provoz",
+          "label": "🖥️ Provoz IT",
+          "description": "Integrace, automatizace, provoz systémů, bezpečnost",
+          "aor_modules": ["T3.1", "T3.2", "T3.3"]
+        },
+        {
+          "folder": "fyzicka-bezpecnost",
+          "label": "🔒 Fyzická bezpečnost",
+          "description": "Kamerový systém, zabezpečení, přístupy",
+          "aor_modules": ["T4.1", "T4.2"]
+        },
+        {
+          "folder": "infrastruktura",
+          "label": "🌐 Infrastruktura",
+          "description": "Síť, konektivita, hardware, zařízení",
+          "aor_modules": ["T5.1", "T5.2"]
+        },
+        {
+          "folder": "objekt",
+          "label": "🏢 Objekt a BOZP",
+          "description": "Údržba objektu, energie, nájemní vztahy, BOZP",
+          "aor_modules": ["T6.1", "T6.2", "T6.3"]
+        },
+        {
+          "folder": "synology",
+          "label": "🗄️ Synology",
+          "description": "Disková architektura Synology NAS — AOR, USE a XPR disky",
+          "aor_modules": ["T1.3"]
+        }
+      ]
+    }
+  ],
+  "conventions": {
+    "folder_naming": "kebab-case, prefix NN- pro AOR oblasti, tematické bloky bez prefixu",
+    "file_naming": "{type}-{tema}.md — prefix podle typu dokumentu (bimg-, sop-, chl-, law-, know-)",
+    "frontmatter_required": ["title", "sidebar_label", "sidebar_position", "description", "type", "audience", "version", "author", "date"],
+    "types": ["bimg", "sop", "chl", "law", "know"],
+    "audiences": ["firma", "management", "finance", "rust", "nakup", "prodej", "dodani", "technologie"]
+  }
+}

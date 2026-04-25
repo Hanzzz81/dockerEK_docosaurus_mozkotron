@@ -1,0 +1,4 @@
+# 109 switch POKLADNY
+
+ID: 10
+IP: 172.25.1.109

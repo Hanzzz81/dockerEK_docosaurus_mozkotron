@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📋 Workflow tvorby obsahu — Mozkotron</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { 
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0f1117; color: #e2e8f0; padding: 24px; line-height: 1.6;
+  }
+  h1 { font-size: 1.6rem; margin-bottom: 8px; color: #f8fafc; }
+  .subtitle { color: #94a3b8; margin-bottom: 32px; font-size: 0.9rem; }
+  
+  .swimlane-container { display: flex; gap: 0; }
+  .swimlane {
+    flex: 1; border-right: 1px solid #1e293b; padding: 0;
+    display: flex; flex-direction: column; min-width: 0;
+  }
+  .swimlane:last-child { border-right: none; }
+  .swimlane-header {
+    padding: 14px 12px; text-align: center; font-weight: 700; font-size: 0.95rem;
+    position: sticky; top: 0; z-index: 10; border-bottom: 2px solid;
+  }
+  .swimlane-header .role-icon { font-size: 1.6rem; display: block; margin-bottom: 2px; }
+  .swimlane-header .role-desc { font-size: 0.7rem; font-weight: 400; opacity: 0.7; }
+  
+  .lane-editor .swimlane-header { background: #1a1a2e; border-color: #7c3aed; color: #c4b5fd; }
+  .lane-system .swimlane-header { background: #1a1a1a; border-color: #64748b; color: #94a3b8; }
+  .lane-claude .swimlane-header { background: #1a2435; border-color: #3b82f6; color: #93c5fd; }
+  .lane-architect .swimlane-header { background: #1a2e1a; border-color: #10b981; color: #6ee7b7; }
+  .lane-reader .swimlane-header { background: #2e1a1a; border-color: #f59e0b; color: #fcd34d; }
+  
+  .swimlane-body { padding: 12px 10px; flex: 1; }
+  
+  .phase-marker {
+    display: flex; align-items: center; gap: 6px; margin: 20px 0 10px 0;
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em;
+    color: #64748b; font-weight: 600;
+  }
+  .phase-marker::after { content: ''; flex: 1; height: 1px; background: #334155; }
+  .phase-marker:first-child { margin-top: 6px; }
+  
+  .card {
+    background: #1e293b; border-radius: 10px; padding: 12px 14px;
+    margin-bottom: 10px; border-left: 3px solid #475569;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .card:hover { background: #263548; transform: translateX(2px); }
+  .card.expanded .card-detail { display: block; }
+  .card-num {
+    display: inline-block; width: 22px; height: 22px; border-radius: 50%;
+    background: #334155; color: #94a3b8; font-size: 0.65rem; font-weight: 700;
+    text-align: center; line-height: 22px; margin-right: 6px; flex-shrink: 0;
+  }
+  .card-header { display: flex; align-items: center; }
+  .card-title { font-weight: 600; font-size: 0.85rem; color: #f1f5f9; }
+  .card-subtitle { font-size: 0.75rem; color: #94a3b8; margin-top: 3px; margin-left: 28px; }
+  .card-detail {
+    display: none; margin-top: 10px; padding-top: 10px;
+    border-top: 1px solid #334155; font-size: 0.78rem; color: #cbd5e1;
+  }
+  .card-detail ul { margin-left: 14px; margin-top: 4px; }
+  .card-detail li { margin-bottom: 3px; }
+  .card-detail strong { color: #f1f5f9; }
+  .card-detail code {
+    background: #0f172a; padding: 2px 5px; border-radius: 4px;
+    font-size: 0.74rem; color: #7dd3fc;
+  }
+  
+  .card-input { border-left-color: #7c3aed; }
+  .card-constraint { border-left-color: #64748b; }
+  .card-ai { border-left-color: #3b82f6; }
+  .card-review { border-left-color: #10b981; }
+  .card-publish { border-left-color: #06b6d4; }
+  .card-access { border-left-color: #f59e0b; }
+  .card-read { border-left-color: #f97316; }
+  .card-feedback { border-left-color: #ef4444; }
+  
+  .flow-arrow {
+    text-align: center; color: #475569; font-size: 1.1rem;
+    margin: 2px 0; line-height: 1;
+  }
+  .flow-cross {
+    text-align: center; color: #64748b; font-size: 0.7rem;
+    padding: 6px 0; font-style: italic; opacity: 0.8;
+  }
+  
+  /* Constraint boxes - special style */
+  .constraint-box {
+    background: #111318; border: 1px solid #334155; border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 10px;
+  }
+  .constraint-box .constraint-title {
+    font-weight: 700; color: #94a3b8; font-size: 0.8rem; margin-bottom: 6px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .constraint-box .constraint-title .lock { color: #64748b; }
+  .constraint-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 4px 0; font-size: 0.75rem; border-bottom: 1px solid #1e293b;
+  }
+  .constraint-row:last-child { border-bottom: none; }
+  .constraint-row .key { color: #64748b; }
+  .constraint-row .val { color: #e2e8f0; font-weight: 500; }
+  
+  /* Type decision tree */
+  .decision-tree {
+    background: linear-gradient(135deg, #111318 0%, #1a1a2e 100%);
+    border: 1px solid #334155; border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 10px;
+  }
+  .decision-tree .dt-title {
+    font-weight: 700; color: #94a3b8; font-size: 0.8rem; margin-bottom: 8px;
+  }
+  .dt-rule {
+    padding: 5px 0; font-size: 0.75rem; border-bottom: 1px solid #1e293b;
+    display: flex; gap: 8px; align-items: flex-start;
+  }
+  .dt-rule:last-child { border-bottom: none; }
+  .dt-if { color: #64748b; flex-shrink: 0; font-weight: 600; }
+  .dt-then { color: #e2e8f0; }
+  .badge {
+    display: inline-block; padding: 1px 6px; border-radius: 3px;
+    font-size: 0.65rem; font-weight: 700;
+  }
+  .badge-bimg { background: #7c3aed33; color: #c4b5fd; border: 1px solid #7c3aed; }
+  .badge-sop { background: #3b82f633; color: #93c5fd; border: 1px solid #3b82f6; }
+  .badge-chl { background: #06b6d433; color: #67e8f9; border: 1px solid #06b6d4; }
+  .badge-law { background: #f59e0b33; color: #fcd34d; border: 1px solid #f59e0b; }
+  .badge-know { background: #10b98133; color: #6ee7b7; border: 1px solid #10b981; }
+  
+  .param-table { width: 100%; font-size: 0.74rem; margin-top: 6px; }
+  .param-table td { padding: 3px 5px; border-bottom: 1px solid #1e293b; vertical-align: top; }
+  .param-table td:first-child { color: #94a3b8; white-space: nowrap; width: 35%; }
+  .param-table td:last-child { color: #e2e8f0; }
+  
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;
+    padding: 10px 14px; background: #1e293b; border-radius: 8px;
+    font-size: 0.72rem;
+  }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-dot { width: 12px; height: 3px; border-radius: 2px; }
+  
+  .expand-hint { font-size: 0.7rem; color: #475569; text-align: center; margin-bottom: 14px; }
+  
+  /* Handoff arrow between lanes */
+  .handoff {
+    background: #0f172a; border: 1px dashed #334155; border-radius: 8px;
+    padding: 8px 12px; margin: 8px 0; text-align: center;
+    font-size: 0.72rem; color: #64748b; font-style: italic;
+  }
+  .handoff .arrow { color: #475569; font-size: 1rem; }
+  
+  @media (max-width: 1100px) {
+    .swimlane-container { flex-direction: column; }
+    .swimlane { border-right: none; border-bottom: 1px solid #1e293b; }
+  }
+</style>
+</head>
+<body>
+
+<h1>📋 Workflow tvorby obsahu — Mozkotron</h1>
+<p class="subtitle">Editor dodá potřebu → Systém constraintuje parametry → Claude vytvoří → Architekt schválí → Čtenář čte a reaguje</p>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div> Lidský vstup</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#64748b"></div> Systémová pravidla</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div> Claude (AI tvorba)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div> Review & publikace</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div> Přístup & čtení</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div> Zpětná vazba</div>
+</div>
+<p class="expand-hint">💡 Klikni na kartu pro detail</p>
+
+<div class="swimlane-container">
+
+  <!-- ===== EDITOR (člověk) ===== -->
+  <div class="swimlane lane-editor">
+    <div class="swimlane-header">
+      <span class="role-icon">👤</span>
+      Editor
+      <div class="role-desc">Člověk — dodává potřebu a vstupy</div>
+    </div>
+    <div class="swimlane-body">
+      
+      <div class="phase-marker">Fáze 1 — Potřeba</div>
+      
+      <div class="card card-input" onclick="this.classList.toggle('expanded')">
+        <div class="card-header"><span class="card-num">1</span><span class="card-title">🎯 Identifikace potřeby</span></div>
+        <div class="card-subtitle">Proč potřebujeme něco zdokumentovat?</div>
+        <div class="card-detail">
+          <strong>Spouštěče:</strong>
+          <ul>
+            <li>Nový proces / pravidlo / rozhodnutí</li>
+            <li>Opakující se otázka od zaměstnanců</li>
+            <li>Chyba způsobená neznalostí</li>
+            <li>Modul AOR Paláce bez dokumentace</li>
+            <li>Zpětná vazba od čtenáře</li>
+          </ul>
+          <strong>Výstup:</strong> „Chci zdokumentovat X, protože Y"
+        </div>
+      </div>
+      
+      <div class="flow-arrow">↓</div>
+      
+      <div class="card card-input" onclick="this.classList.toggle('expanded')">
+        <div class="card-header"><span class="card-num">2</span><span class="card-title">📥 Sběr vstupů</span></div>
+        <div class="card-subtitle">Co editor musí dodat?</div>
+        <div class="card-detail">
+          <strong>Povinné:</strong>
+          <ul>
+            <li>📌 <strong>Obsah / znalost</strong> — co o tématu ví, co je rozhodnuté</li>
+            <li>👤 <strong>Pro koho</strong> — jaká role to bude číst</li>
+            <li>📍 <strong>Téma</strong> — o čem to je (reklamace, fakturace…)</li>
+          </ul>
+          <strong>Volitelné:</strong>
+          <ul>
+            <li>Screenshot, příklad z praxe, existující dokument</li>
+            <li>Zpětná vazba od čtenářů</li>
+          </ul>
+          <strong>Co editor NEŘEŠÍ:</strong>
+          <ul>
+            <li>❌ Jaký typ dokumentu (BIMG/SOP/CHL) — rozhodne systém</li>
+            <li>❌ Formátování — constraintováno pravidly</li>
+            <li>❌ Kam to uložit — vyplývá z AOR struktury</li>
+            <li>❌ Psaní textu — to dělá Claude</li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="handoff"><span class="arrow">→</span> Editor předává vstupy Claudovi</div>
+      
+      <div class="phase-marker">Fáze 4 — Revize</div>
+      
+      <div class="card card-input" onclick="this.classList.toggle('expanded')">
+        <div class="card-header"><span class="card-num">8</span><span class="card-title">🔍 Kontrola výstupu</span></div>
+        <div class="card-subtitle">Editor ověří věcnou správnost</div>
+        <div class="card-detail">
+          Editor kontroluje <strong>jen obsah</strong>:
+          <ul>
+            <li>Je to věcně správné?</li>
+            <li>Chybí něco důležitého?</li>
+            <li>Odpovídá to mé potřebě z kroku 1?</li>
+          </ul>
+          <strong>Nekontroluje:</strong> formát, metadata, umístění — to je strojově zajištěné.
+        </div>
+      </div>
+      
+      <div class="phase-marker">Fáze 6 — Feedback loop</div>
+      
+      <div class="card card-feedback" onclick="this.classList.toggle('expanded')">
+        <div class="card-header"><span class="card-num">—</span><span class="card-title">🔄 Nová potřeba ze zpětné vazby</span></div>
+        <div class="card-subtitle">Feedback čtenáře → nový krok 1</div>
+        <div class="card-detail">
+          Zpětná vazba od čtenářů se transformuje na novou potřebu:
+          <ul>
+            <li>Chybějící SOP → nový vstup pro Claude</li>
+            <li>Nejasný postup → revize existujícího dokumentu</li>
+            <li>Chyba → oprava s novými vstupy</li>
+          </ul>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+
+  <!-- ===== SYSTÉM / PRAVIDLA ===== -->
+  <div class="swimlane lane-system">
+    <div class="swimlane-header">
+      <span class="role-icon">⚙️</span>
+      Systém
+      <div class="role-desc">Centrální pravidla — nikdo je neohýbá</div>
+    </div>
+    <div class="swimlane-body">
+      
+      <div class="phase-marker">Constraint A — Typ dokumentu</div>
+      
+      <div class="decision-tree">
+        <div class="dt-title">🔀 Strojové určení typu</div>
+        <div class="dt-rule">
+          <span class="dt-if">KDYŽ</span>
+          <span class="dt-then">Téma nemá žádnou dokumentaci → <span class="badge badge-bimg">BIMG</span> (vždy první)</span>
+        </div>
+        <div class="dt-rule">
+          <span class="dt-if">KDYŽ</span>
+          <span class="dt-then">Existuje BIMG + editor dodává konkrétní postup pro roli → <span class="badge badge-sop">SOP</span></span>
+        </div>
+        <div class="dt-rule">
+          <span class="dt-if">KDYŽ</span>
+          <span class="dt-then">Existuje BIMG + SOP + potřeba rychlé reference → <span class="badge badge-chl">CHL</span></span>
+        </div>
+        <div class="dt-rule">
+          <span class="dt-if">KDYŽ</span>
+          <span class="dt-then">Závazné pravidlo platné napříč firmou → <span class="badge badge-law">LAW</span></span>
+        </div>
+        <div class="dt-rule">
+          <span class="dt-if">KDYŽ</span>
+          <span class="dt-then">Expertní znalost, produkt, technologie → <span class="badge badge-know">KNOW</span></span>
+        </div>
+      </div>
+      
+      <div class="constraint-box" onclick="this.querySelector('.card-detail')?.classList.toggle('show')" style="cursor:pointer">
+        <div class="constraint-title"><span class="lock">🔒</span> Pravidlo pořadí</div>
+        <div class="constraint-row">
+          <span class="key">Směr tvorby</span>
+          <span class="val">BIMG → SOP → CHL (nikdy obráceně)</span>
+        </div>
+        <div class="constraint-row">
+          <span class="key">Bez BIMG</span>
+          <span class="val">nelze vytvořit SOP ani CHL</span>
+        </div>
+        <div class="constraint-row">
+          <span class="key">Směr revize</span>
+          <span class="val">shora dolů (BIMG změní → SOP+CHL revidovat)</span>
+        </div>
+      </div>
+      
+      <div class="phase-marker">Constraint B — Formát</div>
+      
+      <div class="constraint-box">
+        <div class="constraint-title"><span class="lock">🔒</span> BIMG formát</div>
+        <div class="constraint-row"><span class="key">Rozsah</span><span class="val">Neomezený, pages + subpages</span></div>
+        <div class="constraint-row"><span class="key">Styl</span><span class="val">Souvislý text + diagramy</span></div>
+        <div class="constraint-row"><span class="key">Popisuje</span><span class="val">Co a proč (nikdy „jak")</span></div>
+        <div class="constraint-row"><span class="key">Povinné</span><span class="val">Open Points sekce</span></div>
+      </div>
+      
+      <div class="constraint-box">
+        <div class="constraint-title"><span class="lock">🔒</span> SOP formát</div>
+        <div class="constraint-row"><span class="key">Rozsah</span><span class="val">Bez limitu — délka se řídí tématem (R018)</span></div>
+        <div class="constraint-row"><span class="key">Styl</span><span class="val">Text + obrázky/screenshoty + volitelně diagram</span></div>
+        <div class="constraint-row"><span class="key">Nadpis</span><span class="val">Sloveso v rozkazovacím způsobu</span></div>
+        <div class="constraint-row"><span class="key">Pravidlo</span><span class="val">1 SOP = postup per role</span></div>
+        <div class="constraint-row"><span class="key">Povinné</span><span class="val">Hlavičková tabulka + troubleshooting</span></div>
+        <div class="constraint-row"><span class="key">Jazyk</span><span class="val">Žádné „obvykle", „možná", „asi"</span></div>
+      </div>
+      
+      <div class="constraint-box">
+        <div class="constraint-title"><span class="lock">🔒</span> CHL formát</div>
+        <div class="constraint-row"><span class="key">Rozsah</span><span class="val">1× A4 / 1 obrazovka</span></div>
+        <div class="constraint-row"><span class="key">Styl</span><span class="val">Tabulka nebo diagram (NIKDY odstavce)</span></div>
+        <div class="constraint-row"><span class="key">Jazyk</span><span class="val">Žádné měkké formulace</span></div>
+        <div class="constraint-row"><span class="key">Dual</span><span class="val">Digitálně + laminát na zdi</span></div>
+      </div>
+      
+      <div class="phase-marker">Constraint C — Metadata</div>
+      
+      <div class="constraint-box">
+        <div class="constraint-title"><span class="lock">🔒</span> Frontmatter (povinná pole)</div>
+        <div class="constraint-row"><span class="key">title</span><span class="val">S emoji, plná čeština</span></div>
+        <div class="constraint-row"><span class="key">type</span><span class="val">bimg / sop / chl / law / know</span></div>
+        <div class="constraint-row"><span class="key">audience</span><span class="val">Pole AOR skupin</span></div>
+        <div class="constraint-row"><span class="key">source_bimg</span><span class="val">Cesta k BIMG (povinné u SOP/CHL)</span></div>
+        <div class="constraint-row"><span class="key">version</span><span class="val">Sémantické (1.0, 1.1…)</span></div>
+        <div class="constraint-row"><span class="key">+ další</span><span class="val">sidebar_label, sidebar_position, description, author, date</span></div>
+      </div>
+      
+      <div class="constraint-box">
+        <div class="constraint-title"><span class="lock">🔒</span> Naming konvence</div>
+        <div class="constraint-row"><span class="key">Soubor</span><span class="val"><code>{type}-{tema}.md</code></span></div>
+        <div class="constraint-row"><span class="key">Složky</span><span class="val">kebab-case, bez diakritiky</span></div>
+        <div class="constraint-row"><span class="key">Umístění</span><span class="val">Dle AOR z <code>_structure.json</code></span></div>
+      </div>
+      
+      <div class="phase-marker">Constraint D — Přístup</div>
+      
+      <div class="constraint-box">
+        <div class="constraint-title"><span class="lock">🔒</span> Přístupová matice</div>
+        <div class="constraint-row"><span class="key">BIMG</span><span class="val">👑 Jen architekt</span></div>
+        <div class="constraint-row"><span class="key">SOP / CHL</span><span class="val">👤 Audience dle frontmatter</span></div>
+        <div class="constraint-row"><span class="key">LAW</span><span class="val">👥 Celá firma</span></div>
+        <div class="constraint-row"><span class="key">KNOW</span><span class="val">👤 Dle audience</span></div>
+        <div class="constraint-row"><span class="key">Osa 1</span><span class="val">Hloubka (type) — co smíš vidět</span></div>
+        <div class="constraint-row"><span class="key">Osa 2</span><span class="val">Oblast (audience) — čí oblast vidíš</span></div>
+      </div>
+      
+    </div>
+  </div>
+
+  <!-- ===== CLAUDE (AI) ===== -->
+  <div class="swimlane lane-claude">
+    <div class="swimlane-header">
+      <span class="role-icon">🤖</span>
+      Claude
+      <div class="role-desc">AI — tvorba dokumentů dle pravidel</div>
+    </div>
+    <div class="swimlane-body">
+      
+      <div class="phase-marker">Fáze 2 — Analýza</div>
+      
+      <div class="card card-ai" onclick="this.classList.toggle('expanded')">
+        <div class="card-header"><span class="card-num">3</span><span class="card-title">🔎 Analýza vstupů</span></div>
+        <div class="card-subtitle">Claude přijme vstupy od editora</div>
+        <div class="card-detail">
+          <strong>Claude dělá:</strong>
+          <ul>
+            <li>Přečte vstupy od editora (krok 1 + 2)</li>
+            <li>Podívá se do <code>_structure.json</code> — existuje BIMG pro toto téma?</li>
+            <li>Ověří, do které AOR oblasti a tématu to patří</li>
+            <li>Zjistí <code>sidebar_position</code> pro nový soubor</li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="flow-arrow">↓</div>
+      
+      <div class="card card-ai" onclick="this.classList.toggle('expanded')">
+        <div class="card-header"><span class="card-num">4</span><span class="card-title">⚙️ Aplikace constraintů</span></div>
+        <div class="card-subtitle">Strojové určení parametrů z pravidel</div>
+        <div class="card-detail">
+          Claude <strong>mechanicky</strong> aplikuje systémová pravidla:
+          <ul>
+            <li>🔀 <strong>Typ:</strong> Rozhodne podle decision tree (Constraint A)</li>
+            <li>📏 <strong>Formát:</strong> Zvolí šablonu podle typu (Constraint B)</li>
+            <li>🏷️ <strong>Metadata:</strong> Vyplní frontmatter (Constraint C)</li>
+            <li>📁 <strong>Umístění:</strong> Určí složku a název souboru</li>
+          </ul>
+          <strong>Claude NEROZHODUJE</strong> — jen aplikuje pravidla. Pokud je situace nejednoznačná → ptá se architekta.
+        </div>
+      </div>
+      
+      <div class="flow-arrow">↓</div>
+      
+      <div class="card card-ai" onclick="this.classList.toggle('expanded')">
+        <div class="card-header"><span class="card-num">5</span><span class="card-title">✏️ Tvorba dokumentu</span></div>
+        <div class="card-subtitle">Psaní obsahu podle vstupů a constraintů</div>
+        <div class="card-detail">
+          <strong>Claude tvoří:</strong>
+          <ul>
+            <li>Obsah na základě vstupů od editora</li>
+            <li>Ve formátu definovaném constrainty</li>
+            <li>S kompletním frontmatter</li>
+            <li>S interními odkazy na související dokumenty</li>
+          </ul>
+          <strong>Kontrolní body při tvorbě:</strong>
+          <ul>
+            <li>✅ SOP max 1 obrazovka? (nebo rozdělit)</li>
+            <li>✅ CHL na 1 A4? (nebo zredukovat)</li>
+            <li>✅ BIMG má Open Points?</li>
+            <li>✅ Žádné měkké formulace v SOP/CHL?</li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="handoff"><span class="arrow">→</span> Claude předá k review</div>
+      
+      <div class="phase-marker">Fáze 4 — Opravy</div>
+      
+      <div class="card card-ai" onclick="this.classList.toggle('expanded')">
+        <div class="card-header"><span class="card-num">7</span><span class="card-title">🔧 Zapracování připomínek</span></div>
+        <div class="card-subtitle">Oprava podle review editora/architekta</div>
+        <div class="card-detail">
+          <ul>
+            <li>Věcné připomínky od editora → oprava obsahu</li>
+            <li>Strukturální připomínky od architekta → oprava formátu</li>
+            <li>Aktualizace <code>version</code> pokud zásadní změna</li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="phase-marker">Fáze 5 — Publikace</div>
+      
+      <div class="card card-ai" onclick="this.classList.toggle('expanded')">
+        <div class="card-header"><span class="card-num">9</span><span class="card-title">🚀 Publikace do docs/</span></div>
+        <div class="card-subtitle">Uložení souboru + aktualizace registru</div>
+        <div class="card-detail">
+          <strong>Claude provede:</strong>
+          <ul>
+            <li>1. Uloží <code>.md</code> do správné složky</li>
+            <li>2. Založí složku + <code>_category_.json</code> pokud neexistuje</li>
+            <li>3. Aktualizuje <code>_structure.json</code></li>
+            <li>4. Ověří renderování</li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="phase-marker">Fáze 6 — Kaskádová revize</div>
+      
+      <div class="card card-ai" onclick="this.classList.toggle('expanded')">
+        <div class="card-header"><span class="card-num">11</span><span class="card-title">🔄 Kaskádová revize derivátů</span></div>
+        <div class="card-subtitle">Změna BIMG → revidovat SOP → CHL</div>
+        <div class="card-detail">
+          Když se změní BIMG:
+          <ul>
+            <li>Claude najde všechny SOP/CHL s <code>source_bimg</code> ukazujícím na tento BIMG</li>
+            <li>Přegeneruje je podle aktuálního BIMG</li>
+            <li>Aktualizuje <code>version</code> a <code>date</code></li>
+            <li>Předá k review</li>
+          </ul>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+
+  <!-- ===== ARCHITEKT ===== -->
+  <div class="swimlane lane-architect">
+    <div class="swimlane-header">
+      <span class="role-icon">🏗️</span>
+      Architekt
+      <div class="role-desc">Jan — schvaluje, řeší spory</div>
+    </div>
+    <div class="swimlane-body">
+      
+      <div class="phase-marker">Fáze 0 — Správa pravidel</div>
+      
+      <div class="card card-review" onclick="this.classList.toggle('expanded')">
+        <div class="card-header"><span class="card-num">—</span><span class="card-title">📐 Údržba constraintů</span></div>
+        <div class="card-subtitle">Architekt je jediný, kdo mění pravidla</div>
+        <div class="card-detail">
+          <ul>
+            <li>Definuje a aktualizuje systémová pravidla (sloupec Systém)</li>
+            <li>Rozhoduje spory „jaký typ?" a „kam to patří?"</li>
+            <li>Schvaluje nové tematické bloky v <code>_structure.json</code></li>
+            <li>Pravidla zapisuje do <code>pravidla-projektu.md</code></li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="phase-marker">Fáze 3 — Review</div>
+      
+      <div class="card card-review" onclick="this.classList.toggle('expanded')">
+        <div class="card-header"><span class="card-num">6</span><span class="card-title">✅ Schválení dokumentu</span></div>
+        <div class="card-subtitle">Finální kontrola před publikací</div>
+        <div class="card-detail">
+          <strong>Architekt kontroluje:</strong>
+          <ul>
+            <li>✅ Věcná správnost (spolu s editorem)</li>
+            <li>✅ Správný typ dokumentu?</li>
+            <li>✅ Kompletní frontmatter?</li>
+            <li>✅ Správné umístění v AOR struktuře?</li>
+            <li>✅ Audience správně nastaveno?</li>
+          </ul>
+          <strong>Výsledek:</strong>
+          <ul>
+            <li>✅ Schváleno → Claude publikuje (krok 9)</li>
+            <li>🔄 Vráceno → Claude opraví (krok 7)</li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="phase-marker">Fáze 5 — Viditelnost</div>
+      
+      <div class="card card-access" onclick="this.classList.toggle('expanded')">
+        <div class="card-header"><span class="card-num">10</span><span class="card-title">🔐 Potvrzení viditelnosti</span></div>
+        <div class="card-subtitle">Ověření kdo co uvidí</div>
+        <div class="card-detail">
+          Auth vrstva čte frontmatter automaticky, ale architekt ověří:
+          <ul>
+            <li>Je <code>audience</code> správně? (prodejce nevidí finance)</li>
+            <li>Je <code>type</code> správně? (BIMG skrytý pro uživatele)</li>
+            <li>Speciální případy: cross-AOR dokumenty</li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="phase-marker">Fáze 6 — Údržba</div>
+      
+      <div class="card card-review" onclick="this.classList.toggle('expanded')">
+        <div class="card-header"><span class="card-num">12</span><span class="card-title">📊 Vyhodnocení zpětné vazby</span></div>
+        <div class="card-subtitle">Rozhodování o prioritách</div>
+        <div class="card-detail">
+          <ul>
+            <li>Třídí feedback: oprava vs. nový obsah vs. strukturální změna</li>
+            <li>Rozhoduje priority tvorby (co dokumentovat příště)</li>
+            <li>Periodický audit aktuálnosti (kvartálně?)</li>
+            <li>Analytika: které stránky se čtou, co chybí</li>
+          </ul>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+
+  <!-- ===== ČTENÁŘ ===== -->
+  <div class="swimlane lane-reader">
+    <div class="swimlane-header">
+      <span class="role-icon">👁️</span>
+      Čtenář
+      <div class="role-desc">Zaměstnanec — konzumuje a reaguje</div>
+    </div>
+    <div class="swimlane-body">
+      
+      <div class="phase-marker">Fáze 5 — Přístup</div>
+
+      <div class="card card-read" onclick="this.classList.toggle('expanded')">
+        <div class="card-header"><span class="card-num">—</span><span class="card-title">🔑 Filtrovaný sidebar</span></div>
+        <div class="card-subtitle">Vidí jen to, co mu patří</div>
+        <div class="card-detail">
+          <ul>
+            <li>Prodejce → <code>firma</code> + <code>prodej</code></li>
+            <li>Skladník → <code>firma</code> + <code>nakup</code></li>
+            <li>Nevidí BIMG (jen architekt)</li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="card card-read" onclick="this.classList.toggle('expanded')">
+        <div class="card-header"><span class="card-num">—</span><span class="card-title">📖 Čtení dokumentu</span></div>
+        <div class="card-subtitle">Hledání a čtení relevantního obsahu</div>
+        <div class="card-detail">
+          <strong>Kanály přístupu:</strong>
+          <ul>
+            <li>🗂️ Sidebar navigace (AOR → téma → dokument)</li>
+            <li>🔍 Fulltext search</li>
+            <li>🗺️ Mapa struktury (horní menu)</li>
+            <li>📱 QR kód na pracovišti</li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="flow-arrow">↓</div>
+      
+      <div class="card card-read" onclick="this.classList.toggle('expanded')">
+        <div class="card-header"><span class="card-num">—</span><span class="card-title">⚡ Provedení úkonu</span></div>
+        <div class="card-subtitle">Aplikace postupu v praxi</div>
+        <div class="card-detail">
+          <ul>
+            <li>Provede kroky z SOP</li>
+            <li>Podívá se na CHL pro rychlou referenci</li>
+            <li>Nebo narazí na problém…</li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="phase-marker">Fáze 6 — Zpětná vazba</div>
+      
+      <div class="card card-feedback" onclick="this.classList.toggle('expanded')">
+        <div class="card-header"><span class="card-num">13</span><span class="card-title">💬 Zpětná vazba</span></div>
+        <div class="card-subtitle">Hlášení problémů a návrhů</div>
+        <div class="card-detail">
+          <strong>Typy:</strong>
+          <ul>
+            <li>❌ Chyba v postupu</li>
+            <li>❓ Nejasný krok</li>
+            <li>➕ Chybějící obsah</li>
+            <li>💡 Návrh vylepšení</li>
+          </ul>
+          <strong>Kanály sběru:</strong>
+          <ul>
+            <li>👍👎 Hodnocení na stránce</li>
+            <li>💬 Komentář pod dokumentem</li>
+            <li>📨 Report formulář</li>
+            <li>📊 Automatická analytika</li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="handoff"><span class="arrow">→</span> Feedback → Architekt třídí → Editor/Claude opraví</div>
+      
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

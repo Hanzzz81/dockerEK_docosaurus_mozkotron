@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mozkotron — Mapa znalostí</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    height: calc(100vh - 82px);
+    overflow: hidden;
+    user-select: none;
+  }
+
+  .toolbar {
+    position: fixed; top: 58px; left: 50%; transform: translateX(-50%); z-index: 100;
+    display: flex; gap: 8px; align-items: center;
+    background: rgba(30,41,59,0.92); backdrop-filter: blur(12px);
+    border: 1px solid #475569; border-radius: 12px;
+    padding: 8px 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  .toolbar .logo { font-weight: 700; font-size: 15px; color: #0ea5e9; margin-right: 8px; }
+  .toolbar .sep { width: 1px; height: 20px; background: #475569; margin: 0 4px; }
+  .toolbar button {
+    background: #1e293b; border: 1px solid #475569; border-radius: 8px;
+    padding: 6px 12px; font-size: 13px; color: #cbd5e1; cursor: pointer; transition: all 0.15s;
+  }
+  .toolbar button:hover { background: #334155; border-color: #0ea5e9; color: #0ea5e9; }
+  .search-box {
+    background: #1e293b; border: 1px solid #475569; border-radius: 8px;
+    padding: 6px 12px; font-size: 13px; color: #e2e8f0; width: 200px; outline: none;
+  }
+  .search-box:focus { border-color: #0ea5e9; }
+  .search-box::placeholder { color: #64748b; }
+
+  .legend {
+    position: fixed; bottom: 52px; left: 16px; z-index: 100;
+    background: rgba(30,41,59,0.92); backdrop-filter: blur(8px);
+    border: 1px solid #475569; border-radius: 10px;
+    padding: 12px 16px; font-size: 11px; color: #94a3b8;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+  }
+  .legend-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .legend-row:last-child { margin-bottom: 0; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+
+  .hint {
+    position: fixed; bottom: 52px; right: 16px; z-index: 100;
+    background: rgba(30,41,59,0.92); backdrop-filter: blur(8px);
+    border: 1px solid #475569; border-radius: 10px;
+    padding: 10px 14px; font-size: 11px; color: #94a3b8;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.4); line-height: 1.6;
+  }
+  .hint kbd {
+    background: #334155; border: 1px solid #475569; border-radius: 4px;
+    padding: 1px 5px; font-size: 10px; font-family: inherit;
+  }
+
+  svg { width: 100%; height: calc(100vh - 82px); cursor: grab; }
+  svg:active { cursor: grabbing; }
+  .node { cursor: pointer; }
+  .node:hover .node-card { filter: url(#shadow-hover); }
+  .node.dimmed { opacity: 0.1; transition: opacity 0.3s; }
+  .node.highlighted .node-card { stroke: #0ea5e9 !important; stroke-width: 2.5 !important; }
+  .link-line { fill: none; stroke-linecap: round; }
+  .link-line.dimmed { opacity: 0.04; transition: opacity 0.3s; }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="logo">Mozkotron</span>
+  <span class="sep"></span>
+  <input type="text" class="search-box" placeholder="Hledat… (/)">
+  <span class="sep"></span>
+  <button onclick="expandAll()">Rozbalit</button>
+  <button onclick="collapseAll()">Sbalit</button>
+  <button onclick="resetView()">Vycentrovat</button>
+</div>
+
+<div class="legend">
+  <div class="legend-row"><div class="legend-dot" style="background:#ef4444"></div> BIMG — povinný dokument</div>
+  <div class="legend-row"><div class="legend-dot" style="background:#3b82f6"></div> SOP — standardní postup</div>
+  <div class="legend-row"><div class="legend-dot" style="background:#8b5cf6"></div> CHL — checklist</div>
+  <div class="legend-row"><div class="legend-dot" style="background:#10b981"></div> LAW — legislativa</div>
+  <div class="legend-row"><div class="legend-dot" style="background:#f59e0b"></div> KNOW — znalostní článek</div>
+</div>
+
+<div class="hint">
+  <kbd>kolečko</kbd> zoom · <kbd>tažení</kbd> posun · <kbd>/</kbd> hledat · <kbd>Esc</kbd> zrušit<br>
+  Klik = rozbalit/sbalit · Klik na dokument = otevřít
+</div>
+
+<svg id="canvas"></svg>
+
+<script>
+// ============================================================
+// COLORS
+// ============================================================
+const AOR_COLORS = {
+  '00':'#6366f1','01':'#16a34a','02':'#9333ea','03':'#e11d48',
+  '04':'#eab308','05':'#f97316','06':'#ef4444','07':'#0ea5e9'
+};
+const AOR_BG = {
+  '00':'#eef2ff','01':'#f0fdf4','02':'#faf5ff','03':'#fff1f2',
+  '04':'#fefce8','05':'#fff7ed','06':'#fef2f2','07':'#f0f9ff'
+};
+const TYPE_COLORS = {
+  'BIMG':'#ef4444','SOP':'#3b82f6','CHL':'#8b5cf6','LAW':'#10b981','KNOW':'#f59e0b'
+};
+
+// ============================================================
+// AOR AZIMUTH — from mentální palác (clockwise from top)
+// ============================================================
+// Jeden kruh — Firma je plovoucí nahoře, mimo kruh
+const AOR_ANGLES = {
+  '01': 0,      // Management — 12 hodin
+  '03': 60,     // Růst — 2 hodiny
+  '05': 120,    // Prodej — 4 hodiny
+  '06': 150,    // Dodání — 5 hodin
+  '07': 210,    // Technologie — 7 hodin
+  '04': 240,    // Nákup — 8 hodin
+  '02': 300,    // Finance — 10 hodin
+};
+// Firma (00) je mimo kruh — vykresluje se zvlášť nahoře
+const FIRMA_FLOATING = true;
+
+// ============================================================
+// DATA — docs/ structure
+// ============================================================
+const TREE_DATA = {
+  name: "Mozkotron", _aor: null, children: [
+    // ── 00 FIRMA (325°) ──
+    { name: 'Firma', _aor: '00', children: [
+      { name: 'Datový zákon', _aor: '00', children: [
+        { name: 'Datový zákon', _type:'LAW', _url:'/00-firma/datovy-zakon/datovy-zakon', _aor:'00' },
+        { name: 'Taxonomie dat', _type:'LAW', _url:'/00-firma/datovy-zakon/taxonomie', _aor:'00' },
+      ]},
+      { name: 'Pravidla firmy', _aor: '00', children: [] },
+      { name: 'Jak dokumentujeme', _aor: '00', children: [
+        { name: 'Model dokumentace', _type:'LAW', _url:'/00-firma/jak-dokumentujeme/model-dokumentace', _aor:'00' },
+        { name: 'Metodika Big Image', _type:'LAW', _url:'/00-firma/jak-dokumentujeme/metodika-big-image', _aor:'00' },
+        { name: 'Metodika SOP', _type:'LAW', _url:'/00-firma/jak-dokumentujeme/metodika-sop', _aor:'00' },
+        { name: 'Metodika CHL', _type:'LAW', _url:'/00-firma/jak-dokumentujeme/metodika-chl', _aor:'00' },
+        { name: 'CHL: Kterou vrstvu?', _type:'CHL', _url:'/00-firma/jak-dokumentujeme/chl-kterou-vrstvu-pouzit', _aor:'00' },
+        { name: 'SOP: Založ BIMG', _type:'SOP', _url:'/00-firma/jak-dokumentujeme/sop-zaloz-bimg', _aor:'00' },
+        { name: 'SOP: Napiš SOP', _type:'SOP', _url:'/00-firma/jak-dokumentujeme/sop-napis-sop', _aor:'00' },
+        { name: 'SOP: Vyrob CHL', _type:'SOP', _url:'/00-firma/jak-dokumentujeme/sop-vyrob-chl', _aor:'00' },
+      ]},
+    ]},
+    // ── 01 MANAGEMENT (0°) ──
+    { name: 'Management', _aor: '01', children: [
+      { name: 'Strategie', _aor: '01', children: [] },
+      { name: 'Organizace', _aor: '01', children: [] },
+      { name: 'Řízení a kontrola', _aor: '01', children: [] },
+      { name: 'Lidé a kultura', _aor: '01', children: [] },
+      { name: 'Kapacity a fokus', _aor: '01', children: [] },
+    ]},
+    // ── 02 FINANCE (275°) ──
+    { name: 'Finance', _aor: '02', children: [
+      { name: 'Ekonomický model', _aor: '02', children: [] },
+      { name: 'Cashflow', _aor: '02', children: [] },
+      { name: 'Nákladové řízení', _aor: '02', children: [] },
+      { name: 'Účetnictví', _aor: '02', children: [] },
+    ]},
+    // ── 03 RŮST (55°) ──
+    { name: 'Růst', _aor: '03', children: [
+      { name: 'Tržní pozice', _aor: '03', children: [] },
+      { name: 'Akvizice', _aor: '03', children: [] },
+      { name: 'Předání leadů', _aor: '03', children: [] },
+    ]},
+    // ── 04 NÁKUP (105°) ──
+    { name: 'Nákup', _aor: '04', children: [
+      { name: 'Dodavatelé', _aor: '04', children: [] },
+      { name: 'Objednávky', _aor: '04', children: [] },
+      { name: 'Sklad', _aor: '04', children: [] },
+    ]},
+    // ── 05 PRODEJ (140°) ──
+    { name: 'Prodej', _aor: '05', children: [
+      { name: 'Nabídka', _aor: '05', children: [] },
+      { name: 'Obchodní výkon', _aor: '05', children: [] },
+      { name: 'Zákaznický vztah', _aor: '05', children: [] },
+    ]},
+    // ── 06 DODÁNÍ (180°) ──
+    { name: 'Dodání', _aor: '06', children: [
+      { name: 'Realizace', _aor: '06', children: [] },
+      { name: 'Logistika', _aor: '06', children: [] },
+      { name: 'Reklamace', _aor: '06', children: [] },
+      { name: 'Kvalita', _aor: '06', children: [] },
+    ]},
+    // ── 07 TECHNOLOGIE (220°) ──
+    { name: 'Technologie', _aor: '07', children: [
+      { name: 'IT strategie', _aor: '07', children: [] },
+      { name: 'Vývoj', _aor: '07', children: [] },
+      { name: 'Provoz IT', _aor: '07', children: [] },
+      { name: 'Fyz. bezpečnost', _aor: '07', children: [] },
+      { name: 'Infrastruktura', _aor: '07', children: [] },
+      { name: 'Objekt a BOZP', _aor: '07', children: [] },
+      { name: 'Synology', _aor: '07', children: [
+        { name: 'Disková architektura', _type:'LAW', _url:'/07-technologie/synology/diskova-architektura', _aor:'07' },
+        { name: 'AOR disky', _type:'LAW', _url:'/07-technologie/synology/aor-disky', _aor:'07' },
+        { name: 'USE disky', _type:'LAW', _url:'/07-technologie/synology/use-disky', _aor:'07' },
+        { name: 'XPR disky', _type:'LAW', _url:'/07-technologie/synology/xpr-disky', _aor:'07' },
+      ]},
+    ]},
+  ]
+};
+
+// ============================================================
+// SVG SETUP
+// ============================================================
+const W = window.innerWidth, H = window.innerHeight;
+const svg = d3.select('#canvas');
+const defs = svg.append('defs');
+
+const sf = defs.append('filter').attr('id','shadow')
+  .attr('x','-30%').attr('y','-30%').attr('width','160%').attr('height','160%');
+sf.append('feDropShadow').attr('dx',0).attr('dy',2).attr('stdDeviation',5)
+  .attr('flood-color','rgba(0,0,0,0.07)');
+const shf = defs.append('filter').attr('id','shadow-hover')
+  .attr('x','-30%').attr('y','-30%').attr('width','160%').attr('height','160%');
+shf.append('feDropShadow').attr('dx',0).attr('dy',4).attr('stdDeviation',10)
+  .attr('flood-color','rgba(0,0,0,0.13)');
+
+const g = svg.append('g');
+const linkGroup = g.append('g');
+const nodeGroup = g.append('g');
+
+const zoomBeh = d3.zoom().scaleExtent([0.15, 3])
+  .on('zoom', e => g.attr('transform', e.transform));
+svg.call(zoomBeh);
+
+// ============================================================
+// TAG TREE WITH COLLAPSE STATE
+// ============================================================
+let idC = 0;
+function tagTree(node, depth, parentAor) {
+  node._id = idC++;
+  node._depth = depth;
+  node._aor = node._aor || parentAor;
+  if (!node.children) node.children = [];
+  if (depth >= 2 && node.children.length > 0) {
+    node._children = node.children; node.children = [];
+  }
+  (node.children || []).forEach(c => tagTree(c, depth + 1, node._aor));
+  (node._children || []).forEach(c => tagTree(c, depth + 1, node._aor));
+}
+tagTree(TREE_DATA, 0, null);
+
+function toggle(d) {
+  if (d._children) { d.children = d._children; d._children = null; }
+  else if (d.children && d.children.length) { d._children = d.children; d.children = []; }
+}
+function walkAll(node, fn) {
+  fn(node);
+  (node.children || []).forEach(c => walkAll(c, fn));
+  (node._children || []).forEach(c => walkAll(c, fn));
+}
+
+// ============================================================
+// CUSTOM RADIAL LAYOUT — azimuth-locked wedges
+// ============================================================
+function layoutNodes() {
+  const nodes = [];
+  const links = [];
+  const AOR_RADIUS = 240;   // jeden kruh (zvětšený)
+  const SUB_OFFSET = 180;   // subtémata (více prostoru)
+  const DOC_OFFSET = 140;   // dokumenty
+
+  // Root
+  const root = TREE_DATA;
+  root._x = 0; root._y = 0;
+  nodes.push(root);
+
+  // AOR level (depth 1)
+  const aors = root.children || [];
+  aors.forEach(aor => {
+    // Firma (00) — plovoucí nahoře mimo kruh
+    if (aor._aor === '00') {
+      aor._x = 0;
+      aor._y = -AOR_RADIUS - SUB_OFFSET - 120; // hodně nad kruhem — za Management subtopics
+      aor._angleDeg = 0;
+      aor._isFloating = true;
+      nodes.push(aor);
+      links.push({ source: root, target: aor });
+
+      // Firma subtopics — horizontálně vedle sebe
+      const subs = aor.children || [];
+      const spacing = 180;
+      const startX = -(subs.length - 1) * spacing / 2;
+      subs.forEach((sub, i) => {
+        sub._x = startX + i * spacing;
+        sub._y = aor._y - 80;
+        sub._angleDeg = 0;
+        nodes.push(sub);
+        links.push({ source: aor, target: sub });
+
+        // Firma documents — vertikálně nahoru
+        const docs = sub.children || [];
+        docs.forEach((doc, j) => {
+          doc._x = sub._x;
+          doc._y = sub._y - 40 - j * 36;
+          nodes.push(doc);
+          links.push({ source: sub, target: doc });
+        });
+      });
+      return;
+    }
+
+    // Ostatní AOR — na kruhu
+    const angleDeg = AOR_ANGLES[aor._aor] || 0;
+    const angleRad = (angleDeg - 90) * Math.PI / 180;
+    aor._x = Math.cos(angleRad) * AOR_RADIUS;
+    aor._y = Math.sin(angleRad) * AOR_RADIUS;
+    aor._angleDeg = angleDeg;
+    nodes.push(aor);
+    links.push({ source: root, target: aor });
+
+    // Subtopics — fan out in wedge
+    const subs = aor.children || [];
+    if (subs.length === 0) return;
+
+    const subRadius = AOR_RADIUS + SUB_OFFSET;
+    // Dynamická šířka wedge — více subtémat = širší rozpětí
+    const maxWedge = subs.length > 5 ? 16 : 22;
+    const totalSpread = Math.min(maxWedge * (subs.length - 1), 90); // max 90° spread
+    const wedge = subs.length > 1 ? totalSpread / (subs.length - 1) : 0;
+    const startAngle = angleDeg - totalSpread / 2;
+
+    subs.forEach((sub, i) => {
+      const subAngleDeg = subs.length === 1 ? angleDeg : startAngle + i * wedge;
+      const subAngleRad = (subAngleDeg - 90) * Math.PI / 180;
+      sub._x = Math.cos(subAngleRad) * subRadius;
+      sub._y = Math.sin(subAngleRad) * subRadius;
+      sub._angleDeg = subAngleDeg;
+      nodes.push(sub);
+      links.push({ source: aor, target: sub });
+
+      // Documents
+      const docs = sub.children || [];
+      if (docs.length === 0) return;
+
+      const docRadius = subRadius + DOC_OFFSET;
+      const docWedge = Math.min(10, 40 / docs.length);
+      const docTotal = docWedge * (docs.length - 1);
+      const docStart = subAngleDeg - docTotal / 2;
+
+      docs.forEach((doc, j) => {
+        const docAngleDeg = docs.length === 1 ? subAngleDeg : docStart + j * docWedge;
+        const docAngleRad = (docAngleDeg - 90) * Math.PI / 180;
+        doc._x = Math.cos(docAngleRad) * docRadius;
+        doc._y = Math.sin(docAngleRad) * docRadius;
+        nodes.push(doc);
+        links.push({ source: sub, target: doc });
+      });
+    });
+  });
+
+  return { nodes, links };
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function render(animate) {
+  const { nodes, links } = layoutNodes();
+  const dur = animate ? 500 : 0;
+
+  // --- Links ---
+  const linkSel = linkGroup.selectAll('.link-line')
+    .data(links, d => d.source._id + '-' + d.target._id);
+  linkSel.exit().transition().duration(dur).attr('opacity', 0).remove();
+  const linkEnter = linkSel.enter().append('path').attr('class','link-line').attr('opacity', 0);
+  linkEnter.merge(linkSel)
+    .attr('stroke', d => {
+      const aor = d.target._aor;
+      return aor ? AOR_COLORS[aor] + '50' : '#d5cfc340';
+    })
+    .attr('stroke-width', d => d.source._depth === 0 ? 3 : (d.source._depth === 1 ? 2 : 1.5))
+    .transition().duration(dur)
+    .attr('d', d => {
+      const sx = d.source._x, sy = d.source._y, tx = d.target._x, ty = d.target._y;
+      const mx = (sx + tx) / 2, my = (sy + ty) / 2;
+      // Curved lines that bend toward center
+      const cx1 = sx + (tx - sx) * 0.4, cy1 = sy;
+      const cx2 = sx + (tx - sx) * 0.6, cy2 = ty;
+      return `M${sx},${sy} C${cx1},${cy1} ${cx2},${cy2} ${tx},${ty}`;
+    })
+    .attr('opacity', 1);
+
+  // --- Nodes ---
+  const nodeSel = nodeGroup.selectAll('.node')
+    .data(nodes, d => d._id);
+  nodeSel.exit().transition().duration(dur).attr('opacity', 0).remove();
+
+  const nodeEnter = nodeSel.enter().append('g').attr('class','node').attr('opacity', 0);
+  nodeEnter.append('rect').attr('class','node-card');
+  nodeEnter.append('rect').attr('class','node-accent');
+  nodeEnter.append('rect').attr('class','node-badge-bg');
+  nodeEnter.append('text').attr('class','node-badge-text');
+  nodeEnter.append('text').attr('class','node-label');
+  nodeEnter.append('text').attr('class','node-count');
+
+  const all = nodeEnter.merge(nodeSel);
+
+  all.on('click', (e, d) => {
+    e.stopPropagation();
+    if (d._url) { window.location.href = d._url; return; }
+    if (d._children || (d.children && d.children.length)) { toggle(d); render(true); }
+  });
+
+  // Dimensions
+  function cw(d) { return d._depth === 0 ? 140 : d._depth === 1 ? 130 : d._depth === 2 ? 120 : 160; }
+  function ch(d) { return d._depth === 0 ? 44 : d._depth === 1 ? 38 : d._depth === 2 ? 32 : 28; }
+
+  // Position
+  all.transition().duration(dur)
+    .attr('transform', d => `translate(${d._x},${d._y})`)
+    .attr('opacity', 1);
+
+  // Card
+  all.select('.node-card')
+    .attr('x', d => -cw(d)/2).attr('y', d => -ch(d)/2)
+    .attr('width', d => cw(d)).attr('height', d => ch(d))
+    .attr('rx', 8).attr('ry', 8)
+    .attr('fill', d => d._depth === 0 ? '#0ea5e9' : (AOR_BG[d._aor] || '#1e293b'))
+    .attr('stroke', d => d._depth === 0 ? 'none' : (AOR_COLORS[d._aor] || '#475569') + '50')
+    .attr('stroke-width', d => d._depth === 1 ? 2 : 1)
+    .attr('filter', 'url(#shadow)');
+
+  // Accent bar
+  all.select('.node-accent')
+    .attr('x', d => -cw(d)/2).attr('y', d => -ch(d)/2)
+    .attr('width', d => d._depth === 0 ? 0 : 4)
+    .attr('height', d => ch(d)).attr('rx', 2)
+    .attr('fill', d => AOR_COLORS[d._aor] || 'transparent');
+
+  // Type badge
+  all.select('.node-badge-bg')
+    .attr('x', d => d._type ? cw(d)/2 - 42 : 0).attr('y', -8)
+    .attr('width', d => d._type ? 36 : 0)
+    .attr('height', d => d._type ? 16 : 0)
+    .attr('rx', 4).attr('fill', d => TYPE_COLORS[d._type] || 'transparent');
+
+  all.select('.node-badge-text')
+    .attr('x', d => d._type ? cw(d)/2 - 24 : 0).attr('y', 3)
+    .attr('text-anchor','middle').attr('font-size',9).attr('font-weight',600)
+    .attr('fill','#fff').text(d => d._type || '');
+
+  // Label
+  all.select('.node-label')
+    .attr('x', d => d._depth === 0 ? 0 : -cw(d)/2 + 12)
+    .attr('y', d => d._depth === 0 ? 5 : 4)
+    .attr('text-anchor', d => d._depth === 0 ? 'middle' : 'start')
+    .attr('font-size', d => [16, 13, 11.5, 10.5][Math.min(d._depth, 3)])
+    .attr('font-weight', d => d._depth <= 1 ? 700 : (d._depth === 2 ? 600 : 400))
+    .attr('fill', d => d._depth === 0 ? '#fff' : '#1e293b')
+    .text(d => {
+      const max = d._depth <= 1 ? 16 : (d._depth === 2 ? 14 : 20);
+      return d.name.length > max ? d.name.slice(0, max) + '…' : d.name;
+    });
+
+  // Count / expand indicator
+  all.select('.node-count')
+    .attr('x', d => cw(d)/2 - 12).attr('y', 4)
+    .attr('text-anchor','middle').attr('font-size',11).attr('fill','#64748b')
+    .text(d => {
+      if (d._children && d._children.length) return '+' + d._children.length;
+      if (d.children && d.children.length && d._depth >= 2) return '−';
+      return '';
+    });
+}
+
+// ============================================================
+// TOOLBAR
+// ============================================================
+function expandAll() {
+  walkAll(TREE_DATA, n => { if (n._children) { n.children = n._children; n._children = null; } });
+  render(true);
+}
+function collapseAll() {
+  walkAll(TREE_DATA, n => {
+    if (n.children && n.children.length && n._depth >= 2) { n._children = n.children; n.children = []; }
+  });
+  render(true);
+}
+function resetView() {
+  svg.transition().duration(600).call(zoomBeh.transform,
+    d3.zoomIdentity.translate(W/2, H/2).scale(0.75));
+}
+
+// ============================================================
+// SEARCH
+// ============================================================
+const searchBox = document.querySelector('.search-box');
+searchBox.addEventListener('input', () => {
+  const q = searchBox.value.toLowerCase().trim();
+  if (!q) {
+    nodeGroup.selectAll('.node').classed('dimmed',false).classed('highlighted',false);
+    linkGroup.selectAll('.link-line').classed('dimmed',false);
+    return;
+  }
+  const matchIds = new Set();
+  function find(node) {
+    const m = node.name.toLowerCase().includes(q);
+    let cm = false;
+    (node.children||[]).forEach(c => { if(find(c)) cm=true; });
+    (node._children||[]).forEach(c => { if(find(c)) cm=true; });
+    if (m || cm) { matchIds.add(node._id); return true; }
+    return false;
+  }
+  find(TREE_DATA);
+  let rr = false;
+  walkAll(TREE_DATA, n => {
+    if (matchIds.has(n._id) && n._children) { n.children = n._children; n._children = null; rr = true; }
+  });
+  if (rr) render(true);
+  setTimeout(() => {
+    nodeGroup.selectAll('.node')
+      .classed('dimmed', d => !matchIds.has(d._id))
+      .classed('highlighted', d => d.name.toLowerCase().includes(q));
+    linkGroup.selectAll('.link-line')
+      .classed('dimmed', d => !matchIds.has(d.source._id) || !matchIds.has(d.target._id));
+  }, rr ? 200 : 10);
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === '/' && document.activeElement !== searchBox) { e.preventDefault(); searchBox.focus(); }
+  if (e.key === 'Escape') { searchBox.value=''; searchBox.dispatchEvent(new Event('input')); searchBox.blur(); }
+});
+
+// ============================================================
+// INIT
+// ============================================================
+render(false);
+svg.call(zoomBeh.transform, d3.zoomIdentity.translate(W/2, H/2).scale(0.75));
+</script>
+<script src="/js/sidebar-tree.js"></script>
+<script src="/js/status-bar.js"></script>
+</body>
+</html>

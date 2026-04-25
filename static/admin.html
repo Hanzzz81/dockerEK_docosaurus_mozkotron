@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mozkotron — Uživatelé a skupiny</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #0f172a; color: #e2e8f0; line-height: 1.6;
+    padding: 1.5rem; max-width: 1100px; margin: 0 auto;
+  }
+  h1 { font-size: 1.4rem; color: #f8fafc; margin-bottom: 0.3rem; }
+  .subtitle { color: #94a3b8; font-size: 0.85rem; margin-bottom: 1.5rem; }
+  a { color: #38bdf8; text-decoration: none; }
+  a:hover { text-decoration: underline; color: #0ea5e9; }
+
+  .tabs { display: flex; gap: 0; margin-bottom: 1.5rem; border-bottom: 1px solid #334155; }
+  .tab { padding: 0.6rem 1.2rem; cursor: pointer; font-size: 0.9rem; color: #94a3b8; border-bottom: 2px solid transparent; transition: all 0.2s; }
+  .tab:hover { color: #cbd5e1; }
+  .tab.active { color: #38bdf8; border-bottom-color: #38bdf8; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th { text-align: left; padding: 0.7rem 0.8rem; color: #38bdf8; font-weight: 600; border-bottom: 1px solid #334155; }
+  td { padding: 0.6rem 0.8rem; border-bottom: 1px solid #334155; vertical-align: middle; }
+  tr:hover td { background: #334155; }
+  tr.clickable { cursor: pointer; }
+
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 600; margin: 1px 2px; cursor: pointer; transition: opacity 0.15s; }
+  .badge:hover { opacity: 0.8; }
+  .badge-vedeni { background: #f59e0b22; color: #f59e0b; }
+  .badge-spravci { background: #f59e0b22; color: #f59e0b; }
+  .badge-editori { background: #10b98122; color: #10b981; }
+  .badge-uzivatele { background: #0ea5e922; color: #0ea5e9; }
+  .badge-default { background: #334155; color: #94a3b8; }
+
+  .btn { background: #0ea5e9; color: #fff; border: none; padding: 0.45rem 0.9rem; border-radius: 6px; cursor: pointer; font-size: 0.82rem; font-weight: 600; transition: background 0.15s; }
+  .btn:hover { background: #38bdf8; }
+  .btn-sm { padding: 0.3rem 0.6rem; font-size: 0.75rem; }
+  .btn-danger { background: #ef4444; }
+  .btn-danger:hover { background: #dc2626; }
+  .btn-ghost { background: transparent; border: 1px solid #334155; color: #94a3b8; }
+  .btn-ghost:hover { border-color: #38bdf8; color: #cbd5e1; }
+
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; }
+  .modal-backdrop.open { display: flex; }
+  .modal { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 2rem; width: 520px; max-width: 92vw; max-height: 90vh; overflow-y: auto; }
+  .modal h2 { font-size: 1.1rem; color: #f8fafc; margin-bottom: 1.2rem; }
+
+  .field { margin-bottom: 1rem; }
+  .field label { display: block; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; margin-bottom: 0.35rem; }
+  .field input[type="text"], .field select { width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 0.5rem 0.7rem; color: #e2e8f0; font-size: 0.9rem; }
+  .field input:focus, .field select:focus { outline: none; border-color: #38bdf8; }
+  .field textarea { width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 0.5rem 0.7rem; color: #e2e8f0; font-size: 0.9rem; min-height: 60px; resize: vertical; }
+  .field-row { display: flex; gap: 0.8rem; }
+  .field-row .field { flex: 1; }
+
+  .check-group { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .check-group label { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; text-transform: none; letter-spacing: 0; color: #cbd5e1; cursor: pointer; background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 0.4rem 0.7rem; transition: border-color 0.15s; }
+  .check-group label:hover { border-color: #38bdf8; }
+  .check-group input[type="checkbox"] { accent-color: #38bdf8; }
+
+  .modal-actions { display: flex; gap: 0.8rem; justify-content: flex-end; margin-top: 1.5rem; }
+
+  /* Avatar / Photo */
+  .avatar { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; font-size: 0.85rem; flex-shrink: 0; background: #0ea5e9; overflow: hidden; }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .avatar-lg { width: 64px; height: 64px; font-size: 1.5rem; cursor: pointer; position: relative; }
+  .avatar-lg:hover::after { content: '📷'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); font-size: 1.2rem; border-radius: 50%; }
+
+  /* Group icon */
+  .group-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+
+  /* Detail panel */
+  .detail-card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 1.5rem; margin-bottom: 1rem; }
+  .detail-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+  .detail-header h3 { font-size: 1.1rem; color: #f8fafc; }
+  .detail-meta { font-size: 0.82rem; color: #94a3b8; }
+  .detail-section { margin-top: 1rem; }
+  .detail-section h4 { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; margin-bottom: 0.5rem; }
+  .member-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .member-chip { display: flex; align-items: center; gap: 0.4rem; background: #0f172a; border: 1px solid #334155; border-radius: 20px; padding: 0.3rem 0.7rem 0.3rem 0.3rem; font-size: 0.82rem; cursor: pointer; transition: border-color 0.15s; }
+  .member-chip:hover { border-color: #38bdf8; }
+  .member-chip .avatar { width: 24px; height: 24px; font-size: 0.65rem; }
+
+  .tag-allow { font-size: 0.72rem; background: #10b98122; color: #10b981; padding: 2px 6px; border-radius: 6px; }
+
+  .empty-state { text-align: center; color: #64748b; padding: 2rem; font-size: 0.9rem; }
+  .nav-links { margin-bottom: 1.5rem; font-size: 0.85rem; }
+  .msg { padding: 0.6rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.85rem; display: none; }
+  .msg-ok { background: #10b98122; color: #10b981; }
+  .msg-err { background: #ef444422; color: #ef4444; }
+  .back-link { font-size: 0.82rem; color: #38bdf8; cursor: pointer; margin-bottom: 1rem; display: inline-block; }
+  .back-link:hover { text-decoration: underline; }
+
+  /* Icon picker */
+  .icon-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 0.4rem; }
+  .icon-option { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; background: #0f172a; border: 2px solid #334155; border-radius: 8px; cursor: pointer; transition: all 0.15s; }
+  .icon-option:hover { border-color: #38bdf8; }
+  .icon-option.selected { border-color: #38bdf8; background: #334155; }
+
+  /* Matice — Přehled */
+  .matrix-wrap { overflow-x: auto; margin-bottom: 1rem; }
+  .matrix-table { border-collapse: collapse; font-size: 0.82rem; }
+  .matrix-table th { padding: 0.5rem 0.6rem; color: #38bdf8; font-weight: 600; border-bottom: 1px solid #334155; white-space: nowrap; cursor: pointer; }
+  .matrix-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid #334155; text-align: center; }
+  .matrix-table tr:hover td { background: #334155; }
+  .matrix-table th.matrix-group-head { text-align: center; font-size: 0.78rem; min-width: 60px; }
+  .matrix-table th.matrix-group-head:hover { background: #334155; }
+  .matrix-check { color: #10b981; font-weight: 700; font-size: 1rem; }
+  .matrix-empty { color: #334155; }
+  .matrix-user-name { text-align: left !important; white-space: nowrap; cursor: pointer; }
+  .matrix-user-name:hover { color: #38bdf8; }
+
+  /* Expandable panel */
+  .expand-panel { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 1rem 1.2rem; margin: 0.5rem 0 1rem; animation: slideDown 0.2s ease; }
+  @keyframes slideDown { from { opacity: 0; max-height: 0; } to { opacity: 1; max-height: 500px; } }
+  .expand-panel h4 { font-size: 0.85rem; color: #38bdf8; margin-bottom: 0.6rem; }
+  .expand-panel .close-panel { float: right; cursor: pointer; color: #94a3b8; font-size: 0.9rem; }
+  .expand-panel .close-panel:hover { color: #ef4444; }
+
+  /* Dashboard config */
+  .dash-widget-card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 0.8rem; }
+  .dash-widget-header { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.8rem; }
+  .dash-widget-header .dwh-icon { font-size: 1.3rem; }
+  .dash-widget-header .dwh-title { font-weight: 600; color: #f8fafc; font-size: 0.95rem; flex: 1; }
+  .dash-toggle { position: relative; width: 42px; height: 24px; background: #334155; border-radius: 12px; cursor: pointer; transition: background 0.2s; flex-shrink: 0; }
+  .dash-toggle.on { background: #0ea5e9; }
+  .dash-toggle .dot { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: #fff; border-radius: 50%; transition: left 0.2s; }
+  .dash-toggle.on .dot { left: 21px; }
+  .dash-widget-desc { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.6rem; }
+  .dash-links-list { list-style: none; }
+  .dash-links-list li { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0; border-bottom: 1px solid #334155; font-size: 0.82rem; }
+  .dash-links-list li:last-child { border-bottom: none; }
+  .dash-links-list .dl-label { flex: 1; color: #e2e8f0; }
+  .dash-links-list .dl-url { color: #94a3b8; font-size: 0.75rem; max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
+  .dash-links-list .dl-remove { color: #ef4444; cursor: pointer; font-size: 0.8rem; opacity: 0.6; }
+  .dash-links-list .dl-remove:hover { opacity: 1; }
+  .dash-add-link { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+  .dash-add-link input { flex: 1; background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 0.4rem 0.6rem; color: #e2e8f0; font-size: 0.82rem; }
+  .dash-add-link input:focus { outline: none; border-color: #38bdf8; }
+
+  /* Toggle switch — nastavení panel */
+  .toggle-switch {
+    position: relative; width: 44px; height: 24px; flex-shrink: 0; margin-left: 1rem;
+  }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute; cursor: pointer; inset: 0;
+    background: #334155; border-radius: 24px; transition: all 0.3s;
+  }
+  .toggle-slider::before {
+    content: ''; position: absolute; height: 18px; width: 18px;
+    left: 3px; bottom: 3px; background: #64748b;
+    border-radius: 50%; transition: all 0.3s;
+  }
+  .toggle-switch input:checked + .toggle-slider { background: #0ea5e9; }
+  .toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); background: #fff; }
+</style>
+</head>
+<body>
+
+<div style="background:linear-gradient(135deg,#1e293b 0%,#0f172a 50%,#0f172a 100%);border:1px solid #334155;border-radius:12px;padding:1.2rem 1.5rem;margin-bottom:1.2rem;display:flex;align-items:center;gap:1rem;">
+  <span style="font-size:2.2rem;filter:drop-shadow(0 0 8px rgba(56,189,248,0.4));">⚙️</span>
+  <div>
+    <h1 style="margin:0;font-size:1.3rem;color:#38bdf8;">Admin</h1>
+    <p style="margin:0;font-size:0.78rem;color:#94a3b8;">Správa systému Mozkotron — uživatelé, skupiny, přístupy, nastavení</p>
+  </div>
+</div>
+
+<div class="msg msg-ok" id="msgOk"></div>
+<div class="msg msg-err" id="msgErr"></div>
+
+<div class="tabs" id="mainTabs">
+  <div class="tab active" data-panel="overview">Přehled</div>
+  <div class="tab" data-panel="groups">Skupiny</div>
+  <div class="tab" data-panel="users">Uživatelé</div>
+  <div class="tab" data-panel="dashboard">Dashboard</div>
+  <div class="tab" data-panel="themes">Barvy sekcí</div>
+  <div class="tab" data-panel="settings">Nastavení</div>
+</div>
+
+<!-- ======= PŘEHLED — MATICE ======= -->
+<div class="panel active" id="panel-overview">
+  <div id="matrixContainer"><div style="text-align:center;color:#8b8070;padding:2rem;">Načítám matici...</div></div>
+  <div id="matrixExpandPanel"></div>
+</div>
+
+<!-- ======= UŽIVATELÉ ======= -->
+<div class="panel" id="panel-users">
+  <div style="margin-bottom:1rem;">
+    <button class="btn" onclick="openUserModal()">+ Přidat uživatele</button>
+  </div>
+  <div id="usersListContainer"></div>
+</div>
+
+<!-- ======= SKUPINY ======= -->
+<div class="panel" id="panel-groups">
+  <div style="margin-bottom:1rem;">
+    <button class="btn" onclick="openGroupModal()">+ Přidat skupinu</button>
+  </div>
+  <div id="groupsListContainer"></div>
+</div>
+
+<!-- ======= DASHBOARD — konfigurace widgetů ======= -->
+<div class="panel" id="panel-dashboard">
+  <p style="color:#8b8070;font-size:0.85rem;margin-bottom:1rem;">Nastavení widgetů na domovské stránce (<a href="/">/</a>). Změny se projeví okamžitě po uložení.</p>
+  <div id="dashboardConfigContainer"><div style="text-align:center;color:#8b8070;padding:2rem;">Načítám...</div></div>
+</div>
+
+<!-- ======= BARVY SEKCÍ — per-sekce barevné schéma ======= -->
+<div class="panel" id="panel-themes">
+  <p style="color:#8b8070;font-size:0.85rem;margin-bottom:1rem;">Barevný styl pro každou sekci dokumentace. Vyber preset z nabídky — dědí se na podstránky. Změny se projeví po uložení a refreshi.</p>
+  <div id="themesContainer"><div style="text-align:center;color:#8b8070;padding:2rem;">Načítám strom dokumentů...</div></div>
+  <div style="margin-top:1rem;">
+    <button class="btn" onclick="saveThemes()">💾 Uložit témata</button>
+  </div>
+</div>
+
+<!-- ======= NASTAVENÍ — systémové nastavení ======= -->
+<div class="panel" id="panel-settings">
+  <!-- Navigace -->
+  <div class="detail-card">
+    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.3rem;">
+      <span style="font-size:1.1rem;">🧭</span>
+      <h3 style="font-size:1rem;color:#1a1710;margin:0;">Navigace</h3>
+    </div>
+    <p style="font-size:0.82rem;color:#8b8070;margin-bottom:1rem;">Nastavení navigačních prvků pro rychlou orientaci mezi sekcemi.</p>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0.8rem 0;border-bottom:1px solid #e8e2d4;">
+      <div>
+        <div style="font-size:0.9rem;color:#4a4538;font-weight:500;">Horní navigační lišta</div>
+        <div style="font-size:0.78rem;color:#8b8070;margin-top:0.15rem;">Záložky v horní části stránky pro rychlé přepínání mezi sekcemi.</div>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="toggleTopNav" onchange="handleTopNavToggle(this.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0.8rem 0;">
+      <div>
+        <div style="font-size:0.9rem;color:#4a4538;font-weight:500;">Spodní stavový řádek</div>
+        <div style="font-size:0.78rem;color:#8b8070;margin-top:0.15rem;">Persistentní lišta ve spodní části s uživatelskými statistikami a odkazy.</div>
+      </div>
+      <span style="color:#059669;font-size:0.75rem;font-weight:600;">Vždy zapnuto</span>
+    </div>
+  </div>
+
+  <!-- Systém -->
+  <div class="detail-card" style="margin-top:1rem;">
+    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.3rem;">
+      <span style="font-size:1.1rem;">🔧</span>
+      <h3 style="font-size:1rem;color:#1a1710;margin:0;">Systém</h3>
+    </div>
+    <p style="font-size:0.82rem;color:#8b8070;margin-bottom:1rem;">Informace o systému a diagnostika.</p>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0.8rem 0;border-bottom:1px solid #e8e2d4;">
+      <div>
+        <div style="font-size:0.9rem;color:#4a4538;font-weight:500;">Verze</div>
+        <div style="font-size:0.78rem;color:#8b8070;margin-top:0.15rem;">Mozkotron — Docusaurus 3.10 + Express</div>
+      </div>
+      <span style="color:#a09882;font-size:0.82rem;">v1.0</span>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0.8rem 0;">
+      <div>
+        <div style="font-size:0.9rem;color:#4a4538;font-weight:500;">Server</div>
+        <div style="font-size:0.78rem;color:#8b8070;margin-top:0.15rem;" id="settingsServerInfo">Načítám...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Obsah přesunut na /obsah, Výjimky odstraněny -->
+
+<!-- ======= MODAL: User ======= -->
+<div class="modal-backdrop" id="userModal">
+  <div class="modal">
+    <h2 id="userModalTitle">Nový uživatel</h2>
+    <div class="field">
+      <label for="uid">ID (login)</label>
+      <input type="text" id="uid" placeholder="jan.novak" autocomplete="off">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="ufirst">Jméno</label>
+        <input type="text" id="ufirst" placeholder="Jan" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="ulast">Příjmení</label>
+        <input type="text" id="ulast" placeholder="Novák" autocomplete="off">
+      </div>
+    </div>
+    <div class="field">
+      <label>Skupiny</label>
+      <div class="check-group" id="ugroups"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('userModal')">Zrušit</button>
+      <button class="btn" onclick="saveUser()">Uložit</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======= MODAL: Group ======= -->
+<div class="modal-backdrop" id="groupModal">
+  <div class="modal">
+    <h2 id="groupModalTitle">Nová skupina</h2>
+    <div class="field-row">
+      <div class="field" style="flex:2">
+        <label for="gid">ID skupiny</label>
+        <input type="text" id="gid" placeholder="technici" autocomplete="off">
+      </div>
+      <div class="field" style="flex:3">
+        <label for="glabel">Název</label>
+        <input type="text" id="glabel" placeholder="Technici" autocomplete="off">
+      </div>
+    </div>
+    <div class="field">
+      <label for="gdesc">Popis</label>
+      <textarea id="gdesc" placeholder="Popis role skupiny..."></textarea>
+    </div>
+    <div class="field">
+      <label for="gaccess">Přístupy (oddělené čárkou)</label>
+      <input type="text" id="gaccess" placeholder="audience:uzivatel, audience:editor" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Ikona</label>
+      <div class="icon-grid" id="giconGrid"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('groupModal')">Zrušit</button>
+      <button class="btn" onclick="saveGroup()">Uložit</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======= MODAL: Photo upload ======= -->
+<div class="modal-backdrop" id="photoModal">
+  <div class="modal" style="width:360px;text-align:center;">
+    <h2>Profilová fotka</h2>
+    <div id="photoPreview" style="width:120px;height:120px;border-radius:50%;background:#faf8f2;margin:1rem auto;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+      <span style="color:#a09882;font-size:2rem;" id="photoPlaceholder">📷</span>
+    </div>
+    <input type="file" id="photoInput" accept="image/*" style="display:none;" onchange="handlePhotoSelect(event)">
+    <div style="display:flex;gap:0.5rem;justify-content:center;margin-bottom:1rem;">
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('photoInput').click()">Vybrat soubor</button>
+      <button class="btn btn-danger btn-sm" onclick="removePhoto()">Odebrat</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('photoModal')">Zrušit</button>
+      <button class="btn" onclick="savePhoto()">Uložit</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var CONFIG = null;
+var editingUserId = null;
+var editingGroupId = null;
+var photoUserId = null;
+var photoData = null;
+var selectedIcon = null;
+
+var GROUP_COLORS = {
+  vedeni: '#b45309', spravci: '#b45309', editori: '#059669', uzivatele: '#4f46e5'
+};
+var DEFAULT_COLOR = '#b45309';
+
+var ICONS = ['👥','🛡️','✏️','👁️','🔧','📊','🏢','💼','🎓','📋','⚡','🔑','📁','🌐','💻','🎯'];
+
+/** Zjistí, jestli je skupina admin (má * v access) */
+function isAdminGroup(gid) {
+  var g = CONFIG && CONFIG.groups && CONFIG.groups[gid];
+  return g && (g.access || []).indexOf('*') >= 0;
+}
+
+/** Zjistí, jestli je uživatel admin (je v admin skupině) */
+function isAdminUser(uid) {
+  var u = CONFIG && CONFIG.users && CONFIG.users[uid];
+  if (!u) return false;
+  return (u.groups || []).some(function(g) { return isAdminGroup(g); });
+}
+
+/** Spočítá adminy */
+function countAdmins() {
+  var count = 0;
+  Object.keys(CONFIG.users || {}).forEach(function(uid) {
+    if (isAdminUser(uid)) count++;
+  });
+  return count;
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function flash(type, text) {
+  var el = document.getElementById(type === 'ok' ? 'msgOk' : 'msgErr');
+  el.textContent = text; el.style.display = 'block';
+  setTimeout(function() { el.style.display = 'none'; }, 3000);
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function parseTags(val) { return val.split(',').map(function(s){return s.trim();}).filter(Boolean); }
+function getColor(gid) { return GROUP_COLORS[gid] || DEFAULT_COLOR; }
+
+function badgeClass(gid) {
+  var known = ['vedeni','spravci','editori','uzivatele'];
+  return 'badge badge-' + (known.indexOf(gid) >= 0 ? gid : 'default');
+}
+
+function avatarHtml(user, size) {
+  var cls = size === 'lg' ? 'avatar avatar-lg' : 'avatar';
+  var color = DEFAULT_COLOR;
+  if (user.groups && user.groups.length) color = getColor(user.groups[0]);
+  if (user.photo) {
+    return '<div class="'+cls+'" style="background:'+color+'"><img src="'+esc(user.photo)+'" alt=""></div>';
+  }
+  var initials = ((user.firstName||'?').charAt(0) + (user.lastName||'').charAt(0)).toUpperCase();
+  return '<div class="'+cls+'" style="background:'+color+'">'+esc(initials)+'</div>';
+}
+
+// ---- Tabs ----
+document.querySelectorAll('.tab').forEach(function(t) {
+  t.addEventListener('click', function() {
+    document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active');});
+    document.querySelectorAll('.panel').forEach(function(x){x.classList.remove('active');});
+    t.classList.add('active');
+    document.getElementById('panel-' + t.dataset.panel).classList.add('active');
+    // Reset expand panels when switching tabs
+    expandedEntity = null;
+    var ep = document.getElementById('matrixExpandPanel');
+    if (ep) ep.innerHTML = '';
+  });
+});
+
+// ---- Load ----
+async function loadConfig() {
+  try {
+    var res = await fetch('/api/admin/config');
+    if (res.status === 403) { window.location.href = '/'; return; }
+    CONFIG = await res.json();
+    renderMatrix(); renderUsers(); renderGroups(); renderDashboardConfig();
+  } catch (e) { flash('err', 'Chyba načítání: ' + e.message); }
+}
+
+// ===========================================================================
+// UŽIVATELÉ — accordion styl
+// ===========================================================================
+var expandedUserId = null;
+
+function renderUsers() {
+  var users = CONFIG.users || {};
+  var ids = Object.keys(users).sort();
+  if (ids.length === 0) {
+    document.getElementById('usersListContainer').innerHTML = '<div class="empty-state">Žádní uživatelé</div>';
+    return;
+  }
+  var html = '<div class="table-wrap"><table><thead><tr><th></th><th>ID</th><th>Jméno</th><th>Příjmení</th><th>Skupiny</th><th style="width:120px">Akce</th></tr></thead><tbody>';
+  ids.forEach(function(id) {
+    var u = users[id]; u.username = id;
+    var badges = (u.groups || []).map(function(g) {
+      return '<span class="'+badgeClass(g)+'">'+esc(g)+'</span>';
+    }).join('');
+    var isExpanded = expandedUserId === id;
+    html += '<tr class="clickable" onclick="toggleUserExpand(\''+esc(id)+'\')" style="'+(isExpanded?'background:#eee9dc;':'')+'">' +
+      '<td>'+avatarHtml(u)+'</td>' +
+      '<td><code>'+esc(id)+'</code></td>' +
+      '<td>'+esc(u.firstName||'')+'</td>' +
+      '<td>'+esc(u.lastName||'')+'</td>' +
+      '<td>'+badges+'</td>' +
+      '<td>' +
+        '<button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();openUserModal(\''+esc(id)+'\')">Upravit</button> ' +
+        (isAdminUser(id) && countAdmins() <= 1 ? '' : '<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteUser(\''+esc(id)+'\')">Smazat</button>') +
+      '</td></tr>';
+    // Roletka — vyjede pod řádkem
+    if (isExpanded) {
+      html += '<tr><td colspan="6" style="padding:0;border:none;">' + renderUserExpandInline(id) + '</td></tr>';
+    }
+  });
+  html += '</tbody></table></div>';
+  document.getElementById('usersListContainer').innerHTML = html;
+}
+
+function toggleUserExpand(id) {
+  expandedUserId = (expandedUserId === id) ? null : id;
+  renderUsers();
+}
+
+function renderUserExpandInline(id) {
+  var u = CONFIG.users[id]; if (!u) return '';
+  var groupChips = (u.groups || []).map(function(g) {
+    var gl = CONFIG.groups[g]; var label = gl ? gl.label : g;
+    var icon = gl && gl.icon ? gl.icon : '👥';
+    return '<span class="member-chip" onclick="event.stopPropagation();switchToPanel(\'groups\');expandedGroupId=\''+esc(g)+'\';renderGroups();">' +
+      '<span style="font-size:1rem;">'+icon+'</span> '+esc(label)+'</span>';
+  }).join('') || '<em style="color:#a09882;">Žádné skupiny</em>';
+
+  return '<div class="expand-panel" onclick="event.stopPropagation();">' +
+    '<span class="close-panel" onclick="event.stopPropagation();toggleUserExpand(\''+esc(id)+'\')">✕</span>' +
+    '<div style="display:flex;align-items:center;gap:0.8rem;margin-bottom:0.8rem;">' +
+      '<div onclick="openPhotoModal(\''+esc(id)+'\')" style="cursor:pointer;">'+avatarHtml(u,'lg')+'</div>' +
+      '<div>' +
+        '<h4 style="margin:0;color:#1a1710;">'+esc(u.firstName||'')+' '+esc(u.lastName||'')+'</h4>' +
+        '<div style="font-size:0.78rem;color:#8b8070;">ID: <code>'+esc(id)+'</code></div>' +
+      '</div>' +
+      '<div style="margin-left:auto;display:flex;gap:0.5rem;">' +
+        '<button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();openUserModal(\''+esc(id)+'\')">Upravit</button>' +
+        '<button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();openPhotoModal(\''+esc(id)+'\')">Fotka</button>' +
+      '</div>' +
+    '</div>' +
+    '<div style="font-size:0.78rem;color:#8b8070;margin-bottom:0.3rem;">Členství ve skupinách:</div>' +
+    '<div class="member-list">'+groupChips+'</div>' +
+  '</div>';
+}
+
+function closeUserDetail() {
+  expandedUserId = null;
+  renderUsers();
+}
+
+// ---- User modal ----
+function openUserModal(id) {
+  editingUserId = id || null;
+  document.getElementById('userModalTitle').textContent = id ? 'Upravit uživatele' : 'Nový uživatel';
+  document.getElementById('uid').value = id || '';
+  document.getElementById('uid').disabled = !!id;
+  var u = id ? (CONFIG.users[id] || {}) : {};
+  document.getElementById('ufirst').value = u.firstName || '';
+  document.getElementById('ulast').value = u.lastName || '';
+  var ghtml = '';
+  Object.keys(CONFIG.groups || {}).forEach(function(gid) {
+    var checked = (u.groups||[]).indexOf(gid) >= 0 ? ' checked' : '';
+    var gl = CONFIG.groups[gid];
+    ghtml += '<label><input type="checkbox" value="'+esc(gid)+'"'+checked+'> '+esc(gl.label||gid)+'</label>';
+  });
+  document.getElementById('ugroups').innerHTML = ghtml;
+  document.getElementById('userModal').classList.add('open');
+}
+
+async function saveUser() {
+  var id = editingUserId || document.getElementById('uid').value.trim().toLowerCase().replace(/[^a-z0-9._-]/g,'');
+  var firstName = document.getElementById('ufirst').value.trim();
+  var lastName = document.getElementById('ulast').value.trim();
+  var groups = [];
+  document.querySelectorAll('#ugroups input:checked').forEach(function(cb){groups.push(cb.value);});
+  if (!id) { flash('err','ID je povinné'); return; }
+  if (!firstName) { flash('err','Jméno je povinné'); return; }
+  if (groups.length === 0) groups = ['uzivatele'];
+  // Ochrana: pokud je to admin a odebíráme mu admin skupinu, zkontrolovat že zůstane jiný admin
+  if (editingUserId && isAdminUser(editingUserId)) {
+    var stillAdmin = groups.some(function(g) { return isAdminGroup(g); });
+    if (!stillAdmin && countAdmins() <= 1) {
+      flash('err','Nelze odebrat správcovskou skupinu poslednímu správci.');
+      return;
+    }
+  }
+  try {
+    var res = await fetch('/api/admin/user/'+encodeURIComponent(id), {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({firstName:firstName,lastName:lastName,groups:groups})
+    });
+    var data = await res.json();
+    if (data.ok) { closeModal('userModal'); flash('ok',editingUserId?'Upraven':'Přidán'); await loadConfig(); }
+    else flash('err','Chyba: '+(data.error||''));
+  } catch(e) { flash('err','Chyba sítě: '+e.message); }
+}
+
+async function deleteUser(id) {
+  if (isAdminUser(id) && countAdmins() <= 1) { flash('err','Nelze smazat posledního správce.'); return; }
+  if (!confirm('Smazat uživatele "'+id+'"?')) return;
+  try {
+    var res = await fetch('/api/admin/user/'+encodeURIComponent(id),{method:'DELETE'});
+    var data = await res.json();
+    if (data.ok) { flash('ok','Smazán'); closeUserDetail(); await loadConfig(); }
+    else flash('err','Chyba: '+(data.error||''));
+  } catch(e) { flash('err','Chyba sítě: '+e.message); }
+}
+
+// ---- Photo modal ----
+function openPhotoModal(id) {
+  photoUserId = id; photoData = null;
+  var u = CONFIG.users[id]||{};
+  var preview = document.getElementById('photoPreview');
+  var placeholder = document.getElementById('photoPlaceholder');
+  if (u.photo) {
+    preview.innerHTML = '<img src="'+esc(u.photo)+'" style="width:100%;height:100%;object-fit:cover;">';
+  } else {
+    preview.innerHTML = '<span style="color:#555;font-size:2rem;">📷</span>';
+  }
+  document.getElementById('photoInput').value = '';
+  document.getElementById('photoModal').classList.add('open');
+}
+
+function handlePhotoSelect(event) {
+  var file = event.target.files[0]; if (!file) return;
+  // Resize to max 128x128 and convert to base64
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var size = 128;
+      canvas.width = size; canvas.height = size;
+      var ctx = canvas.getContext('2d');
+      // Crop to square center
+      var sx=0,sy=0,sw=img.width,sh=img.height;
+      if (sw>sh) { sx=(sw-sh)/2; sw=sh; } else { sy=(sh-sw)/2; sh=sw; }
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, size, size);
+      photoData = canvas.toDataURL('image/jpeg', 0.8);
+      document.getElementById('photoPreview').innerHTML = '<img src="'+photoData+'" style="width:100%;height:100%;object-fit:cover;">';
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function removePhoto() { photoData = '__remove__'; document.getElementById('photoPreview').innerHTML = '<span style="color:#555;font-size:2rem;">📷</span>'; }
+
+async function savePhoto() {
+  if (!photoUserId) return;
+  var photo = photoData === '__remove__' ? null : photoData;
+  if (photo === null && photoData !== '__remove__') { closeModal('photoModal'); return; }
+  try {
+    var res = await fetch('/api/admin/user/'+encodeURIComponent(photoUserId)+'/photo', {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({photo:photo})
+    });
+    var data = await res.json();
+    if (data.ok) { closeModal('photoModal'); flash('ok','Fotka uložena'); expandedUserId = photoUserId; await loadConfig(); }
+    else flash('err','Chyba: '+(data.error||''));
+  } catch(e) { flash('err','Chyba sítě: '+e.message); }
+}
+
+// ===========================================================================
+// SKUPINY
+// ===========================================================================
+var expandedGroupId = null;
+
+function renderGroups() {
+  var groups = CONFIG.groups || {};
+  var gids = Object.keys(groups);
+  if (gids.length === 0) {
+    document.getElementById('groupsListContainer').innerHTML = '<div class="empty-state">Žádné skupiny</div>';
+    return;
+  }
+  var html = '';
+  gids.forEach(function(gid) {
+    var g = groups[gid];
+    var members = [];
+    Object.entries(CONFIG.users||{}).forEach(function(pair) {
+      if ((pair[1].groups||[]).indexOf(gid) >= 0) members.push(pair[0]);
+    });
+    var icon = g.icon || '👥';
+    var color = getColor(gid);
+    var isExpanded = expandedGroupId === gid;
+
+    html += '<div class="detail-card" style="cursor:pointer;'+(isExpanded?'border-color:'+color+';':'')+'" onclick="toggleGroupExpand(\''+esc(gid)+'\')">' +
+      '<div style="display:flex;align-items:center;gap:1rem;">' +
+        '<div class="group-icon" style="background:'+color+'22;color:'+color+';border:1px solid '+color+'44;">'+icon+'</div>' +
+        '<div style="flex:1;">' +
+          '<div style="color:#1a1710;font-weight:600;">'+esc(g.label||gid)+' <span style="color:#a09882;font-weight:400;font-size:0.82rem;">('+esc(gid)+')</span></div>' +
+          '<div style="font-size:0.82rem;color:#8b8070;">'+esc(g.description||'')+'</div>' +
+        '</div>' +
+        '<div style="font-size:0.82rem;color:#8b8070;">'+members.length+' členů</div>' +
+        '<span style="color:#a09882;font-size:0.9rem;transition:transform 0.2s;'+(isExpanded?'transform:rotate(180deg);':'')+'">▼</span>' +
+        '<div style="display:flex;gap:0.3rem;">' +
+          '<button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();openGroupModal(\''+esc(gid)+'\')">Upravit</button>' +
+          (isAdminGroup(gid) ? '' : '<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteGroup(\''+esc(gid)+'\')">Smazat</button>') +
+        '</div>' +
+      '</div>';
+
+    if (isExpanded) {
+      html += renderGroupExpandInline(gid);
+    }
+
+    html += '</div>';
+  });
+  document.getElementById('groupsListContainer').innerHTML = html;
+}
+
+function toggleGroupExpand(gid) {
+  expandedGroupId = (expandedGroupId === gid) ? null : gid;
+  renderGroups();
+}
+
+function renderGroupExpandInline(gid) {
+  var g = CONFIG.groups[gid]; if (!g) return '';
+  var color = getColor(gid);
+  var members = [];
+  Object.entries(CONFIG.users||{}).forEach(function(pair) {
+    if ((pair[1].groups||[]).indexOf(gid) >= 0) {
+      var u = pair[1]; u.username = pair[0];
+      members.push(u);
+    }
+  });
+  var membersHtml = members.length > 0
+    ? members.map(function(u) {
+        return '<span class="member-chip" onclick="event.stopPropagation();switchToPanel(\'users\');expandedUserId=\''+esc(u.username)+'\';renderUsers();">' +
+          avatarHtml(u) + ' ' + esc(u.firstName) + ' ' + esc(u.lastName||'') +
+        '</span>';
+      }).join('')
+    : '<em style="color:#a09882;">Žádní členové</em>';
+  var accessHtml = (g.access||[]).map(function(a) {
+    return '<span class="tag-allow">'+esc(a)+'</span>';
+  }).join(' ') || '<em style="color:#a09882;">—</em>';
+
+  return '<div onclick="event.stopPropagation();" style="margin-top:1rem;padding-top:1rem;border-top:1px solid '+color+'44;">' +
+    '<div style="font-size:0.78rem;color:#666;margin-bottom:0.4rem;">Přístupy: '+accessHtml+'</div>' +
+    '<div style="font-size:0.78rem;color:#666;margin-bottom:0.3rem;">Členové ('+members.length+'):</div>' +
+    '<div class="member-list">'+membersHtml+'</div>' +
+  '</div>';
+}
+
+function switchToPanel(panelName) {
+  document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active');});
+  document.querySelectorAll('.panel').forEach(function(x){x.classList.remove('active');});
+  document.querySelectorAll('.tab').forEach(function(t) {
+    if (t.dataset.panel === panelName) t.classList.add('active');
+  });
+  document.getElementById('panel-' + panelName).classList.add('active');
+}
+
+function showGroupDetail(gid) {
+  switchToPanel('groups');
+  expandedGroupId = gid;
+  renderGroups();
+}
+
+function showUserDetailFromGroup(uid) {
+  switchToPanel('users');
+  expandedUserId = uid;
+  renderUsers();
+}
+
+function closeGroupDetail() {
+  expandedGroupId = null;
+  renderGroups();
+}
+
+// ---- Group modal ----
+function openGroupModal(id) {
+  editingGroupId = id || null;
+  document.getElementById('groupModalTitle').textContent = id ? 'Upravit skupinu' : 'Nová skupina';
+  document.getElementById('gid').value = id || '';
+  document.getElementById('gid').disabled = !!id;
+  var g = id ? (CONFIG.groups[id]||{}) : {};
+  document.getElementById('glabel').value = g.label || '';
+  document.getElementById('gdesc').value = g.description || '';
+  var accessField = document.getElementById('gaccess');
+  accessField.value = (g.access||[]).join(', ');
+  // Ochrana admin skupiny — nelze odebrat *
+  if (id && isAdminGroup(id)) {
+    accessField.disabled = true;
+    accessField.title = 'Správcovská skupina musí mít přístup *';
+    accessField.style.opacity = '0.5';
+  } else {
+    accessField.disabled = false;
+    accessField.title = '';
+    accessField.style.opacity = '';
+  }
+  selectedIcon = g.icon || null;
+  // Render icon grid
+  var ihtml = '';
+  ICONS.forEach(function(ic) {
+    var sel = ic === selectedIcon ? ' selected' : '';
+    ihtml += '<div class="icon-option'+sel+'" onclick="selectIcon(this,\''+ic+'\')">'+ic+'</div>';
+  });
+  document.getElementById('giconGrid').innerHTML = ihtml;
+  document.getElementById('groupModal').classList.add('open');
+}
+
+function selectIcon(el, icon) {
+  selectedIcon = icon;
+  document.querySelectorAll('#giconGrid .icon-option').forEach(function(x){x.classList.remove('selected');});
+  el.classList.add('selected');
+}
+
+async function saveGroup() {
+  var id = editingGroupId || document.getElementById('gid').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g,'');
+  var label = document.getElementById('glabel').value.trim();
+  var description = document.getElementById('gdesc').value.trim();
+  var access = parseTags(document.getElementById('gaccess').value);
+  if (!id) { flash('err','ID skupiny je povinné'); return; }
+  if (!label) { flash('err','Název je povinný'); return; }
+  // Ochrana: nelze odebrat * z admin skupiny
+  if (editingGroupId && isAdminGroup(editingGroupId) && access.indexOf('*') < 0) {
+    flash('err','Správcovská skupina musí mít přístup *.');
+    return;
+  }
+  try {
+    var res = await fetch('/api/admin/group/'+encodeURIComponent(id), {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({label:label,description:description,access:access,icon:selectedIcon})
+    });
+    var data = await res.json();
+    if (data.ok) { closeModal('groupModal'); flash('ok',editingGroupId?'Skupina upravena':'Skupina přidána'); await loadConfig(); }
+    else flash('err','Chyba: '+(data.error||''));
+  } catch(e) { flash('err','Chyba sítě: '+e.message); }
+}
+
+async function deleteGroup(id) {
+  if (isAdminGroup(id)) { flash('err','Správcovskou skupinu nelze smazat.'); return; }
+  if (!confirm('Smazat skupinu "'+id+'"? Uživatelé budou ze skupiny odebráni.')) return;
+  try {
+    var res = await fetch('/api/admin/group/'+encodeURIComponent(id),{method:'DELETE'});
+    var data = await res.json();
+    if (data.ok) { flash('ok','Skupina smazána'); closeGroupDetail(); await loadConfig(); }
+    else flash('err','Chyba: '+(data.error||''));
+  } catch(e) { flash('err','Chyba sítě: '+e.message); }
+}
+
+// ===========================================================================
+// MATICE — Přehled (skupiny × uživatelé)
+// ===========================================================================
+var expandedEntity = null; // { type: 'group'|'user', id: '...' }
+
+function renderMatrix() {
+  if (!CONFIG) return;
+  var groups = CONFIG.groups || {};
+  var users = CONFIG.users || {};
+  var gids = Object.keys(groups);
+  var uids = Object.keys(users).sort(function(a,b) {
+    var na = (users[a].firstName||'') + ' ' + (users[a].lastName||'');
+    var nb = (users[b].firstName||'') + ' ' + (users[b].lastName||'');
+    return na.localeCompare(nb, 'cs');
+  });
+
+  if (gids.length === 0 || uids.length === 0) {
+    document.getElementById('matrixContainer').innerHTML = '<div style="text-align:center;color:#666;padding:2rem;">Žádná data</div>';
+    return;
+  }
+
+  var html = '<div class="matrix-wrap"><table class="matrix-table" style="width:100%">';
+
+  // Header row — group names
+  html += '<thead><tr><th style="text-align:left;">Uživatel</th>';
+  gids.forEach(function(gid) {
+    var g = groups[gid];
+    var icon = g.icon || '👥';
+    html += '<th class="matrix-group-head" onclick="toggleMatrixExpand(\'group\',\''+esc(gid)+'\')" title="Klikni pro detail skupiny '+esc(g.label||gid)+'">' +
+      '<span style="display:block;font-size:1rem;">'+icon+'</span>' +
+      '<span style="display:block;font-size:0.68rem;color:#92400e;">'+esc(g.label||gid)+'</span>' +
+    '</th>';
+  });
+  html += '<th style="text-align:center;font-size:0.72rem;color:#666;">Skupin</th></tr></thead>';
+
+  // User rows
+  html += '<tbody>';
+  uids.forEach(function(uid) {
+    var u = users[uid];
+    var name = (u.firstName||'') + ' ' + (u.lastName||'');
+    var userGroups = u.groups || [];
+    var memberCount = 0;
+
+    html += '<tr>';
+    html += '<td class="matrix-user-name" onclick="toggleMatrixExpand(\'user\',\''+esc(uid)+'\')" title="Klikni pro detail uživatele">' +
+      '<div style="display:flex;align-items:center;gap:0.5rem;">' +
+        avatarHtml(u) +
+        '<div><div style="font-weight:600;color:#1a1710;">'+esc(name.trim()||uid)+'</div>' +
+        '<div style="font-size:0.7rem;color:#a09882;">'+esc(uid)+'</div></div>' +
+      '</div></td>';
+
+    gids.forEach(function(gid) {
+      var isMember = userGroups.indexOf(gid) >= 0;
+      if (isMember) memberCount++;
+      html += '<td>' + (isMember ? '<span class="matrix-check">✓</span>' : '<span class="matrix-empty">·</span>') + '</td>';
+    });
+
+    html += '<td style="text-align:center;font-size:0.78rem;color:#8b8070;">'+memberCount+'</td>';
+    html += '</tr>';
+  });
+
+  // Footer — počet členů na skupinu
+  html += '<tr style="border-top:2px solid #d8d0be;"><td style="text-align:right;color:#8b8070;font-size:0.75rem;font-weight:600;">Členů</td>';
+  gids.forEach(function(gid) {
+    var count = 0;
+    uids.forEach(function(uid) {
+      if ((users[uid].groups||[]).indexOf(gid) >= 0) count++;
+    });
+    html += '<td style="text-align:center;color:#92400e;font-weight:700;">'+count+'</td>';
+  });
+  html += '<td></td></tr>';
+
+  html += '</tbody></table></div>';
+  document.getElementById('matrixContainer').innerHTML = html;
+}
+
+function toggleMatrixExpand(type, id) {
+  var panelEl = document.getElementById('matrixExpandPanel');
+
+  // Toggle — klik na stejnou entitu zavře panel
+  if (expandedEntity && expandedEntity.type === type && expandedEntity.id === id) {
+    expandedEntity = null;
+    panelEl.innerHTML = '';
+    return;
+  }
+
+  expandedEntity = { type: type, id: id };
+
+  if (type === 'group') {
+    renderGroupExpandPanel(id, panelEl);
+  } else {
+    renderUserExpandPanel(id, panelEl);
+  }
+}
+
+function renderGroupExpandPanel(gid, container) {
+  var g = CONFIG.groups[gid];
+  if (!g) { container.innerHTML = ''; return; }
+  var icon = g.icon || '👥';
+  var color = getColor(gid);
+  var members = [];
+  Object.entries(CONFIG.users||{}).forEach(function(pair) {
+    if ((pair[1].groups||[]).indexOf(gid) >= 0) {
+      var u = pair[1]; u.username = pair[0];
+      members.push(u);
+    }
+  });
+
+  var membersHtml = members.length > 0
+    ? members.map(function(u) {
+        return '<span class="member-chip" onclick="toggleMatrixExpand(\'user\',\''+esc(u.username)+'\')">' +
+          avatarHtml(u) + ' ' + esc(u.firstName) + ' ' + esc(u.lastName||'') +
+        '</span>';
+      }).join('')
+    : '<em style="color:#a09882;">Žádní členové</em>';
+
+  var accessHtml = (g.access||[]).map(function(a) {
+    return '<span class="tag-allow">'+esc(a)+'</span>';
+  }).join(' ') || '<em style="color:#a09882;">—</em>';
+
+  container.innerHTML =
+    '<div class="expand-panel">' +
+      '<span class="close-panel" onclick="toggleMatrixExpand(\'group\',\''+esc(gid)+'\')">✕</span>' +
+      '<div style="display:flex;align-items:center;gap:0.8rem;margin-bottom:0.8rem;">' +
+        '<div class="group-icon" style="background:'+color+'22;color:'+color+';border:1px solid '+color+'44;">'+icon+'</div>' +
+        '<div>' +
+          '<h4 style="margin:0;color:#1a1710;">'+esc(g.label||gid)+'</h4>' +
+          '<div style="font-size:0.78rem;color:#8b8070;">'+esc(g.description||'')+'</div>' +
+        '</div>' +
+        '<button class="btn btn-sm btn-ghost" style="margin-left:auto;" onclick="openGroupModal(\''+esc(gid)+'\')">Upravit</button>' +
+      '</div>' +
+      '<div style="font-size:0.78rem;color:#8b8070;margin-bottom:0.5rem;">Přístupy: '+accessHtml+'</div>' +
+      '<div style="font-size:0.78rem;color:#8b8070;margin-bottom:0.3rem;">Členové ('+members.length+'):</div>' +
+      '<div class="member-list">'+membersHtml+'</div>' +
+    '</div>';
+}
+
+function renderUserExpandPanel(uid, container) {
+  var u = CONFIG.users[uid];
+  if (!u) { container.innerHTML = ''; return; }
+  var name = (u.firstName||'') + ' ' + (u.lastName||'');
+  var userGroups = (u.groups||[]).map(function(gid) {
+    var g = CONFIG.groups[gid];
+    var icon = g && g.icon ? g.icon : '👥';
+    var label = g ? g.label : gid;
+    var color = getColor(gid);
+    return '<span class="member-chip" onclick="toggleMatrixExpand(\'group\',\''+esc(gid)+'\')">' +
+      '<span style="font-size:1rem;">'+icon+'</span> '+esc(label)+
+    '</span>';
+  }).join('') || '<em style="color:#a09882;">Žádné skupiny</em>';
+
+  container.innerHTML =
+    '<div class="expand-panel">' +
+      '<span class="close-panel" onclick="toggleMatrixExpand(\'user\',\''+esc(uid)+'\')">✕</span>' +
+      '<div style="display:flex;align-items:center;gap:0.8rem;margin-bottom:0.8rem;">' +
+        avatarHtml(u, 'lg') +
+        '<div>' +
+          '<h4 style="margin:0;">'+esc(name.trim()||uid)+'</h4>' +
+          '<div style="font-size:0.78rem;color:#8b8070;">ID: <code>'+esc(uid)+'</code></div>' +
+        '</div>' +
+        '<div style="margin-left:auto;display:flex;gap:0.5rem;">' +
+          '<button class="btn btn-sm btn-ghost" onclick="openUserModal(\''+esc(uid)+'\')">Upravit</button>' +
+          '<button class="btn btn-sm btn-ghost" onclick="openPhotoModal(\''+esc(uid)+'\')">Fotka</button>' +
+        '</div>' +
+      '</div>' +
+      '<div style="font-size:0.78rem;color:#8b8070;margin-bottom:0.3rem;">Členství ve skupinách:</div>' +
+      '<div class="member-list">'+userGroups+'</div>' +
+    '</div>';
+}
+
+// ===========================================================================
+// DASHBOARD — konfigurace widgetů
+// ===========================================================================
+function renderDashboardConfig() {
+  var container = document.getElementById('dashboardConfigContainer');
+  var dash = CONFIG.dashboard || { widgets: {} };
+  var widgets = dash.widgets || {};
+
+  // Defaults
+  var unread = Object.assign({ enabled: true, title: 'Nové stránky k přečtení', maxItems: 10 }, widgets.unreadPages || {});
+  var stats = Object.assign({ enabled: true, title: 'Moje statistiky' }, widgets.readingStats || {});
+  var links = Object.assign({ enabled: true, title: 'Rychlé odkazy', links: [] }, widgets.quickLinks || {});
+
+  var html = '';
+
+  // Widget: Nepřečtené stránky
+  html += '<div class="dash-widget-card">';
+  html += '<div class="dash-widget-header">';
+  html += '<span class="dwh-icon">📋</span>';
+  html += '<span class="dwh-title">' + esc(unread.title) + '</span>';
+  html += '<div class="dash-toggle' + (unread.enabled ? ' on' : '') + '" onclick="toggleDashWidget(\'unreadPages\')"><div class="dot"></div></div>';
+  html += '</div>';
+  html += '<div class="dash-widget-desc">Zobrazuje stránky, které uživatel ještě nenavštívil. Povinné stránky jsou zvýrazněné.</div>';
+  html += '<div style="font-size:0.8rem;color:#8b8070;">Max. položek: <input type="number" value="' + unread.maxItems + '" min="1" max="50" style="width:60px;background:#faf8f2;border:1px solid #d8d0be;border-radius:4px;padding:2px 6px;color:#2d2a24;font-size:0.8rem;" onchange="updateDashMaxItems(this.value)"></div>';
+  html += '</div>';
+
+  // Widget: Statistiky čtení
+  html += '<div class="dash-widget-card">';
+  html += '<div class="dash-widget-header">';
+  html += '<span class="dwh-icon">📊</span>';
+  html += '<span class="dwh-title">' + esc(stats.title) + '</span>';
+  html += '<div class="dash-toggle' + (stats.enabled ? ' on' : '') + '" onclick="toggleDashWidget(\'readingStats\')"><div class="dot"></div></div>';
+  html += '</div>';
+  html += '<div class="dash-widget-desc">Progress bar, počet přečtených stránek, celkový čas a naposledy navštívené stránky.</div>';
+  html += '</div>';
+
+  // Widget: Rychlé odkazy
+  html += '<div class="dash-widget-card">';
+  html += '<div class="dash-widget-header">';
+  html += '<span class="dwh-icon">🔗</span>';
+  html += '<span class="dwh-title">' + esc(links.title) + '</span>';
+  html += '<div class="dash-toggle' + (links.enabled ? ' on' : '') + '" onclick="toggleDashWidget(\'quickLinks\')"><div class="dot"></div>';
+  html += '</div></div>';
+  html += '<div class="dash-widget-desc">Admin-definované odkazy zobrazené na domovské stránce všech uživatelů.</div>';
+
+  // Seznam odkazů
+  if (links.links.length > 0) {
+    html += '<ul class="dash-links-list">';
+    for (var i = 0; i < links.links.length; i++) {
+      var lnk = links.links[i];
+      html += '<li>';
+      html += '<span class="dl-label">' + (lnk.icon || '📄') + ' ' + esc(lnk.label) + '</span>';
+      html += '<span class="dl-url">' + esc(lnk.url) + '</span>';
+      html += '<span class="dl-remove" onclick="removeDashLink(' + i + ')">✕</span>';
+      html += '</li>';
+    }
+    html += '</ul>';
+  }
+
+  // Přidat odkaz
+  html += '<div class="dash-add-link">';
+  html += '<input type="text" id="newLinkLabel" placeholder="Popisek (např. Nový SOP)">';
+  html += '<input type="text" id="newLinkUrl" placeholder="URL (např. /aor-prodej/reklamacni-sop)">';
+  html += '<select id="newLinkIcon" style="width:50px;background:#faf8f2;border:1px solid #d8d0be;border-radius:6px;padding:0.4rem;color:#2d2a24;font-size:1rem;">';
+  html += '<option>📄</option><option>📋</option><option>⚡</option><option>🔧</option><option>📢</option><option>⭐</option><option>🎯</option><option>📌</option>';
+  html += '</select>';
+  html += '<button class="btn btn-sm" onclick="addDashLink()">+ Přidat</button>';
+  html += '</div>';
+  html += '</div>';
+
+  container.innerHTML = html;
+}
+
+async function saveDashboardConfig() {
+  var dash = CONFIG.dashboard || { widgets: {} };
+  CONFIG.dashboard = dash;
+  try {
+    var res = await fetch('/api/admin/config', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(CONFIG) });
+    var data = await res.json();
+    if (data.ok) flash('ok', 'Dashboard uložen');
+    else flash('err', data.error || 'Chyba');
+  } catch (e) { flash('err', 'Chyba: ' + e.message); }
+}
+
+async function toggleDashWidget(widgetKey) {
+  if (!CONFIG.dashboard) CONFIG.dashboard = { widgets: {} };
+  if (!CONFIG.dashboard.widgets) CONFIG.dashboard.widgets = {};
+  if (!CONFIG.dashboard.widgets[widgetKey]) CONFIG.dashboard.widgets[widgetKey] = {};
+  CONFIG.dashboard.widgets[widgetKey].enabled = !CONFIG.dashboard.widgets[widgetKey].enabled;
+  await saveDashboardConfig();
+  renderDashboardConfig();
+}
+
+async function updateDashMaxItems(val) {
+  if (!CONFIG.dashboard) CONFIG.dashboard = { widgets: {} };
+  if (!CONFIG.dashboard.widgets) CONFIG.dashboard.widgets = {};
+  if (!CONFIG.dashboard.widgets.unreadPages) CONFIG.dashboard.widgets.unreadPages = {};
+  CONFIG.dashboard.widgets.unreadPages.maxItems = parseInt(val) || 10;
+  await saveDashboardConfig();
+}
+
+async function addDashLink() {
+  var label = document.getElementById('newLinkLabel').value.trim();
+  var url = document.getElementById('newLinkUrl').value.trim();
+  var icon = document.getElementById('newLinkIcon').value;
+  if (!label || !url) { flash('err', 'Vyplňte popisek i URL'); return; }
+  if (!CONFIG.dashboard) CONFIG.dashboard = { widgets: {} };
+  if (!CONFIG.dashboard.widgets) CONFIG.dashboard.widgets = {};
+  if (!CONFIG.dashboard.widgets.quickLinks) CONFIG.dashboard.widgets.quickLinks = { enabled: true, title: 'Rychlé odkazy', links: [] };
+  if (!CONFIG.dashboard.widgets.quickLinks.links) CONFIG.dashboard.widgets.quickLinks.links = [];
+  CONFIG.dashboard.widgets.quickLinks.links.push({ label: label, url: url, icon: icon });
+  await saveDashboardConfig();
+  renderDashboardConfig();
+}
+
+async function removeDashLink(index) {
+  if (!CONFIG.dashboard?.widgets?.quickLinks?.links) return;
+  CONFIG.dashboard.widgets.quickLinks.links.splice(index, 1);
+  await saveDashboardConfig();
+  renderDashboardConfig();
+}
+
+// ---- Nastavení — toggle top nav ----
+function handleTopNavToggle(enabled) {
+  if (typeof ekSetTopNav === 'function') {
+    ekSetTopNav(enabled);
+  }
+}
+
+function initSettingsPanel() {
+  var toggle = document.getElementById('toggleTopNav');
+  if (toggle && typeof ekGetTopNav === 'function') {
+    toggle.checked = ekGetTopNav();
+  }
+  // Server info
+  fetch('/api/me')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var info = document.getElementById('settingsServerInfo');
+      if (info && data.authenticated) {
+        info.textContent = 'Přihlášen jako ' + data.username + ' · Režim: DEV server';
+      }
+    })
+    .catch(function() {});
+}
+
+// ---- SVG ikony pro stromy (konzistentní s dashboard, obsah) ----
+function svgFolder(color) {
+  return '<svg width="16" height="14" viewBox="0 0 16 14" fill="none" style="vertical-align:middle;flex-shrink:0;">' +
+    '<path d="M1 2C1 1.45 1.45 1 2 1H6L8 3H14C14.55 3 15 3.45 15 4V12C15 12.55 14.55 13 14 13H2C1.45 13 1 12.55 1 12V2Z" fill="' + color + '" opacity="0.85"/>' +
+    '<path d="M1 4H15V12C15 12.55 14.55 13 14 13H2C1.45 13 1 12.55 1 12V4Z" fill="' + color + '"/>' +
+  '</svg>';
+}
+function svgDoc(color) {
+  return '<svg width="14" height="16" viewBox="0 0 14 16" fill="none" style="vertical-align:middle;flex-shrink:0;">' +
+    '<path d="M2 1C1.45 1 1 1.45 1 2V14C1 14.55 1.45 15 2 15H12C12.55 15 13 14.55 13 14V5L9 1H2Z" fill="' + color + '" opacity="0.15" stroke="' + color + '" stroke-width="0.8"/>' +
+    '<path d="M9 1V5H13" stroke="' + color + '" stroke-width="0.8" fill="' + color + '" opacity="0.25"/>' +
+    '<line x1="3.5" y1="8" x2="10.5" y2="8" stroke="' + color + '" stroke-width="0.6" opacity="0.4"/>' +
+    '<line x1="3.5" y1="10" x2="10.5" y2="10" stroke="' + color + '" stroke-width="0.6" opacity="0.4"/>' +
+    '<line x1="3.5" y1="12" x2="8" y2="12" stroke="' + color + '" stroke-width="0.6" opacity="0.4"/>' +
+  '</svg>';
+}
+
+// ---- Section Themes — preset systém se stromem ----
+var themeSections = [];
+var themeData = {};
+
+// Předdefinované barevné presety — každý AOR může mít svůj
+var THEME_PRESETS = {
+  'amber':    { label: '🟠 Amber (výchozí)',  accent: '#b45309', accentLight: '#fef3cd', heading: '#92400e', sidebarActive: '#b45309' },
+  'blue':     { label: '🔵 Modrá (tech)',      accent: '#0369a1', accentLight: '#e0f2fe', heading: '#075985', sidebarActive: '#0369a1' },
+  'purple':   { label: '🟣 Fialová (finance)', accent: '#7c3aed', accentLight: '#ede9fe', heading: '#6d28d9', sidebarActive: '#7c3aed' },
+  'green':    { label: '🟢 Zelená (prodej)',   accent: '#15803d', accentLight: '#dcfce7', heading: '#166534', sidebarActive: '#15803d' },
+  'red':      { label: '🔴 Červená (urgent)',  accent: '#b91c1c', accentLight: '#fee2e2', heading: '#991b1b', sidebarActive: '#b91c1c' },
+  'teal':     { label: '🩵 Tyrkys (servis)',   accent: '#0f766e', accentLight: '#ccfbf1', heading: '#115e59', sidebarActive: '#0f766e' },
+  'slate':    { label: '⚫ Šedá (systém)',     accent: '#475569', accentLight: '#f1f5f9', heading: '#334155', sidebarActive: '#475569' },
+  'rose':     { label: '🩷 Růžová (HR)',       accent: '#be185d', accentLight: '#fce7f3', heading: '#9d174d', sidebarActive: '#be185d' },
+};
+
+async function loadThemes() {
+  try {
+    var res = await fetch('/api/admin/section-themes', { credentials: 'same-origin' });
+    var data = await res.json();
+    themeSections = data.sections || [];
+    themeData = data.themes || {};
+    renderThemeTree();
+  } catch (e) {
+    document.getElementById('themesContainer').innerHTML = '<div style="color:#ef4444;">Chyba načítání témat</div>';
+  }
+}
+
+function getPresetForFolder(folder) {
+  var t = themeData[folder];
+  if (!t || !t.preset) return '';
+  return t.preset;
+}
+
+function renderThemeTree() {
+  var c = document.getElementById('themesContainer');
+  if (!themeSections.length) { c.innerHTML = '<div style="color:#8b8070;">Žádné sekce v docs/</div>'; return; }
+
+  // Sestav dropdown HTML pro presety
+  function presetDropdown(folder, currentPreset) {
+    var html = '<select onchange="setThemePreset(\'' + esc(folder) + '\', this.value)" style="font-size:0.82rem;padding:3px 6px;border:1px solid #d8d0be;border-radius:4px;background:#faf8f2;min-width:180px;">';
+    html += '<option value=""' + (!currentPreset ? ' selected' : '') + '>— Zděděné / výchozí —</option>';
+    Object.keys(THEME_PRESETS).forEach(function(key) {
+      var p = THEME_PRESETS[key];
+      html += '<option value="' + key + '"' + (currentPreset === key ? ' selected' : '') + '>' + esc(p.label) + '</option>';
+    });
+    html += '</select>';
+    return html;
+  }
+
+  // Náhled barvy
+  function presetPreview(folder) {
+    var preset = getPresetForFolder(folder);
+    var colors = preset ? THEME_PRESETS[preset] : THEME_PRESETS['amber'];
+    if (!colors) return '';
+    return '<span style="display:inline-flex;gap:3px;align-items:center;margin-left:8px;">' +
+      '<span style="width:14px;height:14px;border-radius:50%;background:' + esc(colors.accent) + ';border:1px solid #d8d0be;"></span>' +
+      '<span style="font-size:0.75rem;color:' + esc(colors.heading) + ';font-weight:600;">Aa</span>' +
+      '</span>';
+  }
+
+  var html = '<div style="border:1px solid #e0d8c8;border-radius:8px;overflow:hidden;">';
+
+  themeSections.forEach(function(sec, idx) {
+    var preset = getPresetForFolder(sec.folder);
+    var bgColor = idx % 2 === 0 ? '#faf8f2' : '#f5f1e8';
+
+    // Složka (kořenová úroveň)
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1rem;background:' + bgColor + ';border-bottom:1px solid #e0d8c8;">';
+    html += '<div style="display:flex;align-items:center;gap:0.5rem;">';
+    html += svgFolder('#d97706');
+    html += '<div>';
+    html += '<strong style="color:#1a1710;">' + esc(sec.label) + '</strong>';
+    html += '<div style="font-size:0.72rem;color:#8b8070;">' + esc(sec.folder) + ' · ' + esc(sec.type || '') + '</div>';
+    html += '</div>';
+    html += '</div>';
+    html += '<div style="display:flex;align-items:center;gap:0.5rem;">';
+    html += presetDropdown(sec.folder, preset);
+    html += presetPreview(sec.folder);
+    html += '</div>';
+    html += '</div>';
+
+    // Podstránky (listy)
+    if (sec.pages) {
+      sec.pages.forEach(function(page) {
+        var pageFolder = sec.folder + '/' + page.file.replace(/\.(md|mdx)$/, '');
+        var pagePreset = getPresetForFolder(pageFolder);
+        var inheritLabel = pagePreset ? '' : (preset ? ' <span style="font-size:0.7rem;color:#8b8070;">← zděděno</span>' : '');
+
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.4rem 1rem 0.4rem 2.8rem;background:' + bgColor + ';border-bottom:1px solid #f0ece0;font-size:0.85rem;">';
+        html += '<div style="display:flex;align-items:center;gap:0.4rem;">';
+        html += svgDoc('#8b8070');
+        html += '<span style="color:#2d2a24;">' + esc(page.title || page.file) + '</span>';
+        html += inheritLabel;
+        html += '</div>';
+        html += '<div style="display:flex;align-items:center;gap:0.5rem;">';
+        html += presetDropdown(pageFolder, pagePreset);
+        html += presetPreview(pagePreset ? pageFolder : sec.folder);
+        html += '</div>';
+        html += '</div>';
+      });
+    }
+  });
+
+  html += '</div>';
+  c.innerHTML = html;
+}
+
+function setThemePreset(folder, presetKey) {
+  if (!presetKey) {
+    // Odstranit přímé přiřazení (zdědit od rodiče)
+    delete themeData[folder];
+  } else {
+    var p = THEME_PRESETS[presetKey];
+    if (p) {
+      themeData[folder] = {
+        preset: presetKey,
+        accent: p.accent,
+        accentLight: p.accentLight,
+        heading: p.heading,
+        sidebarActive: p.sidebarActive,
+      };
+    }
+  }
+  renderThemeTree();
+}
+
+async function saveThemes() {
+  // Přidej label ke každému tématu ze sections
+  themeSections.forEach(function(sec) {
+    if (themeData[sec.folder]) {
+      themeData[sec.folder].label = sec.label;
+    }
+  });
+  try {
+    var res = await fetch('/api/admin/section-themes', {
+      method: 'PUT', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ themes: themeData })
+    });
+    var data = await res.json();
+    if (data.ok) flash('ok', 'Barvy sekcí uloženy — projeví se po refreshi stránek');
+    else flash('err', 'Chyba: ' + (data.error || 'neznámá'));
+  } catch (e) { flash('err', 'Chyba spojení'); }
+}
+
+// Načti témata při přepnutí na záložku
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('tab') && e.target.getAttribute('data-panel') === 'themes') {
+    if (!themeSections.length) loadThemes();
+  }
+  if (e.target.classList.contains('tab') && e.target.getAttribute('data-panel') === 'settings') {
+    initSettingsPanel();
+  }
+});
+
+// ---- Init ----
+loadConfig();
+</script>
+<script src="/js/status-bar.js"></script>
+</body>
+</html>

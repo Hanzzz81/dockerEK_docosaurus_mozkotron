@@ -1,0 +1,71 @@
+{
+  "users": {
+    "jan":    { "firstName": "Jan",    "lastName": "Kutílek",   "groups": ["vedeni"] },
+    "michal": { "firstName": "Michal", "lastName": "Kutílek",   "groups": ["vedeni"] },
+    "karel":  { "firstName": "Karel",  "lastName": "Novák",     "groups": ["spravci"] },
+    "tomas":  { "firstName": "Tomáš",  "lastName": "Dvořák",    "groups": ["editori"] },
+    "eva":    { "firstName": "Eva",    "lastName": "Svobodová", "groups": ["editori"] },
+    "marie":  { "firstName": "Marie",  "lastName": "Černá",     "groups": ["uzivatele"] },
+    "lukas":  { "firstName": "Lukáš",  "lastName": "Veselý",    "groups": ["uzivatele"] },
+    "petr":   { "firstName": "Petr",   "lastName": "Horák",     "groups": ["uzivatele"] }
+  },
+  "groups": {
+    "vedeni": {
+      "label": "Správci",
+      "description": "Management — plný přístup, správa, reporty",
+      "access": ["*"],
+      "icon": "🛡️"
+    },
+    "spravci": {
+      "label": "Správci IT",
+      "description": "IT správci — technická dokumentace",
+      "access": ["audience:architekt", "audience:spravce"]
+    },
+    "editori": {
+      "label": "Editoři",
+      "description": "Editoři obsahu — tvorba a úprava návodů",
+      "access": ["audience:editor", "audience:uzivatel"]
+    },
+    "uzivatele": {
+      "label": "Čtenáři",
+      "description": "Čtenáři — přístup k návodům a postupům",
+      "access": ["audience:uzivatel"]
+    }
+  },
+  "overrides": {},
+  "tracking": {
+    "enabled": true,
+    "require_confirmation": ["audience:uzivatel", "audience:editor"],
+    "min_reading_time_seconds": 30
+  },
+  "sectionThemes": {
+    "law-obecne": {
+      "accent": "#b45309",
+      "accentLight": "#fef3cd",
+      "heading": "#92400e",
+      "sidebarActive": "#b45309",
+      "label": "📜 Obecná pravidla"
+    },
+    "law-synology": {
+      "accent": "#0369a1",
+      "accentLight": "#e0f2fe",
+      "heading": "#075985",
+      "sidebarActive": "#0369a1",
+      "label": "📁 Synology do detailu"
+    },
+    "law-dokumentace": {
+      "accent": "#7c3aed",
+      "accentLight": "#ede9fe",
+      "heading": "#6d28d9",
+      "sidebarActive": "#7c3aed",
+      "label": "📚 Model dokumentace"
+    }
+  },
+  "dashboard": {
+    "widgets": {
+      "unreadPages": { "enabled": true, "title": "Nové stránky k přečtení", "maxItems": 10 },
+      "readingStats": { "enabled": true, "title": "Moje statistiky" },
+      "quickLinks": { "enabled": true, "title": "Rychlé odkazy", "links": [] }
+    }
+  }
+}

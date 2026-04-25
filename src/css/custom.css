@@ -1,0 +1,8 @@
+/**
+ * Custom CSS — base Docusaurus overrides
+ * Hlavní styling je v static/css/mozkotron-theme.css
+ */
+:root {
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(56, 189, 248, 0.1);
+}

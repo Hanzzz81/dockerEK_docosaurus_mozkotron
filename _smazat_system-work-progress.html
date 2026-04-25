@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📊 Progress — Mozkotron</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0f1117; color: #e2e8f0; padding: 20px 24px;
+    line-height: 1.5;
+  }
+
+  /* Auto-refresh indicator */
+  .refresh-bar {
+    position: fixed; top: 0; left: 0; right: 0; height: 3px;
+    background: #1e293b; z-index: 100;
+  }
+  .refresh-bar .fill {
+    height: 100%; width: 0%; background: #3b82f6;
+    transition: width linear;
+  }
+  .refresh-bar .fill.running { width: 100%; }
+
+  /* Header */
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid #1e293b;
+  }
+  .header h1 { font-size: 1.2rem; color: #f8fafc; }
+  .header .meta { font-size: 0.7rem; color: #475569; text-align: right; }
+  .header .meta .live {
+    display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    background: #10b981; margin-right: 4px; animation: livePulse 2s infinite;
+  }
+  @keyframes livePulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* Summary bar */
+  .summary {
+    display: flex; gap: 12px; margin-bottom: 20px;
+  }
+  .summary-card {
+    flex: 1; background: #111827; border: 1px solid #1e293b;
+    border-radius: 10px; padding: 12px 14px; text-align: center;
+  }
+  .summary-card .num { font-size: 1.6rem; font-weight: 800; }
+  .summary-card .label { font-size: 0.65rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; }
+  .num-done { color: #10b981; }
+  .num-wip { color: #f59e0b; }
+  .num-todo { color: #64748b; }
+
+  /* Progress bar */
+  .progress-bar-wrap {
+    background: #1e293b; border-radius: 6px; height: 10px;
+    margin-bottom: 24px; overflow: hidden; display: flex;
+  }
+  .progress-bar-done { background: #10b981; height: 100%; transition: width 0.5s; }
+  .progress-bar-wip { background: #f59e0b; height: 100%; transition: width 0.5s; }
+
+  /* Sections */
+  .section {
+    margin-bottom: 20px;
+  }
+  .section-header {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 8px; font-size: 0.85rem; font-weight: 700; color: #f8fafc;
+  }
+  .section-header .count {
+    font-size: 0.65rem; color: #64748b; font-weight: 400;
+    background: #1e293b; padding: 2px 8px; border-radius: 10px;
+  }
+
+  /* Items */
+  .item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 8px 12px; margin-bottom: 4px;
+    border-radius: 8px; background: #111827;
+    border-left: 3px solid #334155;
+    transition: all 0.3s;
+  }
+  .item:hover { background: #1e293b; }
+  .item.done { border-left-color: #10b981; opacity: 0.6; }
+  .item.done .item-title { text-decoration: line-through; color: #64748b; }
+  .item.wip { border-left-color: #f59e0b; background: #1a1800; }
+  .item.todo { border-left-color: #334155; }
+  .item.blocked { border-left-color: #ef4444; }
+
+  .item-check {
+    flex-shrink: 0; width: 18px; height: 18px; margin-top: 1px;
+    border-radius: 4px; border: 2px solid #334155;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.65rem;
+  }
+  .item.done .item-check { background: #10b981; border-color: #10b981; color: #fff; }
+  .item.wip .item-check { background: #f59e0b33; border-color: #f59e0b; }
+  .item.wip .item-check::after { content: '◉'; color: #f59e0b; }
+
+  .item-body { flex: 1; min-width: 0; }
+  .item-title { font-size: 0.8rem; font-weight: 600; color: #e2e8f0; }
+  .item-desc { font-size: 0.7rem; color: #64748b; margin-top: 2px; }
+  .item-tag {
+    display: inline-block; font-size: 0.55rem; font-weight: 700;
+    padding: 1px 6px; border-radius: 3px; margin-top: 4px;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .tag-jan { background: #3b82f633; color: #93c5fd; border: 1px solid #3b82f6; }
+  .tag-claude { background: #7c3aed33; color: #c4b5fd; border: 1px solid #7c3aed; }
+  .tag-oba { background: #10b98133; color: #6ee7b7; border: 1px solid #10b981; }
+  .tag-mozkotron { background: #f59e0b33; color: #fcd34d; border: 1px solid #f59e0b; }
+
+  /* Recently changed flash */
+  .item.just-changed {
+    animation: flashChange 3s ease;
+  }
+  @keyframes flashChange {
+    0% { background: #1a3e1a; }
+    100% { background: #111827; }
+  }
+
+  /* Next up highlight */
+  .next-up {
+    background: #111827; border: 1px dashed #3b82f6; border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 20px;
+  }
+  .next-up h3 { font-size: 0.8rem; color: #93c5fd; margin-bottom: 6px; }
+  .next-up p { font-size: 0.75rem; color: #cbd5e1; }
+
+  /* Log */
+  .log {
+    margin-top: 20px; padding-top: 16px; border-top: 1px solid #1e293b;
+  }
+  .log h3 { font-size: 0.8rem; color: #475569; margin-bottom: 8px; }
+  .log-entry {
+    font-size: 0.7rem; color: #64748b; padding: 3px 0;
+    border-bottom: 1px solid #111827;
+  }
+  .log-entry .time { color: #334155; margin-right: 6px; }
+  .log-entry .action { color: #94a3b8; }
+</style>
+</head>
+<body>
+
+<div class="refresh-bar"><div class="fill" id="refreshFill"></div></div>
+
+<div class="header">
+  <h1>📊 Progress — Tvorba obsahu Mozkotron</h1>
+  <div class="meta">
+    <span class="live"></span> auto-refresh 5s<br>
+    <span id="lastUpdate"></span>
+  </div>
+</div>
+
+<!-- Rendered by JS from data below -->
+<div id="app"></div>
+
+<script>
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  📌 DATA — Claude edituje TUTO SEKCI při každém progressu  ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+const LAST_UPDATED = '2026-04-22 20:45';
+
+const NEXT_UP = {
+  title: '🎯 Další krok: Test intake s reálným scénářem',
+  desc: 'Manifest CLAUDE.md hotový. Teď: simulovat reálného editora — projít celý intake dialog, vytvořit dokument, ověřit flow.'
+};
+
+const LOG = [
+  { time: '22.04. 20:45', action: '✅ CLAUDE.md manifest hotový — intake dialog, frontmatter kontrakt, rozhodovací strom, checklist publikace' },
+  { time: '22.04. 20:15', action: '✅ Šablony BIMG/SOP/CHL — 3 šablony s frontmatter, strukturou, pravidly, příklady' },
+  { time: '22.04. 19:45', action: '✅ R012 Intake workflow — Cowork + Synology + manifest. Flow diagram v3 aktualizován.' },
+  { time: '22.04. 19:30', action: '✅ Standard Průvodce zapsán do DNA firmy' },
+  { time: '22.04. 19:00', action: '✅ Průvodce kategoriemi — rozhodovací strom, matice, kvíz 10 otázek' },
+  { time: '22.04. 18:30', action: '✅ Standard komunikace Claude → Jan (trojblok) zapsán do DNA firmy' },
+  { time: '22.04. 18:15', action: '✅ Flow diagram v3 hotový — 12 kroků, event pills, dvouosý model category×layer' },
+  { time: '22.04. 18:00', action: '💡 Objev: dvouosý model — category (DOS taxonomie) × layer (dokumentační vrstva) jsou nezávislé osy' },
+  { time: '22.04. 17:45', action: 'Přidán sběr artefaktů, manažerská kategorizace, rozhodnutí o vrstvách do workflow' },
+  { time: '22.04. 17:30', action: 'Založen progress dashboard' },
+  { time: '22.04. 17:00', action: 'Flow diagram — rollout detail opravený (z-index)' },
+  { time: '22.04. 16:30', action: 'Vytvořen flow diagram s canvas/SVG' },
+  { time: '22.04. 15:00', action: 'Swimlane workflow HTML hotový (5 rolí, 10 kroků)' },
+  { time: '22.04. 14:00', action: 'pravidla-projektu.md — R001 až R009' },
+  { time: '22.04. 12:00', action: 'Struktura wiki — 8 AOR oblastí, 27 bloků, _structure.json' },
+  { time: '22.04. 11:00', action: 'Přesun 14 souborů do nové AOR struktury' },
+];
+
+// status: 'done' | 'wip' | 'todo' | 'blocked'
+// owner: 'jan' | 'claude' | 'oba' | 'mozkotron'
+const SECTIONS = [
+  {
+    title: '✅ Hotovo',
+    id: 'done',
+    items: [
+      { s: 'done', t: 'Struktura wiki', d: '8 AOR oblastí, 27 bloků, _structure.json, _category_.json', o: 'claude' },
+      { s: 'done', t: 'Naming konvence', d: 'kebab-case bez diakritiky, {type}-{tema}.md (R003)', o: 'oba' },
+      { s: 'done', t: 'Rozhodovací strom typů', d: 'BIMG → SOP → CHL → LAW → KNOW (R008)', o: 'oba' },
+      { s: 'done', t: 'Role ve workflow', d: 'Editor, Systém, Claude, Manažer, Čtenář (R009)', o: 'oba' },
+      { s: 'done', t: 'Pravidla editora', d: 'Editor neřeší typ/formát/umístění (R006), Claude píše (R007)', o: 'oba' },
+      { s: 'done', t: 'Vizualizace workflow', d: 'Swimlane tabulka + flow diagram v3 (12 kroků, dvouosý model)', o: 'claude' },
+      { s: 'done', t: 'Pravidla projektu', d: 'pravidla-projektu.md s auto-zápisem rozhodnutí (R005)', o: 'claude' },
+      { s: 'done', t: 'Progress dashboard', d: 'Tento soubor — live HTML s auto-refresh', o: 'claude' },
+      { s: 'done', t: 'Průvodce kategoriemi', d: 'Interaktivní HTML — přehled, strom, matice, kvíz 10 otázek', o: 'claude' },
+      { s: 'done', t: 'Standard Komunikace (trojblok)', d: 'DNA firmy — 🔧 Udělal / 💡 Vyplývá / ❗ Potřebuju', o: 'oba' },
+      { s: 'done', t: 'Standard Průvodce', d: 'DNA firmy — interaktivní HTML pro komplexní témata', o: 'oba' },
+      { s: 'done', t: 'R011 dvouosý model', d: 'category × layer jako 2 nezávislé osy', o: 'oba' },
+      { s: 'done', t: 'R012 Intake přes Cowork + Synology', d: 'Strategické rozhodnutí — manifest jako vstupní brána', o: 'oba' },
+    ]
+  },
+  {
+    title: '🔶 Frontmatter kontrakt',
+    id: 'wip',
+    items: [
+      { s: 'done', t: 'Dvouosý model category × layer', d: 'R011 — potvrzeno a zapsáno', o: 'oba' },
+      { s: 'done', t: 'Audience = AOR oblasti', d: 'R014 — firma/management/finance/rust/nakup/prodej/sluzby/technologie. Array.', o: 'oba' },
+      { s: 'done', t: 'source_bimg jako slug', d: 'R015 — povinné pro SOP/CHL, slug formát', o: 'oba' },
+      { s: 'done', t: 'Validace frontmatter', d: 'R016 — Claude validuje před publikací, 10 povinných polí', o: 'claude' },
+    ]
+  },
+  {
+    title: '📋 Manifest + Intake',
+    id: 'manifest',
+    items: [
+      { s: 'done', t: 'Napsat CLAUDE.md manifest', d: 'Intake dialog, pravidla, constrainty — vstupní brána pro editory', o: 'claude' },
+      { s: 'done', t: 'Intake dialog — definice otázek', d: 'Strukturované otázky: téma, kategorie, audience, podklady — v manifestu', o: 'oba' },
+      { s: 'todo', t: 'Test intake s reálným scénářem', d: 'Simulace: editor zadá nový obsah přes Cowork', o: 'oba' },
+    ]
+  },
+  {
+    title: '📝 Šablony dokumentů',
+    id: 'templates',
+    items: [
+      { s: 'done', t: 'BIMG šablona', d: 'sablona-bimg.md — neomezená délka, subpages, příklady per kategorie', o: 'claude' },
+      { s: 'done', t: 'SOP šablona', d: 'sablona-sop.md — max 1 obrazovka, číslované kroky, screenshoty', o: 'claude' },
+      { s: 'done', t: 'CHL šablona', d: 'sablona-chl.md — 1×A4, 3 formáty (tabulka/checklist/diagram)', o: 'claude' },
+    ]
+  },
+  {
+    title: '🔒 Systémové constrainty',
+    id: 'constraints',
+    items: [
+      { s: 'todo', t: 'Přístupová matice', d: 'Kdo vidí jaký type × audience, mapování rolí', o: 'oba' },
+      { s: 'todo', t: 'Registr existujících BIMG', d: 'Jak Claude pozná, zda téma má BIMG — v _structure.json nebo sken?', o: 'oba' },
+      { s: 'todo', t: 'Kaskádová revize — pravidla', d: 'Jak najít deriváty, co revidovat, auto vs. manuál', o: 'oba' },
+    ]
+  },
+  {
+    title: '📥 Review proces',
+    id: 'process',
+    items: [
+      { s: 'done', t: 'Intake proces', d: 'R012 — Cowork + Synology + manifest. Rozhodnuto.', o: 'oba' },
+      { s: 'todo', t: 'Review proces', d: 'Kde se review dělá — v Cowork session, draft status, verbálně?', o: 'jan' },
+      { s: 'todo', t: 'Review checklist', d: 'Co přesně manažer kontroluje — formalizovat', o: 'oba' },
+    ]
+  },
+  {
+    title: '💬 Feedback a analytika',
+    id: 'feedback',
+    items: [
+      { s: 'todo', t: 'Feedback mechanismus', d: '👍👎, komentáře, report — je implementované?', o: 'mozkotron' },
+      { s: 'todo', t: 'Dashboard pro manažera', d: 'Tracking čtení, stáří dokumentů, priority', o: 'mozkotron' },
+    ]
+  },
+  {
+    title: '🔧 Technický dluh',
+    id: 'tech',
+    items: [
+      { s: 'todo', t: 'Aktualizovat frontmatter v 14 souborech', d: 'Doplnit audience, source_bimg do přesunutých .md', o: 'claude' },
+      { s: 'todo', t: 'Smazat 3 staré law-* složky', d: 'law-obecne, law-synology, law-dokumentace — ručně v Finderu', o: 'jan' },
+      { s: 'todo', t: 'Aktualizovat Jak_pracovat_s_Claude.md', d: 'Sekce 7 odkazuje starý law-{tema} formát', o: 'claude' },
+    ]
+  },
+];
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  🎨 RENDER — nemění se, jen čte data shora                 ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+function render() {
+  const app = document.getElementById('app');
+
+  // Count totals
+  let total = 0, done = 0, wip = 0;
+  SECTIONS.forEach(s => s.items.forEach(i => {
+    total++;
+    if (i.s === 'done') done++;
+    if (i.s === 'wip') wip++;
+  }));
+  const todo = total - done - wip;
+  const pctDone = Math.round((done / total) * 100);
+  const pctWip = Math.round((wip / total) * 100);
+
+  let html = '';
+
+  // Summary cards
+  html += `<div class="summary">
+    <div class="summary-card"><div class="num num-done">${done}</div><div class="label">Hotovo</div></div>
+    <div class="summary-card"><div class="num num-wip">${wip}</div><div class="label">Rozpracováno</div></div>
+    <div class="summary-card"><div class="num num-todo">${todo}</div><div class="label">Čeká</div></div>
+    <div class="summary-card"><div class="num" style="color:#f8fafc">${pctDone}%</div><div class="label">Celkem</div></div>
+  </div>`;
+
+  // Progress bar
+  html += `<div class="progress-bar-wrap">
+    <div class="progress-bar-done" style="width:${pctDone}%"></div>
+    <div class="progress-bar-wip" style="width:${pctWip}%"></div>
+  </div>`;
+
+  // Next up
+  html += `<div class="next-up">
+    <h3>${NEXT_UP.title}</h3>
+    <p>${NEXT_UP.desc}</p>
+  </div>`;
+
+  // Sections
+  SECTIONS.forEach(sec => {
+    const count = sec.items.length;
+    const doneCount = sec.items.filter(i => i.s === 'done').length;
+    html += `<div class="section">
+      <div class="section-header">${sec.title} <span class="count">${doneCount}/${count}</span></div>`;
+
+    sec.items.forEach(item => {
+      const ownerTag = {
+        jan: '<span class="item-tag tag-jan">Jan</span>',
+        claude: '<span class="item-tag tag-claude">Claude</span>',
+        oba: '<span class="item-tag tag-oba">Jan + Claude</span>',
+        mozkotron: '<span class="item-tag tag-mozkotron">MOZKOTRON</span>',
+      }[item.o] || '';
+
+      html += `<div class="item ${item.s}">
+        <div class="item-check">${item.s === 'done' ? '✓' : ''}</div>
+        <div class="item-body">
+          <div class="item-title">${item.t}</div>
+          <div class="item-desc">${item.d}</div>
+          ${ownerTag}
+        </div>
+      </div>`;
+    });
+
+    html += `</div>`;
+  });
+
+  // Log
+  html += `<div class="log"><h3>📝 Poslední změny</h3>`;
+  LOG.forEach(l => {
+    html += `<div class="log-entry"><span class="time">${l.time}</span><span class="action">${l.action}</span></div>`;
+  });
+  html += `</div>`;
+
+  app.innerHTML = html;
+  document.getElementById('lastUpdate').textContent = `Aktualizace: ${LAST_UPDATED}`;
+}
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  🔄 AUTO-REFRESH — reload stránky každých 5 sekund         ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+const REFRESH_INTERVAL = 5; // sekund
+
+function startRefreshCycle() {
+  const fill = document.getElementById('refreshFill');
+  fill.style.transition = `width ${REFRESH_INTERVAL}s linear`;
+
+  // Start fill animation
+  requestAnimationFrame(() => {
+    fill.style.width = '100%';
+  });
+
+  // Reload after interval
+  setTimeout(() => {
+    location.reload();
+  }, REFRESH_INTERVAL * 1000);
+}
+
+// Init
+render();
+startRefreshCycle();
+</script>
+</body>
+</html>

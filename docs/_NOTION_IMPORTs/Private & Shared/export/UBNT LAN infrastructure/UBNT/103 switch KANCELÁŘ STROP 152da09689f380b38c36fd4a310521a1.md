@@ -1,0 +1,4 @@
+# 103 switch KANCELÁŘ STROP
+
+ID: 4
+IP: 172.25.1.103

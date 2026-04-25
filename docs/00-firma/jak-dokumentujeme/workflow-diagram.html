@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔄 Flow diagram — Tvorba obsahu Mozkotron</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0f1117; color: #e2e8f0;
+  }
+  .topbar {
+    background: #111827; border-bottom: 1px solid #1e293b;
+    padding: 12px 24px; display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .topbar h1 { font-size: 1.1rem; color: #f8fafc; }
+  .topbar .subtitle { font-size: 0.75rem; color: #64748b; }
+
+  /* ===== LAYOUT ===== */
+  .layout {
+    display: flex; gap: 0; min-height: 100vh;
+  }
+  .main-flow {
+    flex: 1; padding: 24px 32px; position: relative; min-width: 0;
+  }
+  .side-panel {
+    width: 320px; flex-shrink: 0;
+    background: #111827; border-left: 1px solid #1e293b;
+    padding: 20px; overflow-y: auto;
+  }
+
+  /* ===== PREREQUISITES (floating) ===== */
+  .prereq-panel {
+    background: #0d1117; border: 2px dashed #334155; border-radius: 14px;
+    padding: 16px 20px; margin-bottom: 32px;
+  }
+  .prereq-panel h3 {
+    font-size: 0.75rem; color: #64748b; text-transform: uppercase;
+    letter-spacing: 0.1em; margin-bottom: 12px;
+  }
+  .prereq-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .prereq-card {
+    flex: 1; min-width: 200px;
+    background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+    padding: 12px 16px; cursor: pointer; transition: all 0.2s;
+  }
+  .prereq-card:hover { border-color: #64748b; background: #263244; }
+  .prereq-card .pc-icon { font-size: 1.3rem; margin-bottom: 4px; }
+  .prereq-card .pc-title { font-size: 0.85rem; font-weight: 700; color: #e2e8f0; }
+  .prereq-card .pc-desc { font-size: 0.7rem; color: #64748b; margin-top: 2px; }
+  .prereq-detail {
+    display: none; background: #111827; border: 1px solid #334155;
+    border-radius: 8px; padding: 12px 16px; margin-top: 8px;
+    font-size: 0.75rem; color: #94a3b8; line-height: 1.6;
+  }
+  .prereq-detail.open { display: block; }
+  .prereq-detail h4 { color: #e2e8f0; margin: 8px 0 4px; font-size: 0.75rem; }
+  .prereq-detail h4:first-child { margin-top: 0; }
+  .prereq-detail li { margin-left: 16px; margin-bottom: 2px; }
+
+  /* ===== STEP NODES (main flow) ===== */
+  .step {
+    display: flex; align-items: flex-start; gap: 16px;
+    margin-bottom: 8px; position: relative;
+  }
+  .step-connector {
+    position: absolute; left: 23px; top: 56px; bottom: -8px;
+    width: 2px; background: #1e293b;
+  }
+  .step:last-child .step-connector { display: none; }
+
+  .step-num-circle {
+    width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 1.1rem; position: relative; z-index: 2;
+  }
+  .role-manager .step-num-circle { background: #10b981; color: #000; }
+  .role-claude .step-num-circle { background: #3b82f6; color: #fff; }
+  .role-reader .step-num-circle { background: #f59e0b; color: #000; }
+  .role-feedback .step-num-circle { background: #7c3aed; color: #fff; }
+
+  .step-body { flex: 1; min-width: 0; }
+  .step-card {
+    background: #111827; border: 1px solid #1e293b; border-radius: 12px;
+    padding: 14px 18px; cursor: pointer; transition: all 0.2s;
+  }
+  .step-card:hover { border-color: #334155; background: #151d2e; }
+  .role-manager .step-card { border-left: 3px solid #10b981; }
+  .role-claude .step-card { border-left: 3px solid #3b82f6; }
+  .role-reader .step-card { border-left: 3px solid #f59e0b; }
+  .role-feedback .step-card { border-left: 3px solid #7c3aed; }
+
+  .step-header { display: flex; align-items: center; gap: 8px; }
+  .step-icon { font-size: 1.2rem; }
+  .step-title { font-size: 0.95rem; font-weight: 700; color: #f8fafc; }
+  .step-badge {
+    font-size: 0.6rem; padding: 2px 8px; border-radius: 10px;
+    font-weight: 600; margin-left: auto; text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .role-manager .step-badge { background: #10b98122; color: #10b981; }
+  .role-claude .step-badge { background: #3b82f622; color: #3b82f6; }
+  .role-reader .step-badge { background: #f59e0b22; color: #f59e0b; }
+  .role-feedback .step-badge { background: #7c3aed22; color: #7c3aed; }
+
+  .step-desc { font-size: 0.75rem; color: #64748b; margin-top: 4px; }
+  .step-chevron { color: #475569; font-size: 0.6rem; margin-left: 6px; transition: transform 0.2s; }
+  .step-detail {
+    display: none; background: #0d1117; border: 1px solid #1e293b;
+    border-radius: 8px; padding: 14px 16px; margin-top: 8px;
+    font-size: 0.75rem; color: #94a3b8; line-height: 1.7;
+  }
+  .step-detail.open { display: block; }
+  .step-detail h4 { color: #e2e8f0; margin: 10px 0 4px; font-size: 0.75rem; }
+  .step-detail h4:first-child { margin-top: 0; }
+  .step-detail li { margin-left: 16px; margin-bottom: 3px; }
+  .step-detail .dd { height: 8px; }
+  .step-detail code { background: #1e293b; padding: 1px 5px; border-radius: 3px; font-size: 0.7rem; }
+
+  /* ===== STEP 0: PODNĚTY ===== */
+  .podnety-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    margin-bottom: 16px;
+  }
+  .podnet-card {
+    background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+    padding: 10px 14px; text-align: center; transition: all 0.2s;
+  }
+  .podnet-card:hover { border-color: #ec4899; background: #1e293bcc; }
+  .podnet-icon { font-size: 1.3rem; margin-bottom: 2px; }
+  .podnet-label { font-size: 0.7rem; color: #94a3b8; }
+  .podnety-arrow {
+    text-align: center; font-size: 1.5rem; color: #334155; margin-bottom: 8px;
+    letter-spacing: 8px;
+  }
+
+  /* ===== LOOP ARROW ===== */
+  .loop-marker {
+    display: flex; align-items: center; gap: 8px;
+    margin: 4px 0 4px 56px; font-size: 0.7rem; color: #475569;
+  }
+  .loop-line { flex: 0 0 40px; height: 1px; background: #334155; }
+
+  /* ===== SIDE PANEL ===== */
+  .side-panel h2 {
+    font-size: 0.75rem; color: #64748b; text-transform: uppercase;
+    letter-spacing: 0.1em; margin-bottom: 16px;
+  }
+  .sp-card {
+    background: #0d1117; border: 1px solid #1e293b; border-radius: 10px;
+    padding: 12px 16px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s;
+  }
+  .sp-card:hover { border-color: #334155; }
+  .sp-header { display: flex; align-items: center; gap: 6px; }
+  .sp-icon { font-size: 1rem; }
+  .sp-title { font-size: 0.8rem; font-weight: 700; color: #e2e8f0; }
+  .sp-desc { font-size: 0.68rem; color: #64748b; margin-top: 3px; }
+  .sp-badge {
+    font-size: 0.55rem; padding: 2px 6px; border-radius: 8px;
+    background: #64748b22; color: #64748b; font-weight: 600; margin-left: auto;
+    text-transform: uppercase;
+  }
+  .sp-detail {
+    display: none; background: #111827; border: 1px solid #1e293b;
+    border-radius: 6px; padding: 10px 14px; margin-top: 8px;
+    font-size: 0.7rem; color: #94a3b8; line-height: 1.6;
+  }
+  .sp-detail.open { display: block; }
+  .sp-detail li { margin-left: 14px; margin-bottom: 2px; }
+  .sp-detail h4 { color: #e2e8f0; margin: 6px 0 3px; font-size: 0.7rem; }
+  .sp-detail h4:first-child { margin-top: 0; }
+  .sp-detail code { background: #1e293b; padding: 1px 4px; border-radius: 3px; font-size: 0.65rem; }
+  .sp-section-title {
+    font-size: 0.65rem; color: #475569; text-transform: uppercase;
+    letter-spacing: 0.1em; margin: 20px 0 10px; padding-top: 12px;
+    border-top: 1px solid #1e293b;
+  }
+  .sp-section-title:first-of-type { margin-top: 0; border-top: none; padding-top: 0; }
+  .sp-ref-tag {
+    display: inline-block; font-size: 0.55rem; padding: 1px 6px; border-radius: 4px;
+    background: #3b82f622; color: #3b82f6; margin-top: 4px; font-weight: 600;
+  }
+
+  /* ===== LEGEND ===== */
+  .legend {
+    display: flex; gap: 16px; flex-wrap: wrap; margin-top: 8px;
+    padding: 12px 16px; background: #111827; border: 1px solid #1e293b;
+    border-radius: 10px; font-size: 0.7rem;
+  }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 900px) {
+    .layout { flex-direction: column; }
+    .side-panel { width: 100%; border-left: none; border-top: 1px solid #1e293b; }
+    .podnety-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<!-- Navigace průvodce tvorbou -->
+<nav style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#0a0a1a;border-bottom:1px solid #1e293b;padding:6px 16px;display:flex;align-items:center;gap:12px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:0.78rem;">
+  <a href="/firma/jak-dokumentujeme/pruvodce-tvorbou.html" style="color:#94a3b8;text-decoration:none;font-weight:600;margin-right:8px;">📚 Průvodce</a>
+  <a href="/firma/jak-dokumentujeme/matice.html" style="color:#64748b;text-decoration:none;">📊 Matice</a>
+  <a href="/firma/jak-dokumentujeme/pruvodce-kategorie.html" style="color:#64748b;text-decoration:none;">🎓 Kategorie</a>
+  <a href="/firma/jak-dokumentujeme/workflow-diagram.html" style="color:#64748b;text-decoration:none;">🗺️ Flow</a>
+  <a href="/firma/jak-dokumentujeme/workflow-tvorba.html" style="color:#64748b;text-decoration:none;">📋 Swimlane</a>
+  <a href="/firma/jak-dokumentujeme/workflow-vyvojak.html" style="color:#64748b;text-decoration:none;">🔄 Vývoják</a>
+  <style>.guide-nav a:hover{color:#cbd5e1!important;}</style>
+</nav>
+<div style="height:36px;"></div>
+<!-- /Navigace -->
+
+
+<div class="topbar">
+  <div>
+    <h1>🔄 Workflow — Tvorba obsahu Mozkotron</h1>
+    <div class="subtitle">v4 — oddělené předpoklady, systém vpravo, lidský flow vlevo · Klikni na krok pro detail</div>
+  </div>
+</div>
+
+<div class="layout">
+
+<!-- ════════════════════════════════════════ -->
+<!-- MAIN FLOW (left)                        -->
+<!-- ════════════════════════════════════════ -->
+<div class="main-flow">
+
+  <!-- PREREQUISITES -->
+  <div class="prereq-panel">
+    <h3>⚙️ Předpoklady</h3>
+    <div class="prereq-row">
+      <div class="prereq-card" onclick="togglePrereq('pr-cowork')">
+        <div class="pc-icon">💻</div>
+        <div class="pc-title">Cowork session</div>
+        <div class="pc-desc">Editor otevře Cowork + připojí Synology folder</div>
+        <div class="prereq-detail" id="pr-cowork">
+          <h4>Jak to funguje</h4>
+          <ul>
+            <li>💻 Editor otevře <strong>Cowork desktop</strong> na svém počítači</li>
+            <li>📁 Připojí sdílený <strong>Synology folder</strong> (<code>docs/</code>)</li>
+            <li>📋 Claude přečte <strong>manifest</strong> z <code>_system_work/CLAUDE.md</code></li>
+            <li>🔄 Manifest definuje intake dialog — Claude se ptá strukturovaně</li>
+          </ul>
+          <div class="dd"></div>
+          <h4>Konzistence</h4>
+          Jeden manifest na Synology = <strong>stejný workflow pro všechny editory</strong>. Změna manifestu → změna dialogu pro všechny.
+        </div>
+      </div>
+      <div class="prereq-card" onclick="togglePrereq('pr-manifest')">
+        <div class="pc-icon">📋</div>
+        <div class="pc-title">Manifest (CLAUDE.md)</div>
+        <div class="pc-desc">Sdílená pravidla — vstupní brána pro Claude</div>
+        <div class="prereq-detail" id="pr-manifest">
+          <h4>Co manifest obsahuje</h4>
+          <ul>
+            <li>📌 Intake dialog — jaké otázky se ptát</li>
+            <li>📏 Frontmatter kontrakt — povinná pole</li>
+            <li>🔀 Rozhodovací strom vrstev (BIMG/SOP/CHL)</li>
+            <li>📊 Odkaz na <code>_structure.json</code></li>
+            <li>⚖️ Constrainty formátu</li>
+          </ul>
+          <div class="dd"></div>
+          Leží v <code>docs/_system_work/CLAUDE.md</code>. Všichni editoři sdílí stejný soubor → <strong>uniformní chování</strong> Claude.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEGEND -->
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div> Manažer (editor)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div> Claude</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div> Čtenář</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div> Zpětná vazba</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#64748b"></div> Systém (panel vpravo →)</div>
+  </div>
+
+  <div style="height:24px"></div>
+
+  <!-- ===== STEP 0: PODNĚTY ===== -->
+  <div class="step role-feedback" id="step-0">
+    <div class="step-num-circle">0</div>
+    <div class="step-body">
+      <div class="podnety-grid">
+        <div class="podnet-card"><div class="podnet-icon">🐛</div><div class="podnet-label">Chyba z neznalosti</div></div>
+        <div class="podnet-card"><div class="podnet-icon">❓</div><div class="podnet-label">Opakovaná otázka</div></div>
+        <div class="podnet-card"><div class="podnet-icon">📋</div><div class="podnet-label">Nový proces</div></div>
+        <div class="podnet-card"><div class="podnet-icon">⚖️</div><div class="podnet-label">Nové pravidlo</div></div>
+        <div class="podnet-card"><div class="podnet-icon">💬</div><div class="podnet-label">Zpětná vazba</div></div>
+        <div class="podnet-card"><div class="podnet-icon">🏗️</div><div class="podnet-label">AOR audit</div></div>
+      </div>
+      <div class="podnety-arrow">▼ ▼ ▼</div>
+      <div class="step-connector"></div>
+    </div>
+  </div>
+
+  <!-- ===== STEP 1: TRIGGER ===== -->
+  <div class="step role-manager" id="step-1">
+    <div class="step-num-circle">1</div>
+    <div class="step-body">
+      <div class="step-card" onclick="toggleStep('d1')">
+        <div class="step-header">
+          <span class="step-icon">⚡</span>
+          <span class="step-title">Trigger — potřeba identifikována</span>
+          <span class="step-badge">Manažer (editor)</span>
+          <span class="step-chevron">▼</span>
+        </div>
+        <div class="step-desc">Někdo zjistil, že chybí dokumentace nebo existující nefunguje</div>
+      </div>
+      <div class="step-detail" id="d1">
+        Manažer (v roli editora) zaznamená potřebu nové nebo aktualizované dokumentace. Podnět přichází z jednoho ze šesti zdrojů výše.
+        <div class="dd"></div>
+        <h4>Výstup</h4>
+        Rozhodnutí: „Tohle téma potřebuje dokumentaci." Předává se do kategorizace.
+      </div>
+      <div class="step-connector"></div>
+    </div>
+  </div>
+
+  <!-- ===== STEP 2: KATEGORIZACE ===== -->
+  <div class="step role-manager" id="step-2">
+    <div class="step-num-circle">2</div>
+    <div class="step-body">
+      <div class="step-card" onclick="toggleStep('d2')">
+        <div class="step-header">
+          <span class="step-icon">🏷️</span>
+          <span class="step-title">Kategorizace</span>
+          <span class="step-badge">Manažer (editor)</span>
+          <span class="step-chevron">▼</span>
+        </div>
+        <div class="step-desc">Je to LAW, PROC, KNOW, nebo MEM?</div>
+      </div>
+      <div class="step-detail" id="d2">
+        <h4>Čtyři datové kategorie (z DOS taxonomie)</h4>
+        <ul>
+          <li>⚖️ <strong>LAW</strong> — závazné pravidlo, mantinel, zákon firmy</li>
+          <li>🔧 <strong>PROC</strong> — procedura, jak něco udělat krok za krokem</li>
+          <li>🧠 <strong>KNOW</strong> — expertní znalost, know-how</li>
+          <li>📝 <strong>MEM</strong> — záznam události, porady, rozhodnutí</li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Proč to dělá člověk?</h4>
+        Kategorie je věcné rozhodnutí o tom, CO informace je. Claude pomůže s rozlišením (viz Průvodce), ale finální slovo má manažer.
+      </div>
+      <div class="step-connector"></div>
+    </div>
+  </div>
+
+  <!-- ===== STEP 3: VSTUPY + ARTEFAKTY ===== -->
+  <div class="step role-manager" id="step-3">
+    <div class="step-num-circle">3</div>
+    <div class="step-body">
+      <div class="step-card" onclick="toggleStep('d3')">
+        <div class="step-header">
+          <span class="step-icon">📥</span>
+          <span class="step-title">Vstupy + sběr artefaktů</span>
+          <span class="step-badge">Manažer (editor)</span>
+          <span class="step-chevron">▼</span>
+        </div>
+        <div class="step-desc">Téma, znalost, audience, podklady — vše od jednoho člověka</div>
+      </div>
+      <div class="step-detail" id="d3">
+        <h4>Co editor dodá</h4>
+        <ul>
+          <li>📌 <strong>Téma</strong> — o čem to je</li>
+          <li>🧠 <strong>Znalost</strong> — co o tom ví, co je rozhodnuté</li>
+          <li>👤 <strong>Audience</strong> — pro jakou roli / AOR skupinu</li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Co editor nahraje</h4>
+        <ul>
+          <li>📄 Dokumentace — existující postupy, manuály</li>
+          <li>📸 Fotodokumentace — fotky produktů, pracovišť</li>
+          <li>🖥️ Screenshoty — z Money S4, e-shopu, systémů</li>
+          <li>📝 Přeložený postup — „jak to dělám" vlastními slovy</li>
+          <li>🎥 Video — nahrávka procesu</li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Co editor NEŘEŠÍ</h4>
+        <ul>
+          <li>❌ Typ vrstvy (BIMG/SOP/CHL)</li>
+          <li>❌ Formátování a strukturu</li>
+          <li>❌ Kam uložit</li>
+          <li>❌ Psaní textu</li>
+        </ul>
+      </div>
+      <div class="step-connector"></div>
+    </div>
+  </div>
+
+  <!-- ===== STEP 4: ANALÝZA ===== -->
+  <div class="step role-claude" id="step-4">
+    <div class="step-num-circle">4</div>
+    <div class="step-body">
+      <div class="step-card" onclick="toggleStep('d4')">
+        <div class="step-header">
+          <span class="step-icon">🔎</span>
+          <span class="step-title">Analýza vstupů</span>
+          <span class="step-badge">Claude</span>
+          <span class="step-chevron">▼</span>
+        </div>
+        <div class="step-desc">Přečtení vstupů, ověření struktury, určení AOR</div>
+      </div>
+      <div class="step-detail" id="d4">
+        <ul>
+          <li>Přečte vstupy od editora + nahrané artefakty</li>
+          <li>Ověří <code>_structure.json</code> — existuje pro téma BIMG?</li>
+          <li>Určí AOR oblast a tematický blok</li>
+          <li>Zkontroluje, co už k tématu existuje</li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Pokud nejednoznačné</h4>
+        Claude se ptá manažera. Nikdy nerozhoduje o věcech mimo svůj scope.
+      </div>
+      <div class="step-connector"></div>
+    </div>
+  </div>
+
+  <!-- ===== STEP 5: ROZHODNUTÍ O VRSTVÁCH ===== -->
+  <div class="step role-claude" id="step-5">
+    <div class="step-num-circle">5</div>
+    <div class="step-body">
+      <div class="step-card" onclick="toggleStep('d5')">
+        <div class="step-header">
+          <span class="step-icon">🔀</span>
+          <span class="step-title">Rozhodnutí o vrstvách</span>
+          <span class="step-badge">Claude</span>
+          <span class="step-chevron">▼</span>
+        </div>
+        <div class="step-desc">BIMG vždy. +SOP? +CHL? Návrh + konfirmace manažerem</div>
+      </div>
+      <div class="step-detail" id="d5">
+        <h4>Pravidlo (strojové)</h4>
+        <ul>
+          <li><strong>BIMG se dělá vždy</strong> — každé téma začíná Big Image</li>
+          <li>Existuje BIMG + konkrétní postup pro roli → navrhnout <strong>SOP</strong></li>
+          <li>Existuje BIMG + SOP + potřeba rychlé ref. → navrhnout <strong>CHL</strong></li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Konfirmace</h4>
+        Claude navrhne, manažer potvrdí: <em>„Téma X nemá BIMG — vytvořím BIMG. K tomu navrhuji i SOP pro roli prodejce. Souhlasíš?"</em>
+        <div class="dd"></div>
+        <span class="sp-ref-tag">→ Viz panel: Constraint A + B</span>
+      </div>
+      <div class="step-connector"></div>
+    </div>
+  </div>
+
+  <!-- ===== STEP 6: TVORBA ===== -->
+  <div class="step role-claude" id="step-6">
+    <div class="step-num-circle">6</div>
+    <div class="step-body">
+      <div class="step-card" onclick="toggleStep('d6')">
+        <div class="step-header">
+          <span class="step-icon">✏️</span>
+          <span class="step-title">Tvorba dokumentu</span>
+          <span class="step-badge">Claude</span>
+          <span class="step-chevron">▼</span>
+        </div>
+        <div class="step-desc">Claude píše obsah ve správném formátu s frontmatter</div>
+      </div>
+      <div class="step-detail" id="d6">
+        <ul>
+          <li>Napíše obsah podle šablony dané vrstvy</li>
+          <li>Kompletní frontmatter dle kontraktu</li>
+          <li>Interní odkazy na související docs</li>
+          <li>Kontrola: CHL ≤ A4? Formát dle šablony?</li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Zdroje</h4>
+        Vstupy editora (3) + šablona vrstvy + constrainty + <code>_structure.json</code>
+        <div class="dd"></div>
+        <span class="sp-ref-tag">→ Viz panel: Šablony + Constrainty</span>
+      </div>
+      <div class="step-connector"></div>
+    </div>
+  </div>
+
+  <!-- ===== STEP 7: REVIEW ===== -->
+  <div class="step role-manager" id="step-7">
+    <div class="step-num-circle">7</div>
+    <div class="step-body">
+      <div class="step-card" onclick="toggleStep('d7')">
+        <div class="step-header">
+          <span class="step-icon">✅</span>
+          <span class="step-title">Review a schválení</span>
+          <span class="step-badge">Manažer (editor)</span>
+          <span class="step-chevron">▼</span>
+        </div>
+        <div class="step-desc">Kontrola věcné správnosti, srozumitelnosti, audience</div>
+      </div>
+      <div class="step-detail" id="d7">
+        <h4>Checklist</h4>
+        <ul>
+          <li>✅ Věcně správné?</li>
+          <li>✅ Srozumitelné pro cílovou roli?</li>
+          <li>✅ Chci, aby to šlo do lidí?</li>
+          <li>✅ Nechybí důležité?</li>
+          <li>✅ Správná audience a kategorie?</li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Výsledek</h4>
+        ✅ Schváleno → publikace · 🔄 Vráceno → Claude opraví · ❌ Zamítnuto → zpět
+      </div>
+      <div class="step-connector"></div>
+    </div>
+  </div>
+
+  <!-- LOOP BACK MARKER -->
+  <div class="loop-marker">
+    <div class="loop-line"></div>
+    🔄 Vráceno? → Claude zapracuje připomínky → zpět k review (7)
+    <div class="loop-line"></div>
+  </div>
+
+  <!-- ===== STEP 8: PUBLIKACE ===== -->
+  <div class="step role-claude" id="step-8">
+    <div class="step-num-circle">8</div>
+    <div class="step-body">
+      <div class="step-card" onclick="toggleStep('d8')">
+        <div class="step-header">
+          <span class="step-icon">🚀</span>
+          <span class="step-title">Publikace</span>
+          <span class="step-badge">Claude</span>
+          <span class="step-chevron">▼</span>
+        </div>
+        <div class="step-desc">Uložení .md, aktualizace registru, rebuild</div>
+      </div>
+      <div class="step-detail" id="d8">
+        <ul>
+          <li>Uloží <code>.md</code> do správné složky dle <code>_structure.json</code></li>
+          <li>Založí složku + <code>_category_.json</code> pokud třeba</li>
+          <li>Aktualizuje <code>_structure.json</code></li>
+          <li>Ověří renderování</li>
+        </ul>
+        <div class="dd"></div>
+        <span class="sp-ref-tag">→ Viz panel: Kaskádová revize</span>
+      </div>
+      <div class="step-connector"></div>
+    </div>
+  </div>
+
+  <!-- ===== STEP 9: ČTENÍ ===== -->
+  <div class="step role-reader" id="step-9">
+    <div class="step-num-circle">9</div>
+    <div class="step-body">
+      <div class="step-card" onclick="toggleStep('d9')">
+        <div class="step-header">
+          <span class="step-icon">📖</span>
+          <span class="step-title">Čtení a provedení</span>
+          <span class="step-badge">Čtenář</span>
+          <span class="step-chevron">▼</span>
+        </div>
+        <div class="step-desc">Zaměstnanec najde SOP/CHL, provede úkon</div>
+      </div>
+      <div class="step-detail" id="d9">
+        Najde dokument (sidebar, search, QR kód). Provede kroky z SOP. Podívá se na CHL pro referenci.
+        <div class="dd"></div>
+        <span class="sp-ref-tag">→ Viz panel: Filtrovaný přístup</span>
+      </div>
+      <div class="step-connector"></div>
+    </div>
+  </div>
+
+  <!-- ===== STEP 10: FEEDBACK ===== -->
+  <div class="step role-feedback" id="step-10">
+    <div class="step-num-circle">10</div>
+    <div class="step-body">
+      <div class="step-card" onclick="toggleStep('d10')">
+        <div class="step-header">
+          <span class="step-icon">💬</span>
+          <span class="step-title">Zpětná vazba</span>
+          <span class="step-badge">Čtenář</span>
+          <span class="step-chevron">▼</span>
+        </div>
+        <div class="step-desc">Chyba, nejasnost, chybí obsah → nový podnět → smyčka se uzavírá</div>
+      </div>
+      <div class="step-detail" id="d10">
+        ❌ Chyba · ❓ Nejasnost · ➕ Chybí obsah · 💡 Vylepšení
+        <div class="dd"></div>
+        Feedback → dashboard manažera → nový podnět (krok 0) → <strong>smyčka se uzavírá</strong>.
+        <div class="dd"></div>
+        <span class="sp-ref-tag">→ Viz panel: Dashboard</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOOP BACK TO STEP 0 -->
+  <div class="loop-marker">
+    <div class="loop-line"></div>
+    🔁 Zpětná vazba → nový podnět (krok 0)
+    <div class="loop-line"></div>
+  </div>
+
+  <div style="height: 40px"></div>
+
+</div><!-- /main-flow -->
+
+
+<!-- ════════════════════════════════════════ -->
+<!-- SIDE PANEL (system stuff)               -->
+<!-- ════════════════════════════════════════ -->
+<div class="side-panel">
+  <h2>⚙️ Systém — pravidla a constrainty</h2>
+
+  <div class="sp-section-title">📏 Formátové constrainty</div>
+
+  <div class="sp-card" onclick="toggleSp('sp-conA')">
+    <div class="sp-header">
+      <span class="sp-icon">📏</span>
+      <span class="sp-title">Constraint A — Formát</span>
+      <span class="sp-badge">krok 5–6</span>
+    </div>
+    <div class="sp-desc">Limity délky a formy pro každou vrstvu</div>
+    <div class="sp-detail" id="sp-conA">
+      <ul>
+        <li><strong>BIMG</strong> — text + diagramy, subpages, neomezeno</li>
+        <li><strong>SOP</strong> — číslované kroky, bez limitu délky, řídí se tématem</li>
+        <li><strong>CHL</strong> — tabulka/checklist/diagram, 1×A4 tisknutelný</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="sp-card" onclick="toggleSp('sp-conB')">
+    <div class="sp-header">
+      <span class="sp-icon">🏷️</span>
+      <span class="sp-title">Constraint B — Meta + naming</span>
+      <span class="sp-badge">krok 6</span>
+    </div>
+    <div class="sp-desc">Frontmatter kontrakt, pojmenování, umístění</div>
+    <div class="sp-detail" id="sp-conB">
+      <h4>Frontmatter kontrakt (10 polí)</h4>
+      <code>title</code>, <code>sidebar_label</code>, <code>sidebar_position</code>, <code>description</code>, <code>category</code>, <code>layer</code>, <code>audience</code>, <code>source_bimg</code>, <code>version</code>, <code>author</code>, <code>date</code>
+      <div style="height:6px"></div>
+      <h4>Naming</h4>
+      Soubor: <code>nazev-bimg.md</code> · Složky: kebab-case bez diakritiky · Umístění dle <code>_structure.json</code>
+    </div>
+  </div>
+
+  <div class="sp-card" onclick="toggleSp('sp-templates')">
+    <div class="sp-header">
+      <span class="sp-icon">📄</span>
+      <span class="sp-title">Šablony dokumentů</span>
+      <span class="sp-badge">krok 6</span>
+    </div>
+    <div class="sp-desc">3 šablony: BIMG, SOP, CHL</div>
+    <div class="sp-detail" id="sp-templates">
+      <ul>
+        <li><code>sablona-bimg.md</code> — neomezená délka, subpages, příklady per kategorie</li>
+        <li><code>sablona-sop.md</code> — max 1 obrazovka, číslované kroky, screenshoty</li>
+        <li><code>sablona-chl.md</code> — 1×A4, 3 formáty (tabulka/checklist/diagram)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="sp-section-title">🔄 Životní cyklus</div>
+
+  <div class="sp-card" onclick="toggleSp('sp-cascade')">
+    <div class="sp-header">
+      <span class="sp-icon">🔄</span>
+      <span class="sp-title">Kaskádová revize</span>
+      <span class="sp-badge">krok 8</span>
+    </div>
+    <div class="sp-desc">Změna BIMG → revidovat SOP → CHL</div>
+    <div class="sp-detail" id="sp-cascade">
+      Při změně BIMG najde deriváty přes <code>source_bimg</code>. Přegeneruje a předá k review. <strong>Směr vždy shora dolů.</strong>
+    </div>
+  </div>
+
+  <div class="sp-card" onclick="toggleSp('sp-access')">
+    <div class="sp-header">
+      <span class="sp-icon">🔑</span>
+      <span class="sp-title">Filtrovaný přístup</span>
+      <span class="sp-badge">krok 9</span>
+    </div>
+    <div class="sp-desc">Kdo vidí co: category × layer × audience</div>
+    <div class="sp-detail" id="sp-access">
+      <ul>
+        <li><strong>LAW</strong> — vidí celá firma</li>
+        <li><strong>SOP/CHL</strong> — dle audience (AOR oblast)</li>
+        <li><strong>BIMG</strong> — jen architekt/vedení</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="sp-section-title">📊 Monitoring</div>
+
+  <div class="sp-card" onclick="toggleSp('sp-dashboard')">
+    <div class="sp-header">
+      <span class="sp-icon">📊</span>
+      <span class="sp-title">Dashboard manažera</span>
+      <span class="sp-badge">krok 10</span>
+    </div>
+    <div class="sp-desc">Kdo čte, co nečte, stáří, feedback</div>
+    <div class="sp-detail" id="sp-dashboard">
+      <ul>
+        <li>📈 Čtenost dokumentů — kdo, kdy, kolikrát</li>
+        <li>⏰ Stáří — které docs potřebují revizi</li>
+        <li>💬 Feedback — nahlášené chyby a návrhy</li>
+        <li>📊 Pokrytí — které AOR oblasti mají/nemají BIMG</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="sp-section-title">📚 Reference</div>
+
+  <div class="sp-card">
+    <div class="sp-header">
+      <span class="sp-icon">📁</span>
+      <span class="sp-title">Soubory v _system_work/</span>
+    </div>
+    <div class="sp-desc" style="margin-top:6px; line-height: 1.8;">
+      <code>CLAUDE.md</code> — manifest (intake dialog)<br>
+      <code>_structure.json</code> — strom AOR oblastí<br>
+      <code>pravidla-projektu.md</code> — rozhodnutí R001–R016<br>
+      <code>pruvodce-kategorie.html</code> — trénink LAW/PROC/KNOW/MEM<br>
+      <code>sablona-*.md</code> — šablony BIMG/SOP/CHL
+    </div>
+  </div>
+
+</div><!-- /side-panel -->
+
+</div><!-- /layout -->
+
+<script>
+function toggleStep(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('open');
+}
+function togglePrereq(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('open');
+}
+function toggleSp(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('open');
+}
+</script>
+
+</body>
+</html>

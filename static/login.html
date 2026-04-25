@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mozkotron — Přihlášení</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23d97706'/%3E%3Ctext x='16' y='23' text-anchor='middle' font-family='system-ui,sans-serif' font-size='18' font-weight='700' fill='%23fff'%3EM%3C/text%3E%3C/svg%3E">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .login-box { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 2.5rem; width: 480px; max-width: 90vw; }
+  h1 { font-size: 1.4rem; color: #f8fafc; margin-bottom: 0.3rem; }
+  .sub { font-size: 0.85rem; color: #94a3b8; margin-bottom: 2rem; }
+
+  .group { margin-bottom: 1.5rem; }
+  .group-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+    margin-bottom: 0.5rem;
+    padding-left: 0.2rem;
+  }
+  .group-users { display: flex; flex-direction: column; gap: 0.4rem; }
+
+  .user-btn {
+    background: #334155;
+    border: 2px solid #475569;
+    border-radius: 8px;
+    padding: 0.7rem 1rem;
+    color: #cbd5e1;
+    font-size: 0.95rem;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    width: 100%;
+  }
+  .user-btn:hover { border-color: var(--accent, #0ea5e9); background: #1e293b; color: #f8fafc; }
+
+  .user-avatar {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--accent, #0ea5e9);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; color: #fff; font-size: 0.85rem; flex-shrink: 0;
+  }
+  .user-name { font-weight: 600; }
+  .user-role { font-size: 0.75rem; color: #94a3b8; }
+
+  /* Barvy per skupina */
+  .group-spravci .user-btn:hover { border-color: #f59e0b; }
+  .group-spravci .user-avatar { background: #f59e0b; }
+
+  .group-editori .user-btn:hover { border-color: #10b981; }
+  .group-editori .user-avatar { background: #10b981; }
+
+  .group-ctenari .user-btn:hover { border-color: #6366f1; }
+  .group-ctenari .user-avatar { background: #6366f1; }
+
+  .error { color: #ef4444; font-size: 0.85rem; margin-top: 1rem; display: none; }
+  .loading { text-align: center; color: #94a3b8; padding: 2rem; }
+  .note { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #334155; font-size: 0.75rem; color: #64748b; }
+</style>
+</head>
+<body>
+<div class="login-box">
+  <h1>Mozkotron</h1>
+  <p class="sub">Vyber svůj profil pro přístup do znalostní báze</p>
+  <div id="groups"><div class="loading">Načítám uživatele...</div></div>
+  <div class="error" id="error"></div>
+  <div class="note">Dočasné přihlášení bez hesla — bude nahrazeno plným auth systémem.</div>
+</div>
+<script>
+// Tři zobrazované bloky a které auth-config skupiny do nich spadají
+var DISPLAY_BLOCKS = [
+  { label: 'Správci',  css: 'spravci', authGroups: ['vedeni', 'spravci'] },
+  { label: 'Editoři', css: 'editori', authGroups: ['editori'] },
+  { label: 'Čtenáři', css: 'ctenari', authGroups: ['uzivatele'] }
+];
+
+var GROUP_ROLES = {
+  vedeni: 'vedení / správa',
+  spravci: 'IT správa',
+  editori: 'editor obsahu',
+  uzivatele: 'čtenář'
+};
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function loadUsers() {
+  try {
+    var res = await fetch('/api/users');
+    var users = await res.json();
+    var container = document.getElementById('groups');
+
+    if (users.length === 0) {
+      container.innerHTML = '<div style="color:#8b8070;padding:1rem;">Žádní uživatelé v auth-config.json</div>';
+      return;
+    }
+
+    var html = '';
+    DISPLAY_BLOCKS.forEach(function(block) {
+      // Najdi uživatele patřící do tohoto bloku
+      var blockUsers = users.filter(function(u) {
+        return u.groups.some(function(g) { return block.authGroups.indexOf(g) >= 0; });
+      });
+      if (blockUsers.length === 0) return;
+
+      // Deduplikace (uživatel může být ve více skupinách)
+      var seen = {};
+      blockUsers = blockUsers.filter(function(u) {
+        if (seen[u.username]) return false;
+        seen[u.username] = true;
+        return true;
+      });
+
+      html += '<div class="group group-' + block.css + '">';
+      html += '<div class="group-label">' + escapeHtml(block.label) + '</div>';
+      html += '<div class="group-users">';
+      blockUsers.forEach(function(u) {
+        var displayName = u.firstName + (u.lastName ? ' ' + u.lastName : '');
+        var initials = (u.firstName || u.username).charAt(0).toUpperCase();
+        var roleText = u.groups.map(function(g) {
+          return GROUP_ROLES[g] || g;
+        }).join(', ');
+        html += '<button class="user-btn" onclick="login(\'' + escapeHtml(u.username) + '\')">' +
+          '<div class="user-avatar">' + initials + '</div>' +
+          '<div><div class="user-name">' + escapeHtml(displayName) + '</div>' +
+          '<div class="user-role">' + escapeHtml(roleText) + '</div></div></button>';
+      });
+      html += '</div></div>';
+    });
+
+    container.innerHTML = html || '<div style="color:#8b8070;padding:1rem;">Žádní uživatelé</div>';
+  } catch (e) {
+    document.getElementById('groups').innerHTML = '<div style="color:#ef4444;">Chyba při načítání uživatelů: ' + e.message + '</div>';
+  }
+}
+
+async function login(username) {
+  try {
+    var res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: username })
+    });
+    var data = await res.json();
+    if (data.ok) {
+      // Redirect na původní stránku nebo na úvod
+      var redirect = new URLSearchParams(window.location.search).get('redirect') || '/';
+      window.location.href = redirect;
+    } else {
+      var err = document.getElementById('error');
+      err.textContent = 'Přihlášení selhalo: ' + (data.error || 'neznámá chyba');
+      err.style.display = 'block';
+    }
+  } catch (e) {
+    var err = document.getElementById('error');
+    err.textContent = 'Chyba sítě: ' + e.message;
+    err.style.display = 'block';
+  }
+}
+
+// Pokud už je přihlášený, rovnou přesměruj
+fetch('/api/me').then(function(r) { return r.json(); }).then(function(data) {
+  if (data.authenticated) {
+    window.location.href = '/';
+  } else {
+    loadUsers();
+  }
+});
+</script>
+</body>
+</html>

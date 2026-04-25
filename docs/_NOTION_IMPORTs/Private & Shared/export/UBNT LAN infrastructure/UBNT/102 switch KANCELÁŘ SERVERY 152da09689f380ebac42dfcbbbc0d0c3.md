@@ -1,0 +1,4 @@
+# 102 switch KANCELÁŘ SERVERY
+
+ID: 3
+IP: 172.25.1.102

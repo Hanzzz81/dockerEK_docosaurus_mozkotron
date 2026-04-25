@@ -1,0 +1,12 @@
+﻿Name,DRIVE písmeno,Druh připojení,GB,NAS Groups,NAS Users,Popis obsahu,Rollup,SMB písmeno
+shareDOCs_EK,K:,DRIVE,0,,,EK společný disk,elektro_users (Synology%20drives%20nad%20users/NAS%20Groups/elektro_users%207d85aa676b724d9c9f65751bd3831c9d.md),
+shareSOFT,,SMB,3,,,software instalátory,elektro_admins (Synology%20drives%20nad%20users/NAS%20Groups/elektro_admins%20136da09689f38036b77dc41672c30ab9.md),S:
+shareMONEY,M:,DRIVE,286,,"Veronika.Chocenská (Synology%20drives%20nad%20users/NAS%20Users/Veronika%20Chocensk%C3%A1%20136da09689f3807b9710c9c63c3fa0e0.md), Jan.Kutílek (Synology%20drives%20nad%20users/NAS%20Users/Jan%20Kut%C3%ADlek%204705fae9ada747878b948b735384e7db.md)",Money,,
+shareGRAPHICs,L:,SMB,28610,,"Veronika.Chocenská (Synology%20drives%20nad%20users/NAS%20Users/Veronika%20Chocensk%C3%A1%20136da09689f3807b9710c9c63c3fa0e0.md), Klára.Erbsová (Synology%20drives%20nad%20users/NAS%20Users/Kl%C3%A1ra%20Erbsov%C3%A1%20136da09689f3802fa89cc17d8aee2d39.md), Antonín.Zoul (Synology%20drives%20nad%20users/NAS%20Users/Anton%C3%ADn%20Zoul%20136da09689f380ddaaccfa1d4b259ed6.md), Michal.Kutílek (Synology%20drives%20nad%20users/NAS%20Users/Michal%20Kut%C3%ADlek%20d89a8527307a48c18303329a432e4404.md)","Grafika, 3D tisk",,L:
+shareDOCs_KK,J:,DRIVE,10,,"Jan.Kutílek (Synology%20drives%20nad%20users/NAS%20Users/Jan%20Kut%C3%ADlek%204705fae9ada747878b948b735384e7db.md), Michal.Kutílek (Synology%20drives%20nad%20users/NAS%20Users/Michal%20Kut%C3%ADlek%20d89a8527307a48c18303329a432e4404.md), Veronika.Chocenská (Synology%20drives%20nad%20users/NAS%20Users/Veronika%20Chocensk%C3%A1%20136da09689f3807b9710c9c63c3fa0e0.md), Antonín.Zoul (Synology%20drives%20nad%20users/NAS%20Users/Anton%C3%ADn%20Zoul%20136da09689f380ddaaccfa1d4b259ed6.md)",KK společný disk,,
+VIDEO,,SMB,320,,,defaultní folder od Videostation,,V:
+Photo,,SMB,10,,,Defaultní folder od Photostation,,P:
+shareTOOLs,,,,,,"folder pro automatizaci, aplikace",,T:
+shareSOFT/0-shared4everyone,,SMB,,,,software instalátory,elektro_users (Synology%20drives%20nad%20users/NAS%20Groups/elektro_users%207d85aa676b724d9c9f65751bd3831c9d.md),S:
+home folder,I:,DRIVE,,,,individual disk,,
+shareDOCs_JK,,DRIVE,,,Jan.Kutílek (Synology%20drives%20nad%20users/NAS%20Users/Jan%20Kut%C3%ADlek%204705fae9ada747878b948b735384e7db.md),"daně, povinnosti",,

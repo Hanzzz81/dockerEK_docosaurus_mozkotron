@@ -1,0 +1,12 @@
+﻿Name,Druh připojení,SMB písmeno,DRIVE písmeno,Popis obsahu,NAS Users,Rollup,GB,NAS Groups
+home folder,DRIVE,,I:,individual disk,,,,
+shareDOCs_JK,DRIVE,,,"daně, povinnosti",Jan.Kutílek (Synology%20drives%20nad%20users/NAS%20Users/Jan%20Kut%C3%ADlek%204705fae9ada747878b948b735384e7db.md),,,
+shareDOCs_KK,DRIVE,,J:,KK společný disk,"Jan.Kutílek (Synology%20drives%20nad%20users/NAS%20Users/Jan%20Kut%C3%ADlek%204705fae9ada747878b948b735384e7db.md), Michal.Kutílek (Synology%20drives%20nad%20users/NAS%20Users/Michal%20Kut%C3%ADlek%20d89a8527307a48c18303329a432e4404.md), Veronika.Chocenská (Synology%20drives%20nad%20users/NAS%20Users/Veronika%20Chocensk%C3%A1%20136da09689f3807b9710c9c63c3fa0e0.md), Antonín.Zoul (Synology%20drives%20nad%20users/NAS%20Users/Anton%C3%ADn%20Zoul%20136da09689f380ddaaccfa1d4b259ed6.md)",,10,
+shareDOCs_EK,DRIVE,,K:,EK společný disk,,elektro_users (Synology%20drives%20nad%20users/NAS%20Groups/elektro_users%207d85aa676b724d9c9f65751bd3831c9d.md),0,
+shareGRAPHICs,SMB,L:,L:,"Grafika, 3D tisk","Veronika.Chocenská (Synology%20drives%20nad%20users/NAS%20Users/Veronika%20Chocensk%C3%A1%20136da09689f3807b9710c9c63c3fa0e0.md), Klára.Erbsová (Synology%20drives%20nad%20users/NAS%20Users/Kl%C3%A1ra%20Erbsov%C3%A1%20136da09689f3802fa89cc17d8aee2d39.md), Antonín.Zoul (Synology%20drives%20nad%20users/NAS%20Users/Anton%C3%ADn%20Zoul%20136da09689f380ddaaccfa1d4b259ed6.md), Michal.Kutílek (Synology%20drives%20nad%20users/NAS%20Users/Michal%20Kut%C3%ADlek%20d89a8527307a48c18303329a432e4404.md)",,28610,
+shareMONEY,DRIVE,,M:,Money,"Veronika.Chocenská (Synology%20drives%20nad%20users/NAS%20Users/Veronika%20Chocensk%C3%A1%20136da09689f3807b9710c9c63c3fa0e0.md), Jan.Kutílek (Synology%20drives%20nad%20users/NAS%20Users/Jan%20Kut%C3%ADlek%204705fae9ada747878b948b735384e7db.md)",,286,
+shareSOFT,SMB,S:,,software instalátory,,elektro_admins (Synology%20drives%20nad%20users/NAS%20Groups/elektro_admins%20136da09689f38036b77dc41672c30ab9.md),3,
+shareSOFT/0-shared4everyone,SMB,S:,,software instalátory,,elektro_users (Synology%20drives%20nad%20users/NAS%20Groups/elektro_users%207d85aa676b724d9c9f65751bd3831c9d.md),,
+shareTOOLs,,T:,,"folder pro automatizaci, aplikace",,,,
+VIDEO,SMB,V:,,defaultní folder od Videostation,,,320,
+Photo,SMB,P:,,Defaultní folder od Photostation,,,10,

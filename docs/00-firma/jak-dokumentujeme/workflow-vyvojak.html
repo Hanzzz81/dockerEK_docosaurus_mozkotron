@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔄 Vývojový diagram — Tvorba obsahu Mozkotron</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0f1117; color: #e2e8f0;
+  }
+  .topbar {
+    background: #111827; border-bottom: 1px solid #1e293b;
+    padding: 12px 24px; display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 200;
+  }
+  .topbar h1 { font-size: 1.1rem; color: #f8fafc; }
+  .topbar .subtitle { font-size: 0.75rem; color: #64748b; }
+
+  .legend {
+    position: fixed; bottom: 16px; left: 16px; z-index: 200;
+    background: #111827ee; border: 1px solid #1e293b; border-radius: 10px;
+    padding: 12px 16px; font-size: 0.7rem; display: flex; gap: 14px; flex-wrap: wrap;
+    backdrop-filter: blur(8px);
+  }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  #canvas { position: relative; min-height: 2400px; padding: 24px; overflow: visible; }
+  svg#arrows { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1; width: 100%; height: 100%; }
+
+  /* ===== PREREQ PANEL (floating, with expandable details) ===== */
+  .prereq-floating {
+    position: absolute; right: 40px; top: 20px;
+    background: #0d1117; border: 2px dashed #334155; border-radius: 14px;
+    padding: 16px 20px; width: 380px; z-index: 10;
+  }
+  .prereq-floating h3 { font-size: 0.7rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; }
+  .prereq-item {
+    background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+    padding: 12px 16px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s;
+  }
+  .prereq-item:hover { border-color: #64748b; background: #263244; }
+  .prereq-item:last-child { margin-bottom: 0; }
+  .prereq-item .pi-head { display: flex; align-items: center; gap: 8px; }
+  .prereq-item .pi-icon { font-size: 1.3rem; }
+  .prereq-item .pi-title { font-size: 0.85rem; font-weight: 700; color: #e2e8f0; }
+  .prereq-item .pi-chevron { margin-left: auto; font-size: 0.5rem; color: #475569; transition: transform 0.2s; }
+  .prereq-item .pi-desc { font-size: 0.7rem; color: #64748b; margin-top: 4px; }
+  .prereq-detail {
+    display: none; background: #111827; border: 1px solid #1e293b;
+    border-radius: 8px; padding: 14px 16px; margin-top: 10px;
+    font-size: 0.75rem; color: #94a3b8; line-height: 1.7;
+  }
+  .prereq-detail.open { display: block; }
+  .prereq-detail h4 { color: #e2e8f0; margin: 10px 0 4px; font-size: 0.75rem; }
+  .prereq-detail h4:first-child { margin-top: 0; }
+  .prereq-detail li { margin-left: 16px; margin-bottom: 3px; }
+  .prereq-detail code { background: #1e293b; padding: 1px 5px; border-radius: 3px; font-size: 0.7rem; }
+  .prereq-detail .dd { height: 8px; }
+
+  /* ===== PODNĚTY (step 0) — bigger cards ===== */
+  .podnety-zone {
+    position: absolute; left: 60px; top: 30px; width: 540px;
+  }
+  .podnety-label {
+    font-size: 0.8rem; font-weight: 800; color: #7c3aed;
+    margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+  }
+  .podnety-label .pl-num {
+    width: 28px; height: 28px; border-radius: 50%; background: #7c3aed; color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800;
+  }
+  .podnety-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  }
+  .podnet-card {
+    background: #1e293b; border: 1px solid #334155; border-radius: 12px;
+    padding: 14px 16px; text-align: center; transition: all 0.2s; cursor: pointer;
+  }
+  .podnet-card:hover { border-color: #7c3aed; background: #1e293bdd; transform: translateY(-2px); }
+  .podnet-icon { font-size: 1.6rem; margin-bottom: 4px; }
+  .podnet-title { font-size: 0.8rem; font-weight: 600; color: #e2e8f0; }
+  .podnet-desc { font-size: 0.62rem; color: #64748b; margin-top: 3px; line-height: 1.4; }
+  .podnety-arrows {
+    text-align: center; font-size: 0.8rem; color: #7c3aed; margin-top: 12px;
+    letter-spacing: 2px; opacity: 0.7;
+  }
+
+  /* ===== NODES ===== */
+  .node-wrapper { position: absolute; z-index: 10; width: 260px; }
+  .node {
+    background: #111827; border: 1px solid #1e293b; border-radius: 12px;
+    padding: 14px 16px; cursor: pointer; transition: all 0.2s; position: relative;
+  }
+  .node:hover { border-color: #334155; transform: translateY(-1px); }
+  .node-icon { font-size: 1.4rem; margin-bottom: 4px; }
+  .node-title { font-size: 0.85rem; font-weight: 700; color: #f8fafc; }
+  .node-desc { font-size: 0.68rem; color: #64748b; margin-top: 3px; line-height: 1.4; }
+  .node-badge {
+    position: absolute; top: 8px; right: 10px; font-size: 0.55rem;
+    padding: 2px 8px; border-radius: 8px; font-weight: 600; text-transform: uppercase;
+  }
+  .step-num {
+    position: absolute; top: -10px; left: -10px;
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: 800; z-index: 3;
+  }
+  .node-chevron {
+    position: absolute; top: 10px; right: 32px;
+    font-size: 0.5rem; color: #475569; transition: transform 0.2s;
+  }
+
+  /* Role colors */
+  .n-manager .node { border-left: 3px solid #10b981; }
+  .n-manager .step-num { background: #10b981; color: #000; }
+  .n-manager .node-badge { background: #10b98122; color: #10b981; }
+
+  .n-claude .node { border-left: 3px solid #3b82f6; }
+  .n-claude .step-num { background: #3b82f6; color: #fff; }
+  .n-claude .node-badge { background: #3b82f622; color: #3b82f6; }
+
+  .n-reader .node { border-left: 3px solid #f59e0b; }
+  .n-reader .step-num { background: #f59e0b; color: #000; }
+  .n-reader .node-badge { background: #f59e0b22; color: #f59e0b; }
+
+  .n-feedback .node { border-left: 3px solid #7c3aed; }
+  .n-feedback .step-num { background: #7c3aed; color: #fff; }
+  .n-feedback .node-badge { background: #7c3aed22; color: #7c3aed; }
+
+  .n-system .node { border-left: 3px solid #64748b; }
+  .n-system .step-num { background: #64748b; color: #fff; }
+  .n-system .node-badge { background: #64748b22; color: #64748b; }
+
+  /* Detail panel — SMART POSITIONING (up or down based on viewport) */
+  .node-detail {
+    display: none; position: absolute; left: 0;
+    width: 400px; max-width: 90vw; z-index: 50;
+    background: #111827; border: 1px solid #334155; border-radius: 10px;
+    padding: 16px 18px; box-shadow: 0 8px 30px #00000088;
+    font-size: 0.75rem; color: #94a3b8; line-height: 1.7;
+  }
+  .node-detail.open { display: block; }
+  .node-detail.pos-up { bottom: 100%; top: auto; margin-bottom: 8px; box-shadow: 0 -8px 30px #00000088; }
+  .node-detail.pos-down { top: 100%; bottom: auto; margin-top: 8px; box-shadow: 0 8px 30px #00000088; }
+  .node-detail h4 { color: #e2e8f0; margin: 10px 0 4px; font-size: 0.78rem; }
+  .node-detail h4:first-child { margin-top: 0; }
+  .node-detail li { margin-left: 16px; margin-bottom: 3px; }
+  .node-detail .dd { height: 8px; }
+  .node-detail code { background: #1e293b; padding: 1px 5px; border-radius: 3px; font-size: 0.7rem; }
+  .node-detail strong { color: #e2e8f0; }
+  .node-detail .ref-tag {
+    display: inline-block; font-size: 0.6rem; padding: 2px 8px; border-radius: 4px;
+    background: #3b82f622; color: #3b82f6; margin-top: 6px; font-weight: 600;
+  }
+</style>
+</head>
+<body>
+<!-- Navigace průvodce tvorbou -->
+<nav style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#0a0a1a;border-bottom:1px solid #1e293b;padding:6px 16px;display:flex;align-items:center;gap:12px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:0.78rem;">
+  <a href="/firma/jak-dokumentujeme/pruvodce-tvorbou.html" style="color:#94a3b8;text-decoration:none;font-weight:600;margin-right:8px;">📚 Průvodce</a>
+  <a href="/firma/jak-dokumentujeme/matice.html" style="color:#64748b;text-decoration:none;">📊 Matice</a>
+  <a href="/firma/jak-dokumentujeme/pruvodce-kategorie.html" style="color:#64748b;text-decoration:none;">🎓 Kategorie</a>
+  <a href="/firma/jak-dokumentujeme/workflow-diagram.html" style="color:#64748b;text-decoration:none;">🗺️ Flow</a>
+  <a href="/firma/jak-dokumentujeme/workflow-tvorba.html" style="color:#64748b;text-decoration:none;">📋 Swimlane</a>
+  <a href="/firma/jak-dokumentujeme/workflow-vyvojak.html" style="color:#64748b;text-decoration:none;">🔄 Vývoják</a>
+  <style>.guide-nav a:hover{color:#cbd5e1!important;}</style>
+</nav>
+<div style="height:36px;"></div>
+<!-- /Navigace -->
+
+
+<div class="topbar">
+  <div>
+    <h1>🔄 Vývojový diagram — Tvorba obsahu Mozkotron</h1>
+    <div class="subtitle">v4 — vizuální vývoják · Klikni na uzel pro detail nahoru · Předpoklady vpravo nahoře</div>
+  </div>
+</div>
+
+<div id="canvas">
+  <svg id="arrows"></svg>
+
+  <!-- ===== PREREQUISITES (floating top-right, expandable) ===== -->
+  <div class="prereq-floating">
+    <h3>⚙️ Předpoklady (mimo flow)</h3>
+
+    <div class="prereq-item" onclick="togglePrereq('pr-cowork')">
+      <div class="pi-head">
+        <span class="pi-icon">💻</span>
+        <span class="pi-title">Cowork session</span>
+        <span class="pi-chevron">▼</span>
+      </div>
+      <div class="pi-desc">Editor otevře Cowork + připojí Synology folder</div>
+      <div class="prereq-detail" id="pr-cowork">
+        <h4>Jak to funguje</h4>
+        <ul>
+          <li>💻 Editor otevře <strong>Cowork desktop</strong> na svém počítači</li>
+          <li>📁 Připojí sdílený <strong>Synology folder</strong> (<code>XPR0_docker_mozkotron/docs/</code>)</li>
+          <li>📋 Claude automaticky přečte <strong>manifest</strong> z <code>_system_work/CLAUDE.md</code></li>
+          <li>🔄 Manifest definuje intake dialog — Claude se ptá strukturovaně</li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Proč Synology?</h4>
+        Sdílený folder = všichni editoři pracují nad stejnými daty. Změny se propagují okamžitě. Žádné merge konflikty — jeden editor, jeden dokument, jedna session.
+        <div class="dd"></div>
+        <h4>Konzistence</h4>
+        Jeden manifest na Synology = <strong>stejný workflow pro všechny editory</strong>. Změna manifestu → změna dialogu pro všechny při další session. Centrální řízení bez nutnosti školení.
+        <div class="dd"></div>
+        <h4>Co je potřeba</h4>
+        <ul>
+          <li>✅ Cowork desktop nainstalovaný na počítači editora</li>
+          <li>✅ Synology Drive klient připojený k <code>XPR0_docker_mozkotron</code></li>
+          <li>✅ Přístupová práva read/write na <code>docs/</code></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="prereq-item" onclick="togglePrereq('pr-manifest')">
+      <div class="pi-head">
+        <span class="pi-icon">📋</span>
+        <span class="pi-title">Manifest (CLAUDE.md)</span>
+        <span class="pi-chevron">▼</span>
+      </div>
+      <div class="pi-desc">Sdílená pravidla — vstupní brána pro Claude</div>
+      <div class="prereq-detail" id="pr-manifest">
+        <h4>Co manifest obsahuje</h4>
+        <ul>
+          <li>📌 <strong>Intake dialog</strong> — strukturované otázky, které Claude klade editorovi (téma, kategorie, audience, podklady)</li>
+          <li>📏 <strong>Frontmatter kontrakt</strong> — 10 povinných polí + 1 podmíněné (<code>source_bimg</code>)</li>
+          <li>🔀 <strong>Rozhodovací strom vrstev</strong> — kdy BIMG, kdy SOP, kdy CHL</li>
+          <li>📊 <strong>Odkaz na <code>_structure.json</code></strong> — registr AOR oblastí a tematických bloků</li>
+          <li>⚖️ <strong>Constrainty formátu</strong> — limity délky per vrstva</li>
+          <li>✅ <strong>Checklist před publikací</strong> — 8 bodů validace</li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Kde leží</h4>
+        <code>docs/_system_work/CLAUDE.md</code> — Docusaurus složky s podtržítkem ignoruje, takže se nezobrazuje ve wiki. Claude ho čte automaticky na začátku každé session.
+        <div class="dd"></div>
+        <h4>Princip</h4>
+        Manifest je <strong>jediný zdroj pravdy</strong> pro chování Clauda. Když Jan změní manifest, všichni editoři se při další session chovají podle nových pravidel — žádné přeškolování, žádné individuální nastavení.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== STEP 0: PODNĚTY ===== -->
+  <div class="podnety-zone" id="podnety-zone">
+    <div class="podnety-label"><span class="pl-num">0</span> PODNĚTY — co spouští tvorbu dokumentace</div>
+    <div class="podnety-grid">
+      <div class="podnet-card">
+        <div class="podnet-icon">🐛</div>
+        <div class="podnet-title">Chyba z neznalosti</div>
+        <div class="podnet-desc">Zaměstnanec udělal chybu, protože nevěděl postup</div>
+      </div>
+      <div class="podnet-card">
+        <div class="podnet-icon">❓</div>
+        <div class="podnet-title">Opakovaná otázka</div>
+        <div class="podnet-desc">Stejný dotaz přichází podruhé, potřetí...</div>
+      </div>
+      <div class="podnet-card">
+        <div class="podnet-icon">📋</div>
+        <div class="podnet-title">Nový proces</div>
+        <div class="podnet-desc">Zavádíme nový postup, potřebujeme ho zapsat</div>
+      </div>
+      <div class="podnet-card">
+        <div class="podnet-icon">⚖️</div>
+        <div class="podnet-title">Nové pravidlo</div>
+        <div class="podnet-desc">Vedení rozhodlo nové pravidlo, zákon, mantinel</div>
+      </div>
+      <div class="podnet-card">
+        <div class="podnet-icon">💬</div>
+        <div class="podnet-title">Zpětná vazba</div>
+        <div class="podnet-desc">Čtenář nahlásil chybu nebo nejasnost v docs</div>
+      </div>
+      <div class="podnet-card">
+        <div class="podnet-icon">🏗️</div>
+        <div class="podnet-title">AOR audit</div>
+        <div class="podnet-desc">Systematická kontrola pokrytí oblasti</div>
+      </div>
+    </div>
+    <div class="podnety-arrows">▼ ▼ ▼ ▼ ▼ ▼</div>
+  </div>
+
+  <!-- ===== STEP 1: TRIGGER ===== -->
+  <div class="node-wrapper n-manager" id="nw-trigger" style="left:200px; top:310px" data-detail="trigger">
+    <div class="node" onclick="toggleDetail('trigger')">
+      <span class="step-num">1</span><span class="node-chevron">▼</span>
+      <div class="node-icon">⚡</div>
+      <div class="node-title">Trigger — potřeba identifikována</div>
+      <div class="node-desc">Manažer rozhodl: „Tohle téma potřebuje dokumentaci"</div>
+      <div class="node-badge">Manažer (editor)</div>
+    </div>
+    <div class="node-detail" id="detail-trigger">
+      <div>
+        <h4>Co se děje</h4>
+        Manažer (v roli editora) vyhodnotí podnět z kroku 0 a rozhodne, že téma potřebuje novou nebo aktualizovanou dokumentaci. Nemusí být odborník na dané téma — stačí identifikovat potřebu.
+        <div class="dd"></div>
+        <h4>Kdo je „Manažer (editor)"?</h4>
+        Jedna osoba v dvojroli:
+        <ul>
+          <li><strong>Manažer</strong> = funkce ve firmě (Jan, vedoucí, ...)</li>
+          <li><strong>Editor</strong> = role v tomto systému (ten, kdo zadává obsah Claudovi)</li>
+        </ul>
+        V praxi: Jan Kutílek nebo kdokoli s přístupem do Cowork + Synology, kdo má znalost tématu.
+        <div class="dd"></div>
+        <h4>Výstup</h4>
+        Jasné rozhodnutí: „Toto téma potřebuje dokumentaci." Spouští intake dialog v Cowork session.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== STEP 2: KATEGORIZACE ===== -->
+  <div class="node-wrapper n-manager" id="nw-categorize" style="left:200px; top:480px" data-detail="categorize">
+    <div class="node" onclick="toggleDetail('categorize')">
+      <span class="step-num">2</span><span class="node-chevron">▼</span>
+      <div class="node-icon">🏷️</div>
+      <div class="node-title">Kategorizace</div>
+      <div class="node-desc">Je to LAW, PROC, KNOW, nebo MEM?</div>
+      <div class="node-badge">Manažer (editor)</div>
+    </div>
+    <div class="node-detail" id="detail-categorize">
+      <div>
+        <h4>Čtyři kategorie — čtyři pohledy na téma</h4>
+        <ul>
+          <li>📜 <strong>LAW</strong> — Co platí? Závazné pravidlo, mantinel. <em>Porušení = problém.</em></li>
+          <li>🔧 <strong>PROC</strong> — Jak to udělat? Opakovaný postup, procedura. <em>Dělá se pravidelně.</em></li>
+          <li>💡 <strong>KNOW</strong> — Proč to tak je? Expertní znalost, kontext. <em>Potřeba pro rozhodování.</em></li>
+          <li>📝 <strong>MEM</strong> — Co se změnilo? Žurnál rozhodnutí a událostí.</li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Rozhodovací strom</h4>
+        <ul>
+          <li>1. Porušení = problém? → <strong>LAW</strong></li>
+          <li>2. Opakuje se to pravidelně? → <strong>PROC</strong></li>
+          <li>3. Potřeba pro rozhodování? → <strong>KNOW</strong></li>
+          <li>4. Stalo se jednou, důležité zapsat? → <strong>MEM</strong></li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Proč to dělá člověk a ne stroj?</h4>
+        Kategorie je <strong>věcné rozhodnutí</strong> o tom, CO informace je. Claude pomáhá s rozlišením (viz Průvodce <code>pruvodce-kategorie.html</code>), ale finální slovo má manažer — on zná kontext firmy.
+        <div class="dd"></div>
+        <h4>Pozor: kategorie ≠ vrstva</h4>
+        Kategorie (LAW/PROC/KNOW/MEM) říká <strong>CO</strong> to je. Vrstva (BIMG/SOP/CHL) říká <strong>JAK</strong> to zdokumentovat. Jsou to dvě nezávislé osy — ze stejného LAW pravidla může vzniknout BIMG i SOP i CHL.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== STEP 3: VSTUPY + ARTEFAKTY ===== -->
+  <div class="node-wrapper n-manager" id="nw-inputs" style="left:200px; top:650px" data-detail="inputs">
+    <div class="node" onclick="toggleDetail('inputs')">
+      <span class="step-num">3</span><span class="node-chevron">▼</span>
+      <div class="node-icon">📥</div>
+      <div class="node-title">Vstupy + sběr artefaktů</div>
+      <div class="node-desc">Téma, znalost, audience, podklady — vše od jednoho člověka</div>
+      <div class="node-badge">Manažer (editor)</div>
+    </div>
+    <div class="node-detail" id="detail-inputs">
+      <div>
+        <h4>Co editor dodá (povinné)</h4>
+        <ul>
+          <li>📌 <strong>Téma</strong> — o čem to je, co chce zapsat</li>
+          <li>🧠 <strong>Znalost</strong> — co o tom ví, co je rozhodnuté, jaká je praxe</li>
+          <li>👤 <strong>Audience</strong> — pro koho to je (AOR oblasti: firma, prodej, sluzby, ...)</li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Co editor nahraje (artefakty)</h4>
+        <ul>
+          <li>📄 <strong>Dokumentace</strong> — existující postupy, manuály, specifikace</li>
+          <li>📸 <strong>Fotodokumentace</strong> — fotky produktů, pracovišť, zařízení</li>
+          <li>🖥️ <strong>Screenshoty</strong> — obrazovky z Money S4, e-shopu, systémů</li>
+          <li>📝 <strong>Přeložený postup</strong> — textový popis „jak to dělám" vlastními slovy</li>
+          <li>🎥 <strong>Video</strong> — nahrávka procesu, ukázka</li>
+          <li>🔗 <strong>Odkazy</strong> — na existující docs, webové zdroje</li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Co editor NEŘEŠÍ</h4>
+        <ul>
+          <li>❌ Typ vrstvy (BIMG/SOP/CHL) — to rozhodne Claude</li>
+          <li>❌ Formátování a strukturu — constraintováno šablonami</li>
+          <li>❌ Kam uložit — Claude najde správný AOR blok</li>
+          <li>❌ Psaní textu — to dělá Claude</li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Princip R006</h4>
+        Editor dodává <strong>potřebu a vstupy</strong>. Parametry dokumentu (typ, formát, umístění, metadata) jsou systémová pravidla aplikovaná strojově. Editor nevolí — to vyplývá z rozhodovacího stromu.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== STEP 4: ANALÝZA ===== -->
+  <div class="node-wrapper n-claude" id="nw-analyze" style="left:200px; top:830px" data-detail="analyze">
+    <div class="node" onclick="toggleDetail('analyze')">
+      <span class="step-num">4</span><span class="node-chevron">▼</span>
+      <div class="node-icon">🔎</div>
+      <div class="node-title">Analýza vstupů</div>
+      <div class="node-desc">Přečtení vstupů, ověření struktury, určení AOR</div>
+      <div class="node-badge">Claude</div>
+    </div>
+    <div class="node-detail" id="detail-analyze">
+      <div>
+        <h4>Co Claude dělá</h4>
+        <ul>
+          <li>📖 Přečte vstupy editora + nahrané artefakty</li>
+          <li>🗂️ Ověří <code>_structure.json</code> — existuje pro dané téma BIMG?</li>
+          <li>🎯 Určí AOR oblast a tematický blok (kam dokument patří)</li>
+          <li>🔍 Zkontroluje, co k tématu už existuje v docs/</li>
+          <li>✅ Validuje kompletnost vstupů — pokud něco chybí, doptá se</li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Rozhodovací logika</h4>
+        <ul>
+          <li>Audience <code>[prodej]</code> → složka <code>05-prodej/</code></li>
+          <li>Téma „reklamace" → blok <code>reklamace/</code></li>
+          <li>Existuje BIMG? → ano → navrhne SOP/CHL. Ne → navrhne BIMG.</li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Pokud nejednoznačné</h4>
+        Claude se ptá manažera. Nikdy nerozhoduje o věcech mimo svůj scope — např. jestli je informace LAW nebo SOP je věcné rozhodnutí manažera.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== STEP 5: ROZHODNUTÍ O VRSTVÁCH ===== -->
+  <div class="node-wrapper n-claude" id="nw-layers" style="left:80px; top:1010px" data-detail="layers">
+    <div class="node" onclick="toggleDetail('layers')">
+      <span class="step-num">5</span><span class="node-chevron">▼</span>
+      <div class="node-icon">🔀</div>
+      <div class="node-title">Rozhodnutí o vrstvách</div>
+      <div class="node-desc">BIMG vždy. +SOP? +CHL? Návrh + konfirmace</div>
+      <div class="node-badge">Claude</div>
+    </div>
+    <div class="node-detail" id="detail-layers">
+      <div>
+        <h4>Pravidlo R008 (strojové)</h4>
+        <ul>
+          <li><strong>Téma nemá žádnou dokumentaci</strong> → vždy nejdřív <strong>BIMG</strong></li>
+          <li><strong>Existuje BIMG + konkrétní postup pro roli</strong> → navrhnout <strong>SOP</strong></li>
+          <li><strong>Existuje BIMG + SOP + potřeba rychlé reference</strong> → navrhnout <strong>CHL</strong></li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Konfirmace</h4>
+        Claude navrhne, manažer potvrdí. Příklad: <em>„Téma Reklamace nemá BIMG — vytvořím BIMG (⚖️ LAW). K tomu navrhuji i SOP pro roli prodejce. Souhlasíš?"</em>
+        <div class="dd"></div>
+        <h4>Dvouosý model (R011)</h4>
+        <ul>
+          <li><strong>Category</strong> (CO to je): LAW | PROC | KNOW | MEM — z DOS taxonomie</li>
+          <li><strong>Layer</strong> (JAK je to zdokumentované): BIMG | SOP | CHL</li>
+        </ul>
+        Osy jsou <strong>nezávislé</strong> — z LAW pravidla může být BIMG (kompletní popis) i SOP (postup dodržování) i CHL (quick ref lhůt).
+        <div class="dd"></div>
+        <span class="ref-tag">→ Aplikuje Constraint A + B (vpravo)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CONSTRAINTS (side, same row) ===== -->
+  <div class="node-wrapper n-system" id="nw-conA" style="left:440px; top:1010px" data-detail="conA">
+    <div class="node" onclick="toggleDetail('conA')">
+      <span class="node-chevron">▼</span>
+      <div class="node-icon">📏</div>
+      <div class="node-title">Constraint A — Formát</div>
+      <div class="node-desc">Limity délky a formy pro vrstvu</div>
+      <div class="node-badge">Systém</div>
+    </div>
+    <div class="node-detail" id="detail-conA">
+      <div>
+        <h4>Formátové limity per vrstva</h4>
+        <ul>
+          <li><strong>BIMG</strong> — text + diagramy (Mermaid), subpages povolené, <strong>neomezená délka</strong>. Admonitions: <code>:::info</code>, <code>:::tip</code>, <code>:::warning</code>, <code>:::danger</code></li>
+          <li><strong>SOP</strong> — <strong>bez limitu délky</strong>, řídí se tématem. Číslované kroky, screenshoty, volitelně diagram. Žádné subpages.</li>
+          <li><strong>CHL</strong> — <strong>1×A4 tisknutelný</strong>. 3 povolené formáty: tabulka, checklist, Mermaid diagram. Žádný souvislý text. Max 1–2 screenshoty.</li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Princip</h4>
+        BIMG pokrývá téma do hloubky. SOP popisuje postup per role — délka se řídí tématem (R018). CHL se nalepí vedle monitoru — zkrácená verze nad obsáhlejším SOP.
+        <div class="dd"></div>
+        <h4>Šablony</h4>
+        <code>sablona-bimg.md</code> · <code>sablona-sop.md</code> · <code>sablona-chl.md</code> v <code>_system_work/</code>
+      </div>
+    </div>
+  </div>
+
+  <div class="node-wrapper n-system" id="nw-conB" style="left:740px; top:1010px" data-detail="conB">
+    <div class="node" onclick="toggleDetail('conB')">
+      <span class="node-chevron">▼</span>
+      <div class="node-icon">🏷️</div>
+      <div class="node-title">Constraint B — Meta + naming</div>
+      <div class="node-desc">Frontmatter, pojmenování, umístění</div>
+      <div class="node-badge">Systém</div>
+    </div>
+    <div class="node-detail" id="detail-conB">
+      <div>
+        <h4>Frontmatter kontrakt (R016)</h4>
+        Vždy povinné (10 polí):
+        <ul>
+          <li><code>title</code> (s emoji), <code>sidebar_label</code>, <code>sidebar_position</code>, <code>description</code></li>
+          <li><code>category</code> (law|proc|know|mem), <code>layer</code> (bimg|sop|chl)</li>
+          <li><code>audience</code> (array z AOR: firma|management|finance|rust|nakup|prodej|sluzby|technologie)</li>
+          <li><code>version</code>, <code>author</code>, <code>date</code></li>
+        </ul>
+        Podmíněně povinné:
+        <ul>
+          <li><code>source_bimg</code> — slug mateřského BIMG. <strong>Povinné</strong> pro SOP a CHL, neuvádí se pro BIMG.</li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Naming konvence (R003)</h4>
+        <ul>
+          <li>Soubory: <code>kebab-case-bez-diakritiky.md</code></li>
+          <li>Přípona vrstvy: <code>reklamace-bimg.md</code>, <code>reklamace-sop.md</code>, <code>reklamace-chl.md</code></li>
+          <li>Složky: stejné pravidlo, bez diakritiky</li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Umístění</h4>
+        Dle <code>_structure.json</code> — 8 AOR oblastí, 27 tematických bloků. Claude najde správný blok podle <code>audience</code> + téma.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== STEP 6: TVORBA ===== -->
+  <div class="node-wrapper n-claude" id="nw-create" style="left:200px; top:1190px" data-detail="create">
+    <div class="node" onclick="toggleDetail('create')">
+      <span class="step-num">6</span><span class="node-chevron">▼</span>
+      <div class="node-icon">✏️</div>
+      <div class="node-title">Tvorba dokumentu</div>
+      <div class="node-desc">Claude píše obsah ve správném formátu s frontmatter</div>
+      <div class="node-badge">Claude</div>
+    </div>
+    <div class="node-detail" id="detail-create">
+      <div>
+        <h4>Co Claude dělá</h4>
+        <ul>
+          <li>📄 Přečte šablonu dané vrstvy (<code>sablona-bimg/sop/chl.md</code>)</li>
+          <li>✏️ Napíše obsah ve formátu dle Constraint A</li>
+          <li>🏷️ Vygeneruje kompletní frontmatter dle Constraint B</li>
+          <li>🔗 Přidá interní odkazy na související docs</li>
+          <li>📏 Ověří: CHL ≤ A4? Formát dle šablony?</li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Zdroje pro tvorbu</h4>
+        <ul>
+          <li>Vstupy editora z kroku 3 (téma, znalost, audience)</li>
+          <li>Artefakty (fotky, screenshoty, dokumenty)</li>
+          <li>Existující BIMG (pokud tvoří SOP/CHL)</li>
+          <li>Constrainty A + B</li>
+          <li><code>_structure.json</code> — kam dokument patří</li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Princip R007</h4>
+        <strong>Claude je tvůrce dokumentů.</strong> Editor dodá znalost a kontext, Claude z toho vytvoří dokument ve správném formátu. Editor pak kontroluje jen věcnou správnost.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== STEP 7: REVIEW ===== -->
+  <div class="node-wrapper n-manager" id="nw-review" style="left:200px; top:1370px" data-detail="review">
+    <div class="node" onclick="toggleDetail('review')">
+      <span class="step-num">7</span><span class="node-chevron">▼</span>
+      <div class="node-icon">✅</div>
+      <div class="node-title">Review a schválení</div>
+      <div class="node-desc">Manažer kontroluje věcnost, srozumitelnost, audience</div>
+      <div class="node-badge">Manažer (editor)</div>
+    </div>
+    <div class="node-detail" id="detail-review">
+      <div>
+        <h4>Co manažer kontroluje</h4>
+        <ul>
+          <li>✅ <strong>Věcně správné?</strong> — odpovídá realitě firmy</li>
+          <li>✅ <strong>Srozumitelné?</strong> — cílová role tomu rozumí</li>
+          <li>✅ <strong>Chci, aby to šlo do lidí?</strong> — celkový dojem</li>
+          <li>✅ <strong>Nechybí důležité?</strong> — kompletnost</li>
+          <li>✅ <strong>Správná audience a kategorie?</strong> — kdo to vidí, jak je to klasifikované</li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Tři výsledky</h4>
+        <ul>
+          <li>✅ <strong>Schváleno</strong> → jde na publikaci (krok 8)</li>
+          <li>🔄 <strong>Vráceno</strong> → Claude zapracuje připomínky → zpět sem</li>
+          <li>❌ <strong>Zamítnuto</strong> → dokument se zahodí nebo přepracuje od začátku</li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Kde se review dělá</h4>
+        Přímo v Cowork session — manažer vidí dokument, řekne připomínky, Claude opraví na místě. Žádný separátní review systém.
+      </div>
+    </div>
+  </div>
+
+  <!-- FIX LOOP -->
+  <div class="node-wrapper n-claude" id="nw-fix" style="left:20px; top:1370px" data-detail="fix">
+    <div class="node" onclick="toggleDetail('fix')" style="width: 160px;">
+      <span class="step-num" style="background:#3b82f6; color:#fff;">↺</span><span class="node-chevron">▼</span>
+      <div class="node-icon">🔧</div>
+      <div class="node-title">Zapracování</div>
+      <div class="node-desc">Oprava → zpět k review</div>
+      <div class="node-badge">Claude</div>
+    </div>
+    <div class="node-detail" id="detail-fix">
+      <div>
+        <h4>Co Claude dělá</h4>
+        <ul>
+          <li>Věcné opravy podle připomínek manažera</li>
+          <li>Strukturální změny (přeformátování, reorganizace)</li>
+          <li>Aktualizace <code>version</code> ve frontmatter</li>
+        </ul>
+        <div class="dd"></div>
+        Po opravě se dokument vrací zpět k review (krok 7). Smyčka se opakuje, dokud manažer neschválí.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== STEP 8: PUBLIKACE ===== -->
+  <div class="node-wrapper n-claude" id="nw-publish" style="left:200px; top:1550px" data-detail="publish">
+    <div class="node" onclick="toggleDetail('publish')">
+      <span class="step-num">8</span><span class="node-chevron">▼</span>
+      <div class="node-icon">🚀</div>
+      <div class="node-title">Publikace</div>
+      <div class="node-desc">Uložení .md, aktualizace registru, rebuild</div>
+      <div class="node-badge">Claude</div>
+    </div>
+    <div class="node-detail" id="detail-publish">
+      <div>
+        <h4>Co Claude dělá</h4>
+        <ul>
+          <li>📁 Uloží <code>.md</code> soubor do správné AOR složky dle <code>_structure.json</code></li>
+          <li>📂 Založí podsložku + <code>_category_.json</code> pokud ještě neexistuje</li>
+          <li>📊 Aktualizuje <code>_structure.json</code> — přidá nový dokument do registru</li>
+          <li>🔍 Ověří, že Docusaurus dokument renderuje správně</li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Kaskádová revize</h4>
+        Pokud se mění existující BIMG → Claude automaticky najde všechny SOP a CHL se stejným <code>source_bimg</code> a nabídne revizi. Směr vždy shora dolů: BIMG → SOP → CHL.
+        <div class="dd"></div>
+        <span class="ref-tag">→ Viz Kaskádová revize (vpravo)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- KASKÁDA (side) -->
+  <div class="node-wrapper n-system" id="nw-cascade" style="left:560px; top:1550px" data-detail="cascade">
+    <div class="node" onclick="toggleDetail('cascade')">
+      <span class="node-chevron">▼</span>
+      <div class="node-icon">🔄</div>
+      <div class="node-title">Kaskádová revize</div>
+      <div class="node-desc">Změna BIMG → revize SOP → CHL</div>
+      <div class="node-badge">Systém</div>
+    </div>
+    <div class="node-detail" id="detail-cascade">
+      <div>
+        <h4>Mechanismus</h4>
+        <ul>
+          <li>Při změně BIMG → Claude hledá soubory s <code>source_bimg: &lt;slug&gt;</code></li>
+          <li>Najde všechny SOP a CHL, které odkazují na změněný BIMG</li>
+          <li>Přegeneruje je s novými informacemi</li>
+          <li>Předá k review manažerovi</li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Princip</h4>
+        Směr je vždy <strong>shora dolů</strong>: BIMG (zdroj pravdy) → SOP (postup) → CHL (reference). Nikdy naopak. Pokud se změní SOP, nemění se BIMG — SOP je derivát.
+        <div class="dd"></div>
+        <h4>Slug reference (R015)</h4>
+        <code>source_bimg: reklamacni-rad-bimg</code> — slug = název souboru bez <code>.md</code>. Claude ho používá pro vyhledávání derivátů.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== STEP 9: ČTENÍ ===== -->
+  <div class="node-wrapper n-reader" id="nw-read" style="left:200px; top:1720px" data-detail="read">
+    <div class="node" onclick="toggleDetail('read')">
+      <span class="step-num">9</span><span class="node-chevron">▼</span>
+      <div class="node-icon">📖</div>
+      <div class="node-title">Čtení a provedení</div>
+      <div class="node-desc">Zaměstnanec najde SOP/CHL, provede úkon</div>
+      <div class="node-badge">Čtenář</div>
+    </div>
+    <div class="node-detail" id="detail-read">
+      <div>
+        <h4>Jak čtenář najde dokument</h4>
+        <ul>
+          <li>🔍 <strong>Search</strong> — fulltextové vyhledávání v Mozkotronu</li>
+          <li>📑 <strong>Sidebar</strong> — navigace přes AOR oblasti → tematické bloky</li>
+          <li>📱 <strong>QR kód</strong> — na pracovišti, odkazuje přímo na SOP/CHL</li>
+          <li>🔗 <strong>Přímý odkaz</strong> — z e-mailu, chatu, jiného dokumentu</li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Co čtenář dělá</h4>
+        <ul>
+          <li>📖 Přečte SOP → provede kroky při práci</li>
+          <li>👀 Podívá se na CHL → rychlá reference nalepená vedle monitoru</li>
+          <li>📚 BIMG čte jen architekt/vedení — čtenář potřebuje SOP a CHL</li>
+        </ul>
+        <div class="dd"></div>
+        <span class="ref-tag">→ Viz Filtrovaný přístup (vpravo)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PŘÍSTUP (side) -->
+  <div class="node-wrapper n-system" id="nw-access" style="left:560px; top:1720px" data-detail="access">
+    <div class="node" onclick="toggleDetail('access')">
+      <span class="node-chevron">▼</span>
+      <div class="node-icon">🔑</div>
+      <div class="node-title">Filtrovaný přístup</div>
+      <div class="node-desc">category × layer × audience</div>
+      <div class="node-badge">Systém</div>
+    </div>
+    <div class="node-detail" id="detail-access">
+      <div>
+        <h4>Přístupová matice</h4>
+        <ul>
+          <li>⚖️ <strong>LAW</strong> dokumenty → vidí <strong>celá firma</strong> (povinné pro všechny)</li>
+          <li>🔧 <strong>SOP/CHL vrstvy</strong> → vidí jen role dle <code>audience</code> (např. <code>[prodej]</code> = jen prodejci)</li>
+          <li>📚 <strong>BIMG vrstva</strong> → vidí jen <strong>architekt/vedení</strong> (Jan, manažeři)</li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Audience = AOR oblasti (R014)</h4>
+        <code>firma</code> | <code>management</code> | <code>finance</code> | <code>rust</code> | <code>nakup</code> | <code>prodej</code> | <code>sluzby</code> | <code>technologie</code>
+        <div class="dd"></div>
+        Kde <code>firma</code> = průřezový dokument viditelný pro všechny.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== STEP 10: FEEDBACK ===== -->
+  <div class="node-wrapper n-feedback" id="nw-feedback" style="left:200px; top:1890px" data-detail="feedback">
+    <div class="node" onclick="toggleDetail('feedback')">
+      <span class="step-num">10</span><span class="node-chevron">▼</span>
+      <div class="node-icon">💬</div>
+      <div class="node-title">Zpětná vazba</div>
+      <div class="node-desc">Chyba, nejasnost, chybí obsah → nový podnět → smyčka se uzavírá</div>
+      <div class="node-badge">Čtenář</div>
+    </div>
+    <div class="node-detail" id="detail-feedback">
+      <div>
+        <h4>Typy zpětné vazby</h4>
+        <ul>
+          <li>❌ <strong>Chyba</strong> — „Tady je špatně uvedený termín/postup"</li>
+          <li>❓ <strong>Nejasnost</strong> — „Nerozumím kroku 3"</li>
+          <li>➕ <strong>Chybí obsah</strong> — „Tady by mělo být i jak řešit X"</li>
+          <li>💡 <strong>Vylepšení</strong> — „Bylo by fajn přidat screenshot"</li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Kam feedback jde</h4>
+        Feedback → dashboard manažera → manažer vyhodnotí → nový podnět (krok 0) → <strong>smyčka se uzavírá</strong>.
+        <div class="dd"></div>
+        <h4>Proč je to důležité</h4>
+        Dokumentace je <strong>živý systém</strong>. Bez zpětné vazby stárne a přestává odpovídat realitě. Feedback loop zajišťuje, že se dokumentace neustále zlepšuje na základě reálného používání.
+        <div class="dd"></div>
+        <span class="ref-tag">→ Viz Dashboard manažera (vpravo)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD (side, between review and publish) -->
+  <div class="node-wrapper n-manager" id="nw-dashboard" style="left:560px; top:1370px" data-detail="dashboard">
+    <div class="node" onclick="toggleDetail('dashboard')">
+      <span class="node-chevron">▼</span>
+      <div class="node-icon">📊</div>
+      <div class="node-title">Dashboard manažera</div>
+      <div class="node-desc">Čtenost, stáří, feedback, pokrytí</div>
+      <div class="node-badge">Manažer</div>
+    </div>
+    <div class="node-detail" id="detail-dashboard">
+      <div>
+        <h4>Co dashboard ukazuje</h4>
+        <ul>
+          <li>📈 <strong>Čtenost</strong> — kdo čte, kdy, kolikrát (per dokument)</li>
+          <li>⏰ <strong>Stáří</strong> — které dokumenty potřebují revizi (starší než X měsíců)</li>
+          <li>💬 <strong>Feedback</strong> — nahlášené chyby, nejasnosti, návrhy na vylepšení</li>
+          <li>📊 <strong>Pokrytí</strong> — které AOR oblasti mají/nemají BIMG, kde chybí SOP</li>
+        </ul>
+        <div class="dd"></div>
+        <h4>Akceschopnost</h4>
+        Dashboard není jen pasivní report — každý řádek je potenciální nový podnět (krok 0). Manažer vidí: <em>„Oblast Nákup nemá žádný BIMG"</em> → rozhodne → trigger → tvorba.
+      </div>
+    </div>
+  </div>
+
+</div><!-- /canvas -->
+
+<!-- LEGEND -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div> Manažer (editor)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div> Claude</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div> Čtenář</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div> Podněty / Feedback</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#64748b"></div> Systém</div>
+</div>
+
+<script>
+function toggleDetail(id) {
+  const el = document.getElementById('detail-' + id);
+  const wasOpen = el.classList.contains('open');
+  document.querySelectorAll('.node-detail').forEach(d => { d.classList.remove('open'); d.classList.remove('pos-up'); d.classList.remove('pos-down'); });
+  if (!wasOpen) {
+    // Smart positioning: check if node is in top half or bottom half of viewport
+    const nodeWrapper = el.closest('.node-wrapper');
+    const rect = nodeWrapper.getBoundingClientRect();
+    const viewportMid = window.innerHeight / 2;
+    if (rect.top < viewportMid) {
+      // Node is in top half → open detail DOWNWARD
+      el.classList.add('pos-down');
+    } else {
+      // Node is in bottom half → open detail UPWARD
+      el.classList.add('pos-up');
+    }
+    el.classList.add('open');
+  }
+}
+function togglePrereq(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('open');
+}
+
+// ===== DRAW ARROWS =====
+const connections = [
+  // Main flow
+  { from: 'nw-trigger', to: 'nw-categorize', color: '#10b981' },
+  { from: 'nw-categorize', to: 'nw-inputs', color: '#10b981' },
+  { from: 'nw-inputs', to: 'nw-analyze', color: '#3b82f6' },
+  { from: 'nw-analyze', to: 'nw-layers', color: '#3b82f6' },
+  { from: 'nw-layers', to: 'nw-create', color: '#3b82f6' },
+  { from: 'nw-create', to: 'nw-review', color: '#10b981' },
+  { from: 'nw-review', to: 'nw-publish', color: '#3b82f6' },
+  { from: 'nw-publish', to: 'nw-read', color: '#f59e0b' },
+  { from: 'nw-read', to: 'nw-feedback', color: '#7c3aed' },
+  // Side connections (dashed)
+  { from: 'nw-conA', to: 'nw-create', color: '#64748b', dashed: true },
+  { from: 'nw-conB', to: 'nw-create', color: '#64748b', dashed: true },
+  { from: 'nw-publish', to: 'nw-cascade', color: '#64748b', dashed: true },
+  { from: 'nw-read', to: 'nw-access', color: '#64748b', dashed: true },
+  { from: 'nw-feedback', to: 'nw-dashboard', color: '#7c3aed', dashed: true },
+  // Fix loop
+  { from: 'nw-review', to: 'nw-fix', color: '#3b82f6', dashed: true },
+  { from: 'nw-fix', to: 'nw-review', color: '#3b82f6', dashed: true },
+];
+
+function drawArrows() {
+  const svg = document.getElementById('arrows');
+  const canvas = document.getElementById('canvas');
+  svg.setAttribute('width', canvas.scrollWidth);
+  svg.setAttribute('height', canvas.scrollHeight);
+  svg.innerHTML = '';
+
+  // Defs for arrowheads
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  const colors = ['#10b981','#3b82f6','#f59e0b','#7c3aed','#64748b'];
+  colors.forEach((c, i) => {
+    const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+    marker.setAttribute('id', 'ah-' + c.replace('#',''));
+    marker.setAttribute('markerWidth', '8');
+    marker.setAttribute('markerHeight', '6');
+    marker.setAttribute('refX', '8');
+    marker.setAttribute('refY', '3');
+    marker.setAttribute('orient', 'auto');
+    const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    poly.setAttribute('points', '0 0, 8 3, 0 6');
+    poly.setAttribute('fill', c);
+    marker.appendChild(poly);
+    defs.appendChild(marker);
+  });
+  svg.appendChild(defs);
+
+  const canvasR = canvas.getBoundingClientRect();
+
+  connections.forEach((conn) => {
+    const fromEl = document.getElementById(conn.from);
+    const toEl = document.getElementById(conn.to);
+    if (!fromEl || !toEl) return;
+
+    const fromR = fromEl.getBoundingClientRect();
+    const toR = toEl.getBoundingClientRect();
+
+    let fx, fy, tx, ty;
+
+    // Determine if horizontal or vertical connection
+    if (Math.abs(fromR.top - toR.top) < 80) {
+      // Horizontal
+      fy = fromR.top - canvasR.top + fromR.height / 2;
+      ty = toR.top - canvasR.top + toR.height / 2;
+      if (fromR.left < toR.left) {
+        fx = fromR.left - canvasR.left + fromR.width;
+        tx = toR.left - canvasR.left;
+      } else {
+        fx = fromR.left - canvasR.left;
+        tx = toR.left - canvasR.left + toR.width;
+      }
+    } else {
+      // Vertical
+      fx = fromR.left - canvasR.left + fromR.width / 2;
+      fy = fromR.top - canvasR.top + fromR.height;
+      tx = toR.left - canvasR.left + toR.width / 2;
+      ty = toR.top - canvasR.top;
+    }
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', fx);
+    line.setAttribute('y1', fy);
+    line.setAttribute('x2', tx);
+    line.setAttribute('y2', ty);
+    line.setAttribute('stroke', conn.color);
+    line.setAttribute('stroke-width', '2');
+    line.setAttribute('marker-end', 'url(#ah-' + conn.color.replace('#','') + ')');
+    if (conn.dashed) line.setAttribute('stroke-dasharray', '6,4');
+    line.setAttribute('opacity', '0.6');
+    svg.appendChild(line);
+  });
+
+  // ===== PODNĚTY → TRIGGER arrows =====
+  const podnety = document.querySelectorAll('.podnet-card');
+  const triggerEl = document.getElementById('nw-trigger');
+  if (triggerEl && podnety.length) {
+    const tR = triggerEl.getBoundingClientRect();
+    const tx = tR.left - canvasR.left + tR.width / 2;
+    const ty = tR.top - canvasR.top;
+
+    podnety.forEach(p => {
+      const pR = p.getBoundingClientRect();
+      const px = pR.left - canvasR.left + pR.width / 2;
+      const py = pR.top - canvasR.top + pR.height;
+
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      const midY = py + (ty - py) * 0.5;
+      path.setAttribute('d', `M ${px} ${py} C ${px} ${midY}, ${tx} ${midY}, ${tx} ${ty}`);
+      path.setAttribute('stroke', '#7c3aed');
+      path.setAttribute('stroke-width', '1.5');
+      path.setAttribute('fill', 'none');
+      path.setAttribute('opacity', '0.35');
+      path.setAttribute('marker-end', 'url(#ah-7c3aed)');
+      svg.appendChild(path);
+    });
+  }
+
+  // ===== FEEDBACK → PODNĚTY loop arrow =====
+  const fbEl = document.getElementById('nw-feedback');
+  const pZone = document.getElementById('podnety-zone');
+  if (fbEl && pZone) {
+    const fbR = fbEl.getBoundingClientRect();
+    const pzR = pZone.getBoundingClientRect();
+    const x = fbR.left - canvasR.left - 15;
+    const yBot = fbR.top - canvasR.top + fbR.height / 2;
+    const yTop = pzR.top - canvasR.top + pzR.height / 2;
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', `M ${x} ${yBot} L 20 ${yBot} L 20 ${yTop} L 60 ${yTop}`);
+    path.setAttribute('stroke', '#7c3aed');
+    path.setAttribute('stroke-width', '2');
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke-dasharray', '8,4');
+    path.setAttribute('opacity', '0.4');
+    path.setAttribute('marker-end', 'url(#ah-7c3aed)');
+    svg.appendChild(path);
+
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', '24');
+    text.setAttribute('y', (yBot + yTop) / 2);
+    text.setAttribute('fill', '#7c3aed');
+    text.setAttribute('font-size', '10');
+    text.setAttribute('opacity', '0.5');
+    text.setAttribute('transform', `rotate(-90, 24, ${(yBot + yTop) / 2})`);
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('font-family', '-apple-system, sans-serif');
+    text.textContent = 'zpětná vazba → nový podnět';
+    svg.appendChild(text);
+  }
+}
+
+window.addEventListener('load', () => { setTimeout(drawArrows, 200); });
+window.addEventListener('resize', drawArrows);
+</script>
+
+</body>
+</html>
